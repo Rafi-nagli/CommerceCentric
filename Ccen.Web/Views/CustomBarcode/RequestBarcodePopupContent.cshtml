@@ -1,0 +1,95 @@
+﻿@using Amazon.Web.HtmlExtend
+@using Kendo.Mvc.UI
+@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var RequestBarcodeModel = function(model) {
+        var self = this;
+
+        self.skuText = ko.observable('');
+
+        self.barcodes = ko.observableArray([]);
+
+        self.requestBarcode = function() {
+            popupWindow.customAction("requestBarcode");
+            $.ajax({
+                url: '@Url.Action("RequestBarcode", "CustomBarcode")',
+                data: {
+                    skuText: self.skuText()
+                },
+                cache: false,
+                success: function(result) {
+                    self.barcodes(result.Data);
+                }
+            });
+        }
+
+        self.barcodeText = ko.computed(function() {
+            var text = "";
+            for (var i = 0; i < self.barcodes().length; i++) {
+                text += "'" + self.barcodes()[i].Barcode + "\r\n";
+            }
+            console.log("barcodeText: " + text);
+            return text;
+        });
+
+        self.alreadyExistAssociations = ko.computed(function() {
+            return $.grep(self.barcodes(), function(b) {
+                return !b.IsNewAssociation;
+            });
+        });
+
+        self.close = function() {
+            popupWindow.close();
+        }
+    };
+
+
+    $(document).ready(function() {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var requestBarcodeModel = new RequestBarcodeModel(model);
+
+        ko.applyBindings(requestBarcodeModel, document.getElementById('edit-container'));
+    });
+</script>
+
+
+<div id="edit-container" class="inventory-popup">
+    @Html.ValidationSummary(true)
+
+    <div class="k-edit-form-container" style="margin-bottom: 15px; width: 450px">
+        <div>
+            <div>
+                <div class="editor-label" style="width: 30%">SKU list:</div>
+                <div class="editor-field" style="padding-top: 5px">
+                    <textarea rows="5" data-bind="value: skuText" style="width: 220px" class="k-textbox" />
+                </div>
+            </div>
+            <div>
+                <div class="editor-label" style="width: 30%">Requested barcodes:</div>
+                <div class="editor-field" style="padding-top: 5px">
+                    <textarea rows="5" data-bind="value: barcodeText" style="width: 220px" class="k-textbox" />
+                </div>
+            </div>
+            <div>
+                <div class="editor-label" style="width: 30%"></div>
+                <div class="editor-field" data-bind="foreach: alreadyExistAssociations">
+                    <div class="text-info remark"><span data-bind="text: Barcode"></span> - was generated on <span data-bind="textFormatted: AttachSKUDate, pattern: 'MM/dd/yyyy'"></span></div>
+                </div>
+            </div>
+            <div class="clear"></div>
+        </div>
+
+        <div class="k-edit-buttons k-state-default">
+            <a class="k-button k-button-icontext" data-bind="click: requestBarcode">
+                <span class="k-icon k-update"></span> Request barcodes
+            </a>
+            <a class="k-button k-button-icontext" data-bind="click: close">
+                <span class="k-icon k-cancel"></span> Close
+            </a>
+        </div>
+    </div>
+</div>

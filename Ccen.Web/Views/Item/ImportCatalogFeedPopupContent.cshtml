@@ -1,0 +1,266 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.ViewModels.Inventory
+@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var ImportCatalogFeedModel = function(model, settings) {
+        var self = this;
+
+        self.isLoaded = ko.observable(false);
+
+        self.popupNode = null;
+        self.popup = null;
+
+        self.settings = settings;
+        self.model = model;
+
+        self.messages = ko.observableArray([]);
+
+        //self.submitCallback = settings.submitCallback;
+        self.fileName = ko.observable("");
+        
+        self.result = ko.observable(null);
+
+        self.hasResult = ko.computed(function () {
+            return self.result() != null;
+        });
+
+        self.IsSuccessResult = ko.computed(function () {
+            return self.result() == true;
+        });
+
+        self.IsFailedResult = ko.computed(function () {
+            return self.result() == false;
+        });
+        
+        self.hasFileName = ko.computed(function () {
+            return !dataUtils.isNullOrEmpty(self.fileName());
+        });
+
+        self.onUploadFeed = function (m, e) {
+            var sender = $(e.target);
+            helper.ui.showLoading(sender);
+
+            self.onSubmit(e).done(function (r) {
+                helper.ui.hideLoading(sender, true);
+                console.log("result file name: " + r.Data);
+                self.isSuccessResult(r.IsSuccess);
+            });
+        }
+
+        self.onSubmit = function (e) {
+            console.log("onUpdateQty");
+
+            var defer = $.Deferred();
+            var dataModel = {
+                FileName: self.fileName(),
+            };
+            $.ajax({
+                url: '@Url.Action("Submit", "WalmartCACatalog")',
+                data: JSON.stringify({ model: dataModel }),
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                type: 'POST',
+                success: function (result) {
+                    console.log("onSuccess");
+                    console.log(result);
+                    if (result.IsSuccess) {
+                        defer.resolve(result);
+                    } else {
+                        defer.reject();
+                        self.messages(result.Messages);
+                    }
+                },
+                error: function (result) {
+                    console.log(result);
+                    self.messages(result.Messages);
+                    defer.reject();
+                }
+            });
+            return defer;
+        }
+
+        self.onUploadSuccess = function (e) {
+            console.log("onUploadSuccess");
+            var data = e.response.Data;
+            console.log(data);
+            if (data != null && data.length > 0 && data[0].length > 0) {
+                console.log(data[0][0]);
+                self.fileName(data[0][0].ServerFileName);
+                //self.attachedFile(data[0][0]);
+            }
+
+            //$.publish("PV_Grid_Access_OnAddNewRecord_Event");
+        }
+
+        self.onUploadError = function (e) {
+            console.log("onUploadError");
+            console.log(e);
+            //self.uploadedFile(null);
+            self.messages.push(new MessageString("Unable to upload attachment", MessageStatus.ERROR));
+        }
+
+
+        self.show = function () {
+            var nodeId = "importCatalogFeedPopup";
+
+            console.log($("#" + nodeId).length);
+            $("#" + nodeId).each(function (i) {
+                var popup = $(this).data("kendoWindow");
+                if (popup != null) {
+                    console.log("close previous actualizeGrouponQtyPopup popup");
+
+                    ko.cleanNode($(this)[0]);
+                    popup.close();
+                    popup.destroy();
+                }
+                else {
+                    $(this).remove();
+                }
+            });
+
+            console.log(nodeId + ".create");
+
+            $('body').prepend("<div id='" + nodeId + "'></div>");
+            self.popupNode = $('#' + nodeId);
+
+            self.popupNode.kendoWindow({
+                modal: true,
+                width: "500px",
+                title: "Import Walmart CA Catalog",
+                visible: false,
+                close: self.closeEvent,
+                actions: [
+                    "Close"
+                ],
+            });
+
+            self.popup = self.popupNode.data("kendoWindow");
+            self.popup.content($("#import-catalog-feed-container").html());
+            self.popup.center().open();
+
+            ko.applyBindings(self, self.popupNode[0]);
+        };
+
+        self.onClose = function() {
+            console.log('onClose');
+            //self.closeEvent();
+            self.popup.close();
+        }
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function () {
+            return self.errors().length === 0;
+        });
+
+        self.validate = function () { // function(data, e) {
+            if (self.isValid()) { //validator.validate() &&
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                return false;
+            }
+        };
+        
+        self.isLoaded(true);
+    };
+
+    $(document).ready(function() {
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+    });
+</script>
+
+<style>
+    .actualize-groupon-qty .step {
+        padding: 5px;
+    }
+</style>
+
+<!-- ko stopBinding: true -->
+<div style="display: none">
+    <div id="import-catalog-feed-container">
+        @Html.ValidationSummary(true)
+
+
+        <div class="inventory-popup import-catalog-feed-qty">
+            <div class="k-edit-form-container" style="width: auto">
+
+                <div class="step">
+                    <div><b>Step 1.</b> Download “Download Catalog” file from Walmart.ca <a href="https://seller.walmart.ca/items-and-inventory/manage-items">link</a></div>
+                    <div></div>
+                </div>
+                <div class="step">
+                    <b>Step 2.</b> Import here
+                    <div class="panel panel-default" style="margin: 10px 0px; padding: 0px">
+                        <div data-bind="visible: !hasResult()" class="panel-body" style="padding: 0px 10px">
+                            <table>
+                                <tr>
+                                    <td>Select file:</td>
+                                    <td>
+                                        <input type="file" name="files" data-bind="kendoUpload: {
+                                            async: {
+                                                saveUrl: '@Url.Action("UploadFeed", "WalmartCACatalog")',
+                                                autoUpload: true,
+                                            },
+                                            showFileList: true,
+                                            multiple: false,
+                                            success: onUploadSuccess,
+                                            error: onUploadError
+                                            }" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <button data-bind="click: onUploadFeed; disable: !hasFileName(), css: { 'k-state-disabled': !hasFileName() }" class="k-button" style="margin: 10px 0px">Process</button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div data-bind="visible: hasResult()" style="padding: 10px 0px">
+                            <div data-bind="visible: isSuccessResult()">
+                                <span class="label label-green">Done</span>
+                            </div>
+                            <div data-bind="visible: isFailedResult()">
+                                <span class="label label-red">Failed</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <messages params="{ messages: messages }"></messages>
+            </div>
+        </div>
+
+
+        <div class="clear"></div>
+
+        <div class="k-edit-buttons k-state-default popup-button-panel"
+             style="position: static">
+            <table style="margin-left: auto">
+                <tr>
+                    <td>
+                        <button class="k-button k-button-icontext k-grid-cancel"
+                                tabindex="301"
+                                data-bind="click: onClose">
+                            <span class="k-icon k-cancel"></span>Cancel
+                        </button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+<!-- /ko -->

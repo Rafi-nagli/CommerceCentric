@@ -1,0 +1,461 @@
+﻿@using Amazon.Core.Models
+@model Amazon.Web.ViewModels.Pages.OrderHistoryControlViewModel
+
+<script type="text/javascript">
+
+    var OrderSummaryViewModel = function(model, settings) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+
+        self.wasProcessed = ko.observable(false);
+        self.isMessageMode = ko.observable(false);
+        self.messageText = ko.observable("");
+
+        self.orderItemList = ko.observableArray([]);
+
+        self.toAddress = {
+            city: ko.observable(),
+            state: ko.observable(),
+            country: ko.observable(),
+        }
+
+        self.orderId = ko.observable("");
+        self.orderEntityId = ko.observable(null);
+        self.orderDate = ko.observable(null);
+
+        self.orderIsOnHold = ko.observable(false);
+        self.orderIsCancelled = ko.observable(false);
+
+        self.weightLb = ko.observable('');
+        self.weightOz = ko.observable('');
+        self.totalPrice = ko.observable();
+        self.actualShippingCost = ko.observable().extend({ format: "0.00" });
+        self.priceCurrency = ko.observable();
+        self.marketName = ko.observable();
+        self.orderDateAgoDays = ko.observable();
+
+        //self.shippingDate = ko.observable();
+        self.expShipDate = ko.observable();
+        self.expDeliveryDate = ko.observable();
+        //self.shippingMethodName = ko.observable();
+        //self.shippingProviderName = ko.observable();
+
+        self.trackingNumbers = ko.observable([]);
+        self.hasTrackingNumbers = ko.computed(function() {
+            return self.trackingNumbers().length > 0;
+        });
+
+        //self.deliveryDate = ko.observable();
+        //self.deliveryStatus = ko.observable();
+
+        self.orderUrl = ko.observable(null);
+
+        self.refunds = ko.observable([]);
+        self.hasRefunds = ko.computed(function() {
+            return self.refunds().length > 0;
+        });
+
+        self.hasOrder = ko.computed(function() {
+            return self.orderEntityId() != null;
+        });
+
+        self.isShipped = ko.computed(function() {
+            return !dataUtils.isEmpty(self.trackingNumbers().length > 0);
+        });
+
+        self.returnUrl = ko.computed(function() {
+            return self.settings.urls.orderReturn + "?orderId=" + self.orderId();
+        });
+
+        self.setOrderNumber = function(orderId) {
+            console.log("summary. setOrderNumber, orderId=" + orderId);
+
+            if (self.orderId() == orderId) {
+                console.log("skip. order number the same");
+                return;
+            }
+
+            self.clear();
+            self.orderId(orderId);
+
+            self.load();
+        }
+
+        self.load = function() {
+            console.log("summary.init");
+            Message.clear();
+
+            self.setMessage('Loading...');
+            
+            $.ajax({
+                url: '@Url.Action("GetOrderQuickSummary", "OrderInfo")',
+                cache: false,
+                data: {
+                    orderId: self.orderId()
+                }
+            }).done(function(result) {
+                if (result.IsSuccess) {
+                    console.log("summary.success");
+                    self.showModel(result.Data);
+                    self.initPopups();
+                    self.setMessage(null);
+                } else {
+                    self.setMessage("Order not found");
+                }
+            });
+        };
+
+        self.initPopups = function() {
+            $('#order-summary-content').find('*[data-poload]').popover({
+                html: true,
+                trigger: 'hover',
+                placement: 'bottom',
+                content: function () {
+                    if (typeof(this.loadedContent) == 'undefined') {
+                        var popoverId = "ppv-id-" + $.now();
+                        return self.showPopoverDetails($(this).data('poload'), popoverId, this);
+                    }
+                    return this.loadedContent;
+                }
+            });
+        }
+
+        self.showPopoverDetails = function(url, tagId, sender) {
+            $.ajax({
+                url: url,
+                success: function (result) {
+                    var content = '';
+                    if (result.IsSuccess) {
+                        $.each(result.Data.StyleItems, function(i, n) {
+                            content += "<div>" + n.Size + ': ' + n.Quantity + " - " + tmpl.isNullFormat(n.Price, '$0.00', 'n/a') + "</div>";
+                        });
+                        content += "<div style='padding-top: 5px; margin-top: 5px; border-top: 1px solid grey'>";
+                        if (result.Data.Locations.length > 0) {
+                            $.each(result.Data.Locations, function(i, n) {
+                                content += "<div>" + n.Isle + "<span style='margin: 0px 2px'>/</span>" + n.Section + "<span style='margin: 0px 2px'>/</span>" + n.Shelf + "</div>";
+                            });
+                        } else {
+                            content += "-";
+                        }
+                        content += "</div>";
+                    } else {
+                        content = 'Error getting info';
+                    }
+                    $('#' + tagId).html(content);
+                    sender.loadedContent = content;
+                }
+            });
+            return '<div id="' + tagId + '">Loading...</div>';
+        }
+
+        self.clear = function() {
+            self.orderItemList([]);
+            self.orderId(null);
+            self.orderEntityId(null);
+            self.orderUrl(null);
+        }
+
+        self.showModel = function(model) {
+            console.log("summary.showModel");
+            console.log(model);
+
+            self.priceCurrency(model.PriceCurrency);
+
+            $.each(model.Items, function(i, n) {
+                var item = n;
+                n.ItemPrice = ko.observable(n.ItemPrice).extend({ format: self.priceCurrency() + "0.00"});
+                n.ShippingPrice = ko.observable(n.ShippingPrice).extend({ format: self.priceCurrency() + "0.00"});
+                n.HasShippingPrice = n.ShippingPrice > 0;
+            });
+            self.orderItemList(model.Items);
+
+            $.each(model.Refunds, function(i, n) {
+                n.Amount = dataUtils.floorPrice(n.Amount);
+                n.statusCss = ko.computed(function() {
+                    var css = "";
+                    if (n.Status == '@((int)SystemActionStatus.Done)')
+                        css = "bold green";
+                    if (n.Status >= '@((int)SystemActionStatus.Fail)')
+                        css = "bold red";
+
+                    return css;
+                });
+            });
+            self.refunds(model.Refunds);
+
+            self.orderId(model.OrderID);
+            self.orderEntityId(model.OrderEntityId);
+            self.orderDate(kendo.parseDate(model.OrderDate));
+            self.orderIsCancelled(model.OrderIsCancelled);
+            self.orderIsOnHold(model.OrderIsOnHold);
+
+            self.orderDateAgoDays(dataUtils.getDayCount(new Date(), kendo.parseDate(model.OrderDate)));
+            self.marketName(model.MarketName);
+
+            self.orderUrl(model.OrderUrl);
+
+            console.log("trackingNumbers");
+            console.log(model.TrackingNumbers);
+            $.each(model.TrackingNumbers, function (i, n) {
+                n.isCanceled = ko.observable(n.IsCanceled);
+                if (n.LastTrackingStateUpdateDate != null)
+                    n.updateStatusAgoDays = ko.observable(dataUtils.getHoursAndDaysCount(new Date(), kendo.parseDate(n.LastTrackingStateUpdateDate)));
+                else
+                    n.updateStatusAgoDays = ko.observable(null);
+            });
+            self.trackingNumbers(model.TrackingNumbers);
+
+            self.weightLb(model.WeightLb);
+            self.weightOz(model.WeightOz);
+
+            //self.shippingMethodName(model.ShippingMethodName);
+            //self.shippingProviderName(model.ShippingProviderName);
+            //self.shippingDate(model.ShippingDate);
+            self.expShipDate(model.AlignedExpectedShipDate);
+            self.expDeliveryDate(model.AlignedExpectedDeliveryDate);
+
+            //self.deliveryDate(model.DeliveryDate);
+            //self.deliveryStatus(model.DeliveryStatus);
+            
+            self.toAddress.city(model.ToAddress.City);
+            self.toAddress.state(model.ToAddress.State);
+            self.toAddress.country(model.ToAddress.Country);
+        };
+
+        self.setMessage = function(message) {
+            console.log("setMessage: " + message);
+            if (message != null && message != '') {
+                self.isMessageMode(true);
+            } else {
+                self.isMessageMode(false);
+            }
+            self.messageText(message);
+        }
+
+        self.toggleOrderHold = function(m, e) {
+            console.log("toggleHold: " + self.orderEntityId() + ", onHold=" + self.orderIsOnHold());
+
+            var sender = $(e.target);
+
+            helper.ui.showLoading(sender);
+            var newHoldStatus = !self.orderIsOnHold();
+            console.log("new onHold status: " + newHoldStatus);
+            $.ajax({
+                url: self.settings.urls.setOnHold,
+                data: { id: self.orderEntityId(), onHold: newHoldStatus},
+                cache: false,
+                success: function(data) {
+                    helper.ui.hideLoading(sender);
+                    self.orderIsOnHold(data.OnHold);
+                }
+            });
+        };
+
+        self.onEditOrder = function() {
+            console.log("onEditOrder, id=" + self.orderEntityId());
+            popupWindow.initAndOpenWithSettings(
+            {
+                content: self.settings.urls.editOrder + "?id=" + self.orderEntityId(),
+                title: "Order Edit",
+                width: 910,
+                customAction: self.onPopupCustomAction,
+                submitSuccess: self.onPopupSubmitSuccess,
+            });
+        };
+
+        self.onPopupSubmitSuccess = function(e) {
+
+        };
+
+        self.onPopupCustomAction = function (action, data) {
+            console.log("onPopupCustomAction");
+            console.log(action);
+
+            if (action == 'toggleHold') {
+                self.orderIsOnHold(data.onHold);
+            }
+        };
+
+        self.setOrderNumber(model.OrderNumber);
+
+        $.subscribe('ordernumber-changed', function(e, orderId) { self.setOrderNumber(orderId); });
+    };
+</script>
+
+
+<!-- ko stopBinding: true -->
+
+<div id="order-summary-content">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <div>
+                Order Summary # <a href="#"
+                                   data-bind="attr: { href: orderUrl }"
+                                   target="_blank"><span data-bind="text: orderId"></span></a>
+            </div>
+            <div data-bind="visible: hasOrder">
+                <button class='k-button k-button-icontext'
+                        id='editOrderButton'
+                        style='margin: 4px 0px 0px 0px; min-width: 55px'
+                        data-bind="click: onEditOrder">
+                    <span class='glyphicon glyphicon-pencil am-icon'></span>Edit
+                </button>
+                <button class='k-button k-button-icontext'
+                        id='holdButton'
+                        style='margin-top: 4px'
+                        data-bind="click: toggleOrderHold">
+                    <span data-bind="visible: orderIsOnHold">UnHold</span>
+                    <span data-bind="visible: !orderIsOnHold()">
+                        <span class='glyphicon glyphicon-ban-circle am-icon'></span>Hold
+                    </span>
+                </button>
+
+                <a target='_blank'
+                   class='k-button k-button-icontext'
+                   style='margin-left: 25px'
+                   data-bind="attr: { 'href': returnUrl }">
+                    <span class='glyphicon glyphicon-arrow-left am-icon'></span>Return
+                </a>
+            </div>
+
+        </div>
+        <div class="panel-body">
+            <div style="padding: 15px" data-bind="visible: isMessageMode">
+                <span data-bind="text: messageText"></span>
+            </div>
+
+            <div style="font-size: 13px; min-height: 50px; display: none"
+                 class="quick-summary"
+                 data-bind="visible: !isMessageMode()">
+                <div class="line">
+                    <span class="gray">Order placed</span>
+                    <span data-bind="text: orderDateAgoDays"></span> days ago (<span data-bind="textFormatted: orderDate, pattern: 'MMMM dd, yyyy'"></span>)
+                    <span class="gray">through</span> <span data-bind="text: marketName"></span>.
+                    <div data-bind="visible: orderIsCancelled()">
+                        <span class="red">Cancelled</span>
+                    </div>
+                    <div>
+                        <span class="gray">Exp. delivery date:</span>
+                        <span data-bind="textFormatted: expDeliveryDate, pattern: 'MMMM dd, yyyy', ifEmpty: '-'"></span>
+                    </div>
+                </div>
+                
+                <div data-bind="visible: !hasTrackingNumbers()" class="line">
+                    <div>
+                        <span class="gray">Shipping scheduled on</span>
+                        <span data-bind="textFormatted: expShipDate, pattern: 'MMMM dd, yyyy', ifEmpty: '-'"></span>
+                    </div>
+                    <div><span class="gray">Tracking #:</span> -</div>
+                </div>
+                <div data-bind="foreach: trackingNumbers">
+                    <div class="line">
+                        <span class="gray"><span data-bind="visible: $parent.trackingNumbers().length > 1"><span data-bind="text: $index() + 1"></span>.</span> Tracking #: </span>
+                        <a class='tr-num'
+                           target='_blank'
+                           data-bind="attr: { 'href': TrackingUrl }"><span data-bind="text: TrackingNumber"></span></a>
+                        <div style="padding-left: 10px">
+                            <div data-bind="visible: !isCanceled()">
+                                <span class="gray">Shipped on</span>
+                                <span data-bind="textFormatted: ShippingDate, pattern: 'MMMM dd, yyyy', ifEmpty: '-'"></span>, <span data-bind="text: ShippingProviderName"></span> - <span data-bind="text: ShippingMethodName"></span>.
+                            </div>
+                            <div data-bind="visible: isCanceled()">
+                                <span class="red">Cancelled</span>
+                            </div>
+                            <div data-bind="visible: !isCanceled()">
+                                <div>
+                                    <span class="gray">Delivered: </span> <span data-bind="textFormatted: ActualDeliveryDate, ifEmpty: 'no', pattern: 'MMMM dd, yyyy'"></span>
+                                    <span class="gray">, Est. delivery date: </span> <span data-bind="textFormatted: EstDeliveryDate, ifEmpty: '-', pattern: 'MMMM dd, yyyy'"></span>
+                                </div>
+                                <div>
+                                    <span class="gray">Status:</span> <span data-bind="text: DeliveryStatusMessage"></span> <span class="gray">(updated:</span> <span data-bind="textFormatted: updateStatusAgoDays, ifEmpty: 'n/a'"></span> ago)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="line"><span class="gray">Address:</span> <span data-bind="text: toAddress.city"></span>, <span data-bind="text: toAddress.state"></span>, <span data-bind="text: toAddress.country"></span></div>
+                <div class="line">
+                    <span class="gray">Refunds:</span>
+                    <div data-bind="visible: hasRefunds" style="padding-left: 4px" class="refund-items">
+                        <table>
+                            <tr>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                            </tr>
+                            <tbody data-bind="foreach: refunds">
+                                <tr>
+                                    <td><span data-bind="textFormatted: Amount, pattern: '$0.00', ifEmpty: '-'"></span></td>
+                                    <td><span data-bind="text: StatusName, css: statusCss"></span></td>
+                                    <td><span data-bind="textFormatted: Date, pattern: 'MM.dd.yyyy', ifEmpty: '-'"></span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <span data-bind="visible: !hasRefunds()"> no refunds</span>
+                </div>
+
+                <div style="padding-top: 3px">
+                    <span class="gray">Items:</span>
+                    <table>
+                        <colgroup>
+                            <col style="width: 80px" />
+                            <col />
+                        </colgroup>
+                        <tbody data-bind="foreach: orderItemList">
+                            <tr>
+                                <td>
+                                    <a data-bind="attr: { href: ProductStyleUrl }" target='_blank'><img height='75' data-bind="attr: {src: Thumbnail}" style='height: 75px; border: 0' /></a>
+                                </td>
+                                <td style="padding-bottom:3px">
+                                    <div data-bind="text: Title"></div>
+                                    <div><span class="gray">Style:</span> <a class='asin' target='_blank' data-bind="attr: { href: StyleUrl, 'data-poload': StyleWithListingPopoverInfoUrl }, text: StyleID"></a> - <span class='size-num' data-bind="text: Size"></span></div>
+                                    <div>
+                                        <span class="gray">Qty: </span> <span data-bind="text: QuantityOrdered"></span><span class="gray">, Item Price:</span> <span data-bind="text: ItemPrice"></span>
+                                        + <span data-bind="text: ShippingPrice"></span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- /ko -->
+
+<script type="text/javascript">
+    var orderSummaryVm = null;
+
+    $(document).ready(function () {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        var settings = {
+            urls: {
+                editOrder: '@Url.Action(MVC.Order.OnEditOrder())',
+                setOnHold: '@Url.Action(MVC.Order.SetOnHold())',
+                orderReturn: '@Url.Action(MVC.ReturnOrder.Index())',
+            }
+        };
+
+        orderSummaryVm = new OrderSummaryViewModel(model, settings);
+
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error-inline",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(orderSummaryVm, document.getElementById('order-summary-content'));
+    });
+</script>

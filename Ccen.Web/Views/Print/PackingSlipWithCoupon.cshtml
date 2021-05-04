@@ -1,0 +1,247 @@
+﻿@using Amazon.Core.Models
+@model Amazon.Web.ViewModels.PackingSlipCollectionModel
+@{
+    Layout = null;
+    var couponIndex = 0;
+}
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Packing Slip - @(Model.PackingSlips.Count == 1 ? Model.PackingSlips[0].OrderId : Model.PackingSlips.Count + " orders")</title>
+    <style>
+        @@page {
+            margin-top: 0.4in;
+            margin-bottom: 0.4in;
+            margin-left: 0.4in;
+            margin-right: 0.4in;
+        }
+
+        body {
+            -webkit-print-color-adjust: exact;
+        }
+
+        .doc {
+            /*max-width: 950px;*/
+            font-family: sans-serif;
+        }
+
+            .doc a {
+                color: #0070C0;
+            }
+
+            .doc table {
+                width: 100%;
+                vertical-align: top;
+                border: none;
+                border-collapse: collapse;
+            }
+
+            .doc td, .doc th {
+                vertical-align: top;
+            }
+
+        .doc .ship-to {
+            color: #808080;
+        }
+
+        .doc .order, .doc .ship-to, .doc .items {
+            padding: 20px 40px 10px 40px;
+        }
+
+            .doc .order th, .doc .order td, .doc .items th, .doc .items td {
+                border: 1px solid #B0CCB0;
+            }
+
+        .doc .order th, .items th {
+            color: #808080;
+            font-size: 11px;
+            background-color: #EFF4EF;
+            height: 25px;
+            vertical-align: middle;
+        }
+
+        .doc .order td {
+            padding: 3px 10px 3px 10px;
+            vertical-align: middle;
+        }
+
+        .doc .items th {
+            text-align: left;
+            padding: 0px 10px 0px 10px;
+        }
+
+        .doc .items td {
+            font-size: 12px;
+            padding: 3px 10px 3px 10px;
+        }
+
+        .doc .footer {
+            padding: 5px 40px 5px 40px;
+        }
+
+        .doc .bottom-footer {
+            /*position: fixed;
+                bottom:0px;*/
+        }
+
+        .doc .header {
+            /* opacity: 0.5; */
+        }
+
+
+
+    </style>
+    <link rel="shortcut icon" href="/Content/Images/print.ico" />
+
+</head>
+<body>
+    @for (int j = 0; j < Model.PackingSlips.Count; j++)
+    {
+        var order = Model.PackingSlips[j];
+        var marketInfo = Model.GetMarketInfoBy(order.Market, order.MarketplaceId);
+        var newPage = "style=\"page-break-after: always;\"";
+
+        <div class="doc" @Html.Raw(newPage)>
+            <table class="header">
+                <tr>
+                    <td>
+                        <div>
+                            @if (!String.IsNullOrEmpty(marketInfo.StoreLogoUrl))
+                            {
+                                <img src="@(marketInfo.StoreLogoUrl)" height="105" />
+                            }
+                            else
+                            {
+                                <span>@(marketInfo.StoreDisplayName)</span>
+                            }
+                        </div>
+                    </td>
+                    <td style="font-size: 42px; color: #DFEADF;padding-top:20px">Packaging Slip</td>
+                    <td style="padding-top: 20px">
+                        <div><img src="@(marketInfo.MarketLogoUrl)" width="120" /></div>
+                    </td>
+                </tr>
+            </table>
+            <div class="ship-to">
+                <table>
+                    <tr>
+                        <th style="width: 55px; font-size: 10px; text-align: left; line-height: 14px; padding-top: 5px">SHIP<br />TO</th>
+                        <td style="font-size: 15px">
+                            @order.AddressToFullName
+                            <br />@order.AddressToAddress1 @order.AddressToAddress2
+                            <br />@order.AddressToCity, @order.AddressToState @order.AddressToZip @order.AddressToCountry
+                            <br />@order.AddressToPhone
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="order">
+                <table>
+                    <tr>
+                        <th>#</th>
+                        <th>Order Number</th>
+                        <th>Buyer Name</th>
+                        <th>Order Date</th>
+                        <th>Shipping</th>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 12px; width: 16px">@order.Number</td>
+                        <td style="font-size: 18px; width: 190px">@order.FormattedOrderId</td>
+                        <td style="font-size: 12px;">@order.FormattedBuyerName</td>
+                        <td style="font-size: 11px; width: 70px">@order.OrderDateFormatted</td>
+                        <td style="font-size: 12px; width: 75px; text-align: center">@order.Carrier - @order.ShippingService</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="items">
+                <table>
+                    <tr>
+                        <th>Item's image</th>
+                        <th>Item Name</th>
+                        <th>Details</th>
+                    </tr>
+                    @foreach (var item in order.Items)
+                    {
+                        for (int i = 0; i < item.Quantity; i++)
+                        {
+                            var margin = (int)(j / 80);
+
+                            <tr>
+                                <td style="width: 100px; height: 85px; padding:0px; margin:0px; text-align: center; vertical-align: middle;">
+                                    <img height="75" style="margin-top:@(margin + 4)px;" src="@item.Thumbnail" />
+                                </td>
+                                <td>
+                                    @item.Name<br />
+                                    <span style="font-size: 13px">
+                                        Size:
+                                        @if (item.Size != item.StyleSize)
+                                        {
+                                            <span style="font-weight: bold">@item.FormattedStyleSize</span> <span>(@(item.Size))</span>
+                                        }
+                                        else
+                                        {
+                                            <span style="font-weight: bold">@item.FormattedStyleSize</span>
+                                        }
+                                    </span><br />
+                                    <span style="font-weight: bold; font-size: 13px">Color: @item.Color</span><br />
+
+                                </td>
+                                <td style="width: 190px">
+                                    ASIN: @item.ASIN<br />
+                                    @*Listing ID: @item.ListingID<br />
+                                        Order Item ID: @item.OrderItemID<br />*@
+                                    SKU: @item.SKU<br />
+                                    Style ID: <b>@item.StyleID</b><br />
+                                    LOC: @item.Isle / @item.Section
+                                </td>
+                            </tr>
+                        }
+                    }
+                </table>
+            </div>
+            <div class="footer">
+                <div style="padding: 0px 50px">
+                    <p style="font-size: 13px; font-weight: bold; text-align: center">Thank you for buying from @(marketInfo.StoreDisplayName) on @(marketInfo.MarketName) Marketplace.</p>
+
+                    @Html.Raw(marketInfo.PackingSlipFooterTemplate)
+                </div>
+
+                @if (order.Items.Count <= 2
+                    && order.Market == MarketType.Amazon)
+                {
+                    if ((couponIndex++) % 3 < 2)
+                    {
+                        <div style="padding-left: 20px">
+                            <div style="text-align: center;">
+                                <div>
+                                    <img src="~/Images/Coupones/coupon_1.jpg" style="width: 500px" />
+                                </div>
+                                <div style="font-size: 16px">
+                                    <a href="http://a.co/8WIjsQ6" target="_blank">http://a.co/8WIjsQ6</a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div style="padding-left: 20px">
+                            <div style="text-align: center;">
+                                <div>
+                                    <img src="~/Images/Coupones/coupon_2.jpg" style="width: 500px" />
+                                </div>
+                                <div style="font-size: 16px">
+                                    <a href="http://a.co/2OoVXOF" target="_blank">http://a.co/2OoVXOF</a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+        <div class="bottom-footer" style="position: relative; top: -40px">
+            <p style="font-size: 11px; color: #808080; text-align: center">Our Address for Returns & Exchanges: @(marketInfo.StoreDisplayName), @(Model.ReteurnAddressString)</p>
+        </div>
+    }
+</body>
+</html>

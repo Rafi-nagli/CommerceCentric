@@ -1,0 +1,107 @@
+﻿@model Amazon.Web.ViewModels.OrderToTrackViewModel
+@{
+    Layout = null;
+}
+
+
+<script>
+    var OrderToTrackModel = function(model, settings) {
+        var self = this;
+
+        self.isLoaded = ko.observable(false);
+
+        self.settings = settings;
+        self.model = model;
+
+        self.orderNumber = ko.observable("");
+        self.trackingNumber = ko.observable("");
+        self.comment = ko.observable("");
+
+        self.orderIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetOrderIdList", "AutoComplete")',
+                parameterMap: function(data, action) {
+                    console.log("action=" + action);
+                    if (action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+    };
+
+
+    $(document).ready(function() {
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+        };
+
+        var viewModel = new OrderToTrackModel(model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(viewModel, document.getElementById('ordertotrack-container'));
+    });
+</script>
+
+
+<div id="ordertotrack-container">
+    @Html.ValidationSummary(false)
+
+    <div class="gray" style="padding: 10px 0px 3px 15px"><b>Get all trackings from the Order</b>
+    </div>
+    <div style='padding-left: 20px'>
+        <div class="editor-label">Order Number</div>
+        <div class="editor-field">
+            <input style='width: 200px'
+                   class="k-textbox"
+                   name="OrderNumber"
+                   data-bind="kendoAutoComplete: {
+                           value: orderNumber,
+                           data: {},
+                           dataSource: orderIdSource }"/>
+        </div>
+    </div>
+    <div style='clear: both'></div>
+
+    <div class="gray" style="padding: 15px 0px 3px 15px"><b>or set tracking directly</b>
+    </div>
+    <div style='padding-left: 20px'>
+        <div class="editor-label">Tracking Number</div>
+        <div class="editor-field">
+            <input name="TrackingNumber"
+                   style='width: 200px'
+                   data-bind="value: trackingNumber"
+                   class="k-textbox"/>
+        </div>
+    </div>
+    <div style='clear: both'></div>
+
+    <div style="padding: 20px 0px 0px 20px">
+        <div class="editor-label">Comment</div>
+        <div class="editor-field">
+            <textarea name="Comment"
+                      rows="3"
+                      style='width: 200px'
+                      class="k-textbox"></textarea>
+        </div>
+    </div>
+    <div style='clear: both'></div>
+</div>

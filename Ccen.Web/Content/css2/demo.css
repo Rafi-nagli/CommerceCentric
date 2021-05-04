@@ -1,0 +1,12 @@
+﻿.demo-status {
+    background: #ff9966;
+    color: white;
+}
+
+.demo-status td {
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+

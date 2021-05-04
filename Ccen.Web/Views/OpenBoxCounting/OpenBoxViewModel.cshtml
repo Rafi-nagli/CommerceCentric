@@ -1,0 +1,90 @@
+﻿@using Amazon.Web.HtmlExtend
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Inventory.Counting.OpenBoxCountingViewModel
+@{
+    Layout = null;
+    Model.StyleItems.Title = "Quantities in One Box";
+}
+
+<script type="text/javascript">
+    var OpenBoxViewModel = function(model, settings) {
+        var self = this;
+
+        self.canEditCountPerson = ko.observable(model.CanEditCountPerson);
+
+        console.log(model.CountingDateUtc);
+        //var date = moment.tz(model.)
+        self.batchTimeStatusList = ko.observableArray(settings.batchTimeStatusList);
+        self.countPersonList = ko.observableArray(settings.countPersonList);
+
+        var date = moment.utc(model.CountingDateUtc);//, "America/New_York");//model.CreateDate).tz("EST");
+
+        self.CountingDateUtc = ko.observable(new Date(date.format()));
+        self.BatchTimeStatus = ko.observable(model.BatchTimeStatus.toString());
+        self.CountByName = ko.observable(model.CountByName);
+    }
+
+    $(document).ready(function() {
+        console.log("onready");
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+            batchTimeStatusList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.BatchTimeStatusList)),
+            countPersonList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.CountPersonList)),
+        };
+
+        var vm = new OpenBoxViewModel(model, settings);
+        ko.applyBindings(vm, document.getElementById('edit-container'));
+    });
+</script>
+
+<div id="edit-container">
+    @Html.ValidationSummary(true)
+
+    @Html.HiddenFor(m => m.Id)
+    @Html.HiddenFor(m => m.StyleId)
+    
+    <div class="k-edit-form-container">
+        <div class="editor-label"># of Boxes</div>
+        <div class="editor-field">
+            @Html.TextBoxFor(m => m.BoxQuantity, new { @class = "k-textbox", type = "number" })
+            @Html.ValidationMessageFor(m => m.BoxQuantity)
+        </div>
+        
+        <div class="editor-label">Counting Date</div>
+        <div class="editor-field">
+            <input name="CountingDateUtc" data-bind="kendoDateTimePicker: { value: CountingDateUtc, format: 'MM/dd/yyyy HH:mm' }"/>
+        </div>
+
+        <div class="editor-label">Batch Status</div>
+        <div class="editor-field">
+            <div data-bind="foreach: batchTimeStatusList">
+                <div style="margin: 10px">
+                    <label><input type="radio" name="BatchTimeStatus" data-bind="checked: $root.BatchTimeStatus(), value: Value" /> <span data-bind="text: Text"></span></label>
+                </div>
+            </div>
+        </div>
+
+        <div class="editor-label">Counted by</div>
+        <div class="editor-field">
+            <input type="hidden" name="CountByName" data-bind="value: CountByName" />
+            <div data-bind="visible: canEditCountPerson">
+                <input style="width: 180px"
+                       data-bind="kendoDropDownList: {data: countPersonList,
+                                    value: CountByName,
+                                    dataTextField: 'Text',
+                                    dataValueField: 'Value' }"/>
+            </div>
+            <div data-bind="visible: !canEditCountPerson()" style="margin: 3px">
+                <span data-bind="text: CountByName"></span>
+            </div>
+        </div>
+
+        <div class="clear"></div>
+        <div style="padding-top: 10px; padding-left: 50px">
+            @Html.Partial("_ItemStyleItems", Model.StyleItems)
+        </div>
+        <div class="clear"></div>
+    </div>
+
+</div>

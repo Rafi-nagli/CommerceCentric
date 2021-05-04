@@ -1,0 +1,290 @@
+﻿@using Amazon.Core.Models
+@model Amazon.Web.ViewModels.Pages.OrderHistoryControlViewModel
+
+<script type="text/javascript">
+
+    var OrderMessageSummaryViewModel = function(model, settings) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+
+        self.isMessageMode = ko.observable(false);
+        self.messageText = ko.observable("");
+
+        self.orderNumber = ko.observable("");
+        self.orderEntityId = ko.observable(null);
+
+        self.lastComment = ko.observable(null);
+        self.commentCount = ko.observable(null);
+        self.comments = ko.observable([]);
+
+        self.emailCount = ko.observable(null);
+        self.emails = ko.observable([]);
+
+        self.hasLastComment = ko.computed(function() {
+            return self.lastComment() != null;
+        });
+
+        self.otherEmailCount = ko.computed(function() {
+            return Math.max(0, (self.emailCount() || 0) - 1);
+        });
+
+        self.otherCommentCount = ko.computed(function() {
+            return Math.max(0, (self.commentCount() || 0) - 1);
+        });
+
+        self.setOrderNumber = function(orderNumber) {
+            console.log("messageSummary. setOrderNumber, orderNumber=" + orderNumber);
+
+            if (self.orderNumber() == orderNumber) {
+                console.log("skip. order number the same");
+                return;
+            }
+
+            self.clear();
+            self.orderNumber(orderNumber);
+
+            self.load();
+        }
+
+        self.loadingOtherMessagesStatus = ko.observable(0);
+        self.isLoadingOtherMessages = ko.computed(function() {
+            return self.loadingOtherMessagesStatus() == 1;
+        });
+
+        self.isOtherCommentsCollapsed = ko.observable(true);
+        self.onToggleOtherComments = function() {
+            self.isOtherCommentsCollapsed(!self.isOtherCommentsCollapsed());
+        }
+
+        self.isOtherMessagesCollapsed = ko.observable(true);
+        self.onToggleOtherMessages = function() {
+            self.isOtherMessagesCollapsed(!self.isOtherMessagesCollapsed());
+            if (self.loadingOtherMessagesStatus() == 0) {
+                self.loadingOtherMessagesStatus(1);
+                $.ajax({
+                    url: '@Url.Action("GetEmailsByOrderId", "OrderInfo")',
+                    data: { orderId: self.orderNumber() },
+                    cache: false,
+                    success: function(data) {
+                        console.log("GetEmailsByOrderId.success");
+
+                        $.each(data, function(i, n) {
+                            n.ReceiveDate = ko.observable(kendo.parseDate(n.ReceiveDate)).extend({
+                                format: "MM/dd/yyyy HH:mm"
+                            });
+                            n.isSelected = ko.observable(n.Id == self.model.EmailId);
+                        });
+
+                        self.emails(data);
+                        self.loadingOtherMessagesStatus(2);
+                    }
+                });
+            }
+        }
+
+        self.load = function() {
+            console.log("messageSummary.init");
+            Message.clear();
+
+            self.setMessage('Loading...');
+
+            $.ajax({
+                url: '@Url.Action("GetOrderMessagesSummary", "OrderInfo")',
+                cache: false,
+                data: {
+                    orderNumber: self.orderNumber()
+                }
+            }).done(function(result) {
+                if (result.IsSuccess) {
+                    console.log("messageSummary.success");
+                    self.showModel(result.Data);
+
+                    self.setMessage(null);
+                } else {
+                    self.setMessage("Order not found");
+                }
+            });
+        };
+
+        self.clear = function() {
+            self.lastComment(null);
+            self.emailCount(null);
+
+            self.emails([]);
+            self.isOtherMessagesCollapsed(true);
+
+            self.orderNumber(null);
+            self.orderEntityId(null);
+        }
+
+        self.showModel = function(model) {
+            console.log("messageSummary.showModel");
+            console.log(model);
+
+            self.orderNumber(model.OrderNumber);
+            self.orderEntityId(model.OrderEntityId);
+
+            self.comments(model.Comments);
+            self.lastComment(model.Comments.length > 0 ? model.Comments[0] : null);
+            self.commentCount(model.Comments.length);
+
+            self.emailCount(model.EmailCount);
+        };
+
+        self.setMessage = function(message) {
+            console.log("setMessage: " + message);
+            if (message != null && message != '') {
+                self.isMessageMode(true);
+            } else {
+                self.isMessageMode(false);
+            }
+            self.messageText(message);
+        }
+
+        self.setOrderNumber(model.OrderNumber);
+
+        $.subscribe('ordernumber-changed', function(e, orderNumber) { self.setOrderNumber(orderNumber); });
+    };
+</script>
+
+
+<!-- ko stopBinding: true -->
+
+<div id="order-message-summary-content">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            Other Messages
+        </div>
+        <div class="panel-body">
+            <div style="padding: 15px" data-bind="visible: isMessageMode">
+                <span data-bind="text: messageText"></span>
+            </div>
+
+            <div style="font-size: 13px; min-height: 50px; display: none"
+                 data-bind="visible: !isMessageMode()">
+                <div>
+                    <div>
+                        <span class="gray">Last comment: </span>
+                        <span data-bind="visible: hasLastComment, with: lastComment">
+                            <span data-bind="textFormatted: Comment, ifEmpty: '-'"></span>
+                        </span>
+                        <span data-bind="visible: !hasLastComment()">-</span>
+                    </div>
+                    <div data-bind="visible: hasLastComment, with: lastComment">
+                        <span class="gray">by: </span><span data-bind="textFormatted: CommentByName, ifEmpty: 'system'"></span>
+                        <span class="gray">, at: </span><span data-bind="textFormatted: CommentDate, pattern: 'MM/dd/yyyy', ifEmpty: '-'"></span>
+                    </div>
+                </div>
+                <div>
+                    <div data-bind="click: onToggleOtherComments"
+                         style="padding: 4px 0px; margin-top: 5px; border-bottom: 1px solid #ccc; font-weight: bold; cursor: pointer">
+                        <span>Comments:</span>
+                        <span data-bind="text: commentCount"></span>
+                        <span class="pull-right clickable">
+                            <a style="color: #333"
+                               href="javascript:;">
+                                <i class="glyphicon glyphicon-chevron-down" data-bind="css: { 'glyphicon-chevron-down' : !isOtherCommentsCollapsed(), 'glyphicon-chevron-up' : isOtherCommentsCollapsed()}"></i>
+                            </a>
+                        </span>
+                    </div>
+                    <div data-bind="visible: !isOtherCommentsCollapsed()">
+                        <div class="list" style="padding-top: 5px; padding-right: 5px; overflow-y: scroll; max-height: 500px;">
+                            <table data-bind="foreach: comments">
+                                <tr>
+                                    <td>
+                                        <div style="padding-bottom: 4px">
+                                            <div>
+                                                <span class="gray">#<span data-bind='text: $index() + 1'></span>: </span>
+                                                <span data-bind="textFormatted: Comment, ifEmpty: '-'"></span>
+                                            </div>
+                                            <div>
+                                                <span class="gray">by: </span><span data-bind="textFormatted: CommentByName, ifEmpty: 'system'"></span>
+                                                <span class="gray">, at: </span><span data-bind="textFormatted: CommentDate, pattern: 'MM/dd/yyyy', ifEmpty: '-'"></span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div data-bind="click: onToggleOtherMessages"
+                         style="padding: 4px 0px; margin-top: 5px; border-bottom: 1px solid #ccc; font-weight: bold; cursor: pointer">
+                        <span>Emails:</span>
+                        <span data-bind="text: emailCount"></span>
+                        <span class="pull-right clickable">
+                            <a style="color: #333"
+                               href="javascript:;">
+                                <i class="glyphicon glyphicon-chevron-down" data-bind="css: { 'glyphicon-chevron-down' : !isOtherMessagesCollapsed(), 'glyphicon-chevron-up' : isOtherMessagesCollapsed()}"></i>
+                            </a>
+                        </span>
+                    </div>
+                    <div data-bind="visible: !isOtherMessagesCollapsed()">
+                        <div data-bind="visible: isLoadingOtherMessages()"
+                             style="padding: 4px">Loading...</div>
+                        <div data-bind="visible: !isLoadingOtherMessages()">
+                            <div class="list" style="padding-top: 5px; padding-right: 5px; overflow-y: scroll; max-height: 500px;">
+                                <table data-bind="foreach: emails">
+                                    <tr>
+                                        <td>
+                                            <div style="border-bottom: 1px solid #ccc; margin: 0px; padding: 6px 4px"
+                                                 data-bind="style: { 'background-color': isSelected() ? '#efefef' : 'none'}">
+                                                <div>
+                                                    <span data-bind="text: FolderName, css: { 'sent-folder' : IsSent, 'inbox-folder': !IsSent}" class="folder"
+                                                          style="margin-right: 0px"></span>
+                                                    <a target="_blank"
+                                                       data-bind="attr: { href: ViewEmailUrl }"
+                                                       style="">
+                                                        <span data-bind="html: Subject" />
+                                                    </a>
+                                                </div>
+                                                <div style="padding-top: 2px; padding-bottom: 2px; font-size: 12px"><span class="gray">Date:</span> <span data-bind="text: ReceiveDate"></span></div>
+                                                <div style="font-size: 11px;">
+                                                    <span class="gray">From:</span> <span data-bind="text: FromName"></span> <<a data-bind="attr: {'href' : FromEmail}"><span data-bind="text: FromEmail"></span></a>>
+                                                </div>
+                                                
+                                                <div style="clear: both"></div>
+                                                <div data-bind="html: ShortBody" style="padding-top: 3px;  color: #333; font-size: 13px"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- /ko -->
+
+<script type="text/javascript">
+    var orderMessageSummaryVm = null;
+
+    $(document).ready(function () {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        var settings = {
+        };
+
+        orderMessageSummaryVm = new OrderMessageSummaryViewModel(model, settings);
+
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error-inline",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(orderMessageSummaryVm, document.getElementById('order-message-summary-content'));
+    });
+</script>

@@ -1,0 +1,303 @@
+﻿
+.item-popup {
+    
+}
+
+.item-popup .k-edit-form-container .editor-label {
+    padding-top: 0em;
+    padding-bottom: 0em;
+}
+
+.item-child-popup .k-edit-form-container .editor-label {
+    padding-top: 0.2em;
+    padding-bottom: 0em;
+}
+
+.amz .flag-button {
+    border: 1px solid #999;
+}
+
+.amz .flag-link, .amz .k-grid .flag-link, .amz .k-grid .flag-link-active {
+    display: block;
+    margin: 2px;
+    padding: 0px;
+    width: 32px;
+    height: 26px;
+    border: 1px solid #666;
+    -moz-border-radius: 2px;
+    -webkit-border-radius: 2px;
+    border-radius: 2px;
+    opacity: 0.7;
+}
+
+.amz .k-grid .flag-link-active {
+    opacity: 1.0;
+}
+
+.amz .k-grid .flag-link:hover {
+    border: 1px solid #888;
+    opacity: 1;
+}
+
+.amz .flag-US, .amz .k-content .flag-US {
+    background: url('/Images/Flags/United-states-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-UK, .amz .k-content .flag-UK {
+    background: url('/Images/Flags/United-kingdom-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-AU, .amz .k-content .flag-AU {
+    background: url('/Images/Flags/Australia-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-ES, .amz .k-content .flag-ES {
+    background: url('/Images/Flags/European-union-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-IT, .amz .k-content .flag-IT {
+    background: url('/Images/Flags/European-union-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-DE, .amz .k-content .flag-DE {
+    background: url('/Images/Flags/European-union-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-FR, .amz .k-content .flag-FR {
+    background: url('/Images/Flags/European-union-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-CA, .amz .k-content .flag-CA {
+    background: url('/Images/Flags/Canada-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-MX, .amz .k-content .flag-MX {
+    background: url('/Images/Flags/Mexico-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-IN, .amz .k-content .flag-IN {
+    background: url('/Images/Flags/India-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-eBay, .amz .k-content .flag-eBay {
+    background: url('/Images/Flags/Ebay-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-eBay4kids, .amz .k-content .flag-eBay4kids {
+    background: url('/Images/Flags/Ebay-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-eBayPA, .amz .k-content .flag-eBayPA {
+    background: url('/Images/Flags/Ebay-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-MG, .amz .k-content .flag-MG {
+    background: url('/Images/Flags/Magento-flag.png') no-repeat center center;
+    background-size: 26px 26px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-GP, .amz .k-content .flag-GP {
+    background: url('/Images/Flags/Groupon-flag.png') no-repeat center center;
+    background-size: 26px 26px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-SH, .amz .k-content .flag-SH,
+.amz .flag-MBG, .amz .k-content .flag-MBG{
+    background: url('/Images/Flags/MBB-flag.png') no-repeat center center;
+    background-size: 26px 26px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-WOO, .amz .k-content .flag-WOO,
+.amz .flag-HDEA, .amz .k-content .flag-HDEA {
+    background: url('/Images/Flags/WooCommerce-flag.png') no-repeat center center;
+    background-size: 26px 26px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-BLONDE, .amz .k-content .flag-BLONDE {
+    background: url('/Images/Flags/Shopify-flag.png') no-repeat center center;
+    background-size: 26px 26px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-Walmart, .amz .k-content .flag-Walmart,
+.amz .flag-WM, .amz .k-content .flag-WM {
+    background: url('/Images/Flags/Walmart-flag.png') no-repeat center center;
+    background-size: 26px 26px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-WalmartCA, .amz .k-content .flag-WalmartCA,
+.amz .flag-WM-CA, .amz .k-content .flag-WM-CA {
+    background: url('/Images/Flags/Walmart-CA-flag.png') no-repeat center center;
+    background-size: 26px 26px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-Jet, .amz .k-content .flag-Jet {
+    background: url('/Images/Flags/Jet-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-OS, .amz .k-content .flag-OS {
+    background: url('/Images/Flags/OverStock-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .market-higtlight {
+    border-bottom: 2px solid #e51400;
+    background: #efefef;
+    padding: 2px 0px;
+}
+
+.amz .market-higtlight a {
+    opacity: 1;
+}
+
+.btn-red-line {
+    border-bottom: 2px red solid;
+}
+
+
+
+.am-item-popup .k-edit-form-container {
+    font-size: 13px !important;
+    width: auto;
+}
+
+.am-item-popup .panel-body {
+    padding: 10px 10px;
+}
+
+.am-item-popup .panel-heading {
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+.am-item-popup .display-field,
+.am-item-popup .editor-field,
+.am-item-popup .editor-label {
+    margin-top: 0px;
+    vertical-align: middle;
+}
+
+.am-item-popup .k-edit-form-container .editor-label {
+    width: 20%;
+}
+
+.am-item-popup .k-edit-form-container .editor-field {
+    width: 70%;
+}
+
+.am-item-popup .variation-list td {
+    vertical-align: top;
+}

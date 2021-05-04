@@ -1,0 +1,671 @@
+﻿@using Amazon.Common.Helpers
+@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.Models
+@model Amazon.Web.ViewModels.Pages.StylePageViewModel
+@{
+    ViewBag.Title = "Inventory";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/inventory.ico" />
+}
+
+<div id="page-content" class="inventory-page">
+
+    <ol class="breadcrumb">
+        <li><a href="#">Inventory</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <div class="messages-block">
+                <div><span id="infoMessage" class="text-info"></span></div>
+                <div><span id="errorMessage" class="label label-danger"></span></div>
+                <div><span id="successMessage" class="label label-success"></span></div>
+            </div>
+
+            @if (AccessManager.Company.ShortName == PortalEnum.BS.ToString()
+                || AccessManager.Company.ShortName == PortalEnum.HDEA.ToString())
+            {
+                <table style="width: 100%">
+                    <colgroup>
+                        <col style="width: 80px" />
+                        <col style="width: 230px" />
+                        <col style="width: 100px" />
+                        <col style="width: 300px" />
+                        <col style="width: 110px" />
+                        <col style="width: 180px" />
+                        <col style="width: 110px" />
+                        <col style="width: 180px" />
+                        <col style="width: 110px" />
+                        <col style="width: auto" />
+                    </colgroup>
+                    <tr>
+                        <th>Barcode:</th>
+                        <td>
+                            <input type="text"
+                                   style="width: 150px"
+                                   class="k-textbox"
+                                   data-bind="value: searchFilters.barcode, valueUpdate:'afterkeydown', event: { keypress: searchByKeyCmd }" />
+                        </td>
+                        <th>Online Status:</th>
+                        <td>
+                            <input data-bind="kendoDropDownList: { data: searchFilters.onlineStatusList, value: searchFilters.onlineStatus, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'All' }" />
+                        </td>
+                        <th>Min Qty:</th>
+                        <td>
+                            <input type="text" class="k-textbox" data-bind="value: searchFilters.minQty, valueUpdate:'afterkeydown', event: { keypress: searchByKeyCmd }" min="0" max="100000" style="width: 50px" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Keywords:</th>
+                        <td>
+                            <input type="text"
+                                   style="width: 240px; border-color: #2d2d2d"
+                                   class="k-textbox"
+                                   data-bind="value: searchFilters.keywords, valueUpdate:'afterkeydown', event: { keypress: searchByKeyCmd }" />
+                        </td>
+                        <th>Has Initial Qty:</th>
+                        <td>
+                            <input type="checkbox" data-bind="checked: searchFilters.hasInitialQty" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>StyleId:</th>
+                        <td style="padding-right: 20px">
+                            <input type="text"
+                                   class="k-textbox"
+                                   style="border-color: #2d2d2d"
+                                   data-bind="value: searchFilters.styleId, valueUpdate:'afterkeydown'" />
+                        </td>
+                        <th>On Hold:</th>
+                        <td>
+                            <input type="checkbox" data-bind="checked: searchFilters.onlyOnHold" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="text-align: left; padding-top: 5px">
+                            <button class="k-button"
+                                    style="width: 110px; margin: 0px 0px 0px 0px; padding: 3px 20px 3px 20px"
+                                    data-bind="click: search">
+                                <span class='glyphicon glyphicon-search am-icon'></span>Search
+                            </button>
+                            <button class="k-button"
+                                    style="width: 100px; margin: 0px 0px 0px 10px; padding: 3px 20px 3px 20px"
+                                    data-bind="click: clear">
+                                <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+                            </button>
+                        </td>
+                    </tr>
+                </table>
+            }
+            else
+            {
+                <table style="width: 100%">
+                    <colgroup>
+                        <col style="width: 80px" />
+                        <col style="width: 230px" />
+                        <col style="width: 100px" />
+                        <col style="width: 300px" />
+                        <col style="width: 110px" />
+                        <col style="width: 180px" />
+                        <col style="width: 110px" />
+                        <col style="width: 180px" />
+                        <col style="width: 110px" />
+                        <col style="width: auto" />
+                    </colgroup>
+                    <tr>
+                        <th></th>
+                        <td></td>
+                        <th>Gender:</th>
+                        <td style="padding-right: 10px">
+                            <input data-bind="kendoDropDownList: { data: searchFilters.genderList, value: searchFilters.gender, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+                        </td>
+                        <th>Online Status:</th>
+                        <td>
+                            <input data-bind="kendoDropDownList: { data: searchFilters.onlineStatusList, value: searchFilters.onlineStatus, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'All' }" />
+                        </td>
+                        <th>Not on Marketplace:</th>
+                        <td>
+                            <input data-bind="kendoDropDownList: { data: searchFilters.marketplaceList, value: searchFilters.excludeMarketplaceId, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+                        </td>
+                        <th>Min Qty:</th>
+                        <td>
+                            <input type="text" class="k-textbox" data-bind="value: searchFilters.minQty, valueUpdate:'afterkeydown', event: { keypress: searchByKeyCmd }" min="0" max="100000" style="width: 50px" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Barcode:</th>
+                        <td>
+                            <input type="text"
+                                   style="width: 150px"
+                                   class="k-textbox"
+                                   data-bind="value: searchFilters.barcode, valueUpdate:'afterkeydown', event: { keypress: searchByKeyCmd }" />
+                        </td>
+                        <th>Item Style:</th>
+                        <td>
+                            <input style="width: 280px"
+                                   data-bind="kendoMultiSelect: { data: searchFilters.itemStyleList, value: searchFilters.itemStyles, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+                        </td>
+                        <th>Main License:</th>
+                        <td>
+                            <input style="width: 180px" data-bind="kendoDropDownList: { data: searchFilters.mainLicenseList, value: searchFilters.mainLicense, dataTextField: 'Text', dataValueField: 'ParentValue', optionLabel: 'Select...' }" />
+                        </td>
+                        <th>On Marketplace:</th>
+                        <td>
+                            <input data-bind="kendoDropDownList: { data: searchFilters.marketplaceList, value: searchFilters.includeMarketplaceId, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+                        </td>
+                        <th>Has Initial Qty:</th>
+                        <td>
+                            <input type="checkbox" data-bind="checked: searchFilters.hasInitialQty" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Keywords:</th>
+                        <td>
+                            <input type="text"
+                                   style="width: 240px; border-color: #2d2d2d"
+                                   class="k-textbox"
+                                   data-bind="value: searchFilters.keywords, valueUpdate:'afterkeydown', event: { keypress: searchByKeyCmd }" />
+                        </td>
+                        <th>Sleeve:</th>
+                        <td>
+                            <input style="width: 280px"
+                                   data-bind="kendoMultiSelect: { data: searchFilters.sleeveList, value: searchFilters.sleeves, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+                        </td>
+                        <th>Sub License:</th>
+                        <td>
+                            <input id="SubLicense" style="width: 180px" data-bind="kendoDropDownList: {data: searchFilters.subLicenseList, value: searchFilters.subLicense, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...', enabled: searchFilters.enableSubLicense }" />
+                        </td>
+                        <th>Style Status:</th>
+                        <td>
+                            <input id="FillingStatus" style="width: 180px" data-bind="kendoDropDownList: {data: searchFilters.fillingStatusList, value: searchFilters.fillingStatus, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'All' }" />
+                        </td>
+                        <th>Include Kiosk</th>
+                        <td>
+                            <input type="checkbox" data-bind="checked: searchFilters.includeKiosk" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>StyleId:</th>
+                        <td style="padding-right: 20px">
+                            <input type="text"
+                                   class="k-textbox"
+                                   style="border-color: #2d2d2d"
+                                   data-bind="value: searchFilters.styleId, valueUpdate:'afterkeydown'" />
+                        </td>
+                        <th style="vertical-align: top; padding-top: 7px">Drop Shipper:</th>
+                        <td style="padding-right: 20px; vertical-align: top">
+                            <input data-bind="kendoDropDownList: { data: searchFilters.dropShipperList, value: searchFilters.dropShipperId, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'All' }" />
+                        </td>
+                        <th>Selling History:</th>
+                        <td>
+                            <input id="SellingHistory" name="SellingHistory" style="width: 180px" data-bind="kendoDropDownList: { data: searchFilters.noneSoldPeriodList, value: searchFilters.noneSoldPeriod, dataTextField: 'Text', dataValueField: 'Value' }" />
+                        </td>
+                        <th>Holiday:</th>
+                        <td>
+                            <input data-bind="kendoDropDownList: { data: searchFilters.holidayList, value: searchFilters.holidayId, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+                        </td>
+                        <th>On Hold:</th>
+                        <td>
+                            <input type="checkbox" data-bind="checked: searchFilters.onlyOnHold" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th></th>
+                        <td></td>
+                        <th></th>
+                        <td></td>
+                        <th></th>
+                        <td></td>
+                        <th>Picture Status:</th>
+                        <td>
+                            <input id="PictureStatus" style="width: 180px" data-bind="kendoDropDownList: {data: searchFilters.pictureStatusList, value: searchFilters.pictureStatus, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'All' }" />
+                        </td>
+                        <th></th>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="text-align: left; padding-top: 5px">
+                            <button class="k-button"
+                                    style="width: 110px; margin: 0px 0px 0px 0px; padding: 3px 20px 3px 20px"
+                                    data-bind="click: search">
+                                <span class='glyphicon glyphicon-search am-icon'></span>Search
+                            </button>
+                            <button class="k-button"
+                                    style="width: 100px; margin: 0px 0px 0px 10px; padding: 3px 20px 3px 20px"
+                                    data-bind="click: clear">
+                                <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+                            </button>
+                        </td>
+                    </tr>
+                </table>
+            }
+        </div>
+    </div>
+
+    <div class="k-toolbar k-grid-toolbar">
+        @if (AccessManager.CanEditStyle())
+        {
+            <div class="dropdown" style="float: left; margin-right: 30px">
+                <button class="k-button k-button-icontext k-grid-add dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Actions<span class="k-icon k-i-arrow-s" style="margin-bottom: 3px; margin-left: 2px"></span>
+                </button>
+                <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                    <a class="dropdown-item" data-bind="click: addToGroup" href="#">Add to Group</a>
+                </div>
+            </div>
+
+            <div style="float: left">
+                <a href="#"
+                   class="k-button k-button-icontext k-grid-add"
+                   style="margin: 0px 20px 0px 10px"
+                   data-bind="click: addStyle">
+                    <span class="k-icon k-add"></span>
+                    Add new style
+                </a>
+
+                <a href="#"
+                   class="k-button k-button-icontext k-grid-add"
+                   style="margin-right: 80px"
+                   data-bind="click: addReferenceStyle">
+                    <span class="k-icon k-add"></span>
+                    Add virtual style
+                </a>
+
+                <a href="#"
+                   class="k-button k-button-icontext k-grid-add"
+                   style="margin-right: 20px"
+                   data-bind="click: mergeStyle">
+                    <span class="glyphicon glyphicon-join am-icon"></span>
+                    Merge styles...
+                </a>
+            </div>
+        }
+
+        <div class="clear"></div>
+        <div style="padding-top: 4px; padding-left: 4px">
+            <div style="float: left; margin-right: 10px">
+                <span class="gray">checked:</span> <span data-bind="text: checkedCount"></span>
+            </div>
+            
+            <div style="float: left">
+                <span class="toolbar-label">
+                    <span>
+                        <a href="javascript:;"
+                           data-bind="click: checkAllOnPage">check page</a>
+                    </span>
+                    <span> / </span>
+                    <span>
+                        <a href="javascript:;"
+                           data-bind="click: uncheckAllOnPage">uncheck page</a>
+                    </span>
+                </span>
+            </div>
+        </div>
+        <div class="clear"></div>
+    </div>
+    
+    <div class="grid-small">
+        <div data-bind='component: {
+        name: "grid-pager",
+        params: { itemCount: grid.itemCount, pageIndex: grid.pageIndex, itemsPerPage: grid.itemsPerPage, refreshCallback: grid.reload }
+        }'></div>
+
+        <div data-bind='component: {
+         name: "fast-grid",
+         params: fastGridSettings }'></div>
+
+        <div data-bind='component: {
+        name: "grid-pager",
+        params: { itemCount: grid.itemCount, pageIndex: grid.pageIndex, itemsPerPage: grid.itemsPerPage, refreshCallback: grid.reload }
+        }'></div>
+    </div>
+</div>
+
+
+
+@Html.Partial(MVC.Shared.Views._TemplatesStyle)
+
+@Html.Partial("_TemplateGridPager")
+@Html.Partial("_TemplateFastGrid")
+
+<script type="text/x-kendo-template" id="style-buttons-column-template">
+    <div>
+        @if (AccessManager.CanEditStyle())
+        {
+            <a href='javascript: void(0)' class='k-button' style='width:80px' onclick='javascript: styleListVm.editDefaultStyle(this, "#=data.Id#")'><span class='glyphicon glyphicon-pencil am-icon'></span>Edit</a>
+        }
+    </div>
+
+    <a href='javascript: void(0)' class='k-button' style='margin-top:4px; width:80px' onclick='styleListVm.editStyleQuantity(this, "#=data.Id#")'><span class='glyphicon glyphicon-list am-icon'></span>Qty</a>
+
+    @if (AccessManager.CanEditStyle())
+    {
+        <a href='javascript: void(0)' class='k-button' style='margin-top:4px; width:80px' onclick='styleListVm.editStylePrice(this, "#=data.Id#")'><span class='glyphicon glyphicon-usd am-icon'></span>Price</a>
+    }
+    <div style="display: #=data.Type == @((int)StyleTypes.References) ? 'block' : 'none'#">
+        @if (AccessManager.CanEditStyle())
+        {
+            <a href='javascript: void(0)' class='k-button' style='margin-top:4px; width:80px' onclick='javascript: styleListVm.editReferenceStyle(this, "#=data.Id#")'><span class='glyphicon glyphicon-join am-icon'></span>Virtual</a>
+        }
+    </div>
+</script>
+
+<script type="text/x-kendo-template" id="style-buttons2-column-template">
+    <a class='k-button k-button-icontext'
+       id='historyOrderButton'
+       style='min-width: 20px'
+       target="_blank"
+       href="@Url.Action("StyleHistory", "Inventory")?styleString=#=StyleId#">
+        <span class='glyphicon glyphicon-new-window am-icon'></span>
+    </a>
+
+    <a href='javascript: void(0)' class='k-button' style='margin-top:4px; width:80px' onclick='styleListVm.toggleHold(this, "#=data.Id#")'>
+        #if (OnHold) {#
+            <span class='glyphicon glyphicon-ban-circle am-icon'></span>UnHold
+        #} else {#
+            <span class='glyphicon glyphicon-ban-circle am-icon'></span>Hold
+        #}#
+    </a>
+
+    <a class='k-button'
+        style='margin-top:4px; width:80px'
+        target="_blank"
+        href="@Url.Action("Index", "QuantityOperation")?type=Lost&styleId=#=data.StyleId#">
+        <span class='glyphicon glyphicon-list-alt am-icon'></span>Lost
+    </a>
+
+</script>
+
+
+<script type="text/kendo-tmpl" id="style-row-template">
+    <tr class="k-master-row #=data._isAlt ? 'k-alt': ''#" row-uid="#=data.Id#">
+        <td class="k-hierarchy-cell">
+            <a class="k-icon k-plus" href='javascript: void(0)' onclick='styleListVm.toggleGridRow("#=data.Id#")' tabindex="-1"></a>
+        </td>
+        <td><input class='check_row' type='checkbox' onclick='javascript: styleListVm.checkOne(this, "#=data.Id#")' /></td>
+        <td>#=data.Id#</td>
+        <td>#= tmpl.t('styleid-complex-column-template', data)#</td>
+        <td>#= tmpl.t('ds-column-template', data)#</td>
+        <td>#= tmpl.t('quantity-complex-column-template', data)#</td>
+        <td>#= tmpl.t('remaining-column-template', data)#</td>
+        <td>#= tmpl.t('boxprice-column-template', data)#</td>
+        <td>#= tmpl.t('size-column-template', data)#</td>
+        <td>#= tmpl.t('location-column-template', data)#</td>
+        <td>#= tmpl.f(data.CreateDate, '@(DateHelper.DateFormat)')#</td>
+        <td>#= tmpl.t('style-buttons-column-template', data)#</td>
+        @if (AccessManager.CanDoStyleOperations())
+        {
+            <td>#= tmpl.t('style-buttons2-column-template', data)#</td>
+        }
+        @if (AccessManager.CanEditStyle())
+        {
+            <td><a href='javascript: void(0)' class='k-button' style='min-width: 25px' onclick='styleListVm.deleteStyle(this, "#=data.Id#")'><span class='glyphicon glyphicon-remove am-icon'></span></a></td>
+        }
+    </tr>
+    <tr class="k-detail-row" id="Detail_#=data.Id#" style="display:none">
+        <td class="k-hierarchy-cell"></td>
+        <td class="k-detail-cell" colspan="13">
+            <div>
+                <div class="k-toolbar k-grid-toolbar">
+                    @if (AccessManager.CanEditStyle())
+                    {
+                        <a href="javascript: styleListVm.createBoxWizard(this, '#=data.Id#')"
+                           class="k-button k-button-icontext k-grid-add">
+                            <span class="k-icon k-add"></span>Add Boxes Wizard
+                        </a>
+                    }
+                </div>
+
+                <div class="k-toolbar k-grid-toolbar k-toolbar-title"><span class="toolbar-label">Sealed Boxes:</span></div>
+                <div class="k-toolbar k-grid-toolbar">
+                    @if (AccessManager.CanEditStyle())
+                    {
+                        <a href="javascript: styleListVm.createSealedBox(this, '#=data.Id#')" 
+                           class="k-button k-button-icontext k-grid-add"
+                           style="margin-right: 20px">
+                            <span class="k-icon k-add"></span>Add Sealed Box
+                        </a>
+                    }
+                </div>
+                <div class="k-widget k-grid k-secondary">
+                    <div class="k-loading-mask" id="SealedBox_Loading_#=data.Id#" style="width: 100%; height: 100%; top: 0px; left: 0px; display: none">
+                        <span class="k-loading-text">Loading...</span>
+                        <div class="k-loading-image"></div>
+                        <div class="k-loading-color"></div>
+                    </div>
+
+                    <table cellspacing="0">
+                        <colgroup>
+                            <col width="60px" />
+                            <col />
+                            <col />
+                            <col />
+                            <col />
+                            <col />
+                            <col />
+                            <col />
+                            <col />
+                            <col />
+                            <col />
+                            <col width="75px" />
+                        </colgroup>
+                        <thead class="k-grid-header">
+                            <tr>
+                                <th class="k-header"><span class="k-link">Id</span></th>
+                                <th class="k-header"><span class="k-link">Boxes ID</span></th>
+                                <th class="k-header"><span class="k-link">Breakdown</span></th>
+                                <th class="k-header"><span class="k-link">Boxes</span></th>
+                                <th class="k-header"><span class="k-link">Total Qty</span></th>
+                                <th class="k-header"><span class="k-link">Cost, $</span></th>
+                                <th class="k-header"><span class="k-link">Owned</span></th>
+                                @*<th class="k-header"><span class="k-link">Printed</span></th>*@
+                                <th class="k-header"><span class="k-link">Archived</span></th>
+                                <th class="k-header"><span class="k-link">Invoice Date</span></th>
+                                <th class="k-header"><span class="k-link">Entered On</span></th>
+                                <th class="k-header"><span class="k-link">Updated By</span></th>
+                                <th class="k-header"><span class="k-link">&nbsp;</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="SealedBox_#=data.Id#"></tbody>
+                    </table>
+                </div>
+                <div class="k-toolbar k-grid-toolbar k-toolbar-title"><span class="toolbar-label">Open Boxes:</span></div>
+                <div class="k-toolbar k-grid-toolbar">
+                    @if (AccessManager.CanEditStyle())
+                    {
+                        <a href="javascript: styleListVm.createOpenBox(this, '#=data.Id#')" 
+                           class="k-button k-button-icontext k-grid-add" 
+                           style="margin-right: 20px">
+                            <span class="k-icon k-add"></span> Add Open Box
+                        </a>
+                    }
+                </div>
+                <div class="k-widget k-grid k-secondary">
+                    <div class="k-loading-mask" id="OpenBox_Loading_#=data.Id#" style="width: 100%; height: 100%; top: 0px; left: 0px; display: none">
+                        <span class="k-loading-text">Loading...</span>
+                        <div class="k-loading-image"></div>
+                        <div class="k-loading-color"></div>
+                    </div>
+
+                    <table cellspacing="0">
+                        <colgroup>
+                            <col width="60px" />
+                            <col />
+                            <col />
+                            <col />
+                            <col />
+                            <col />
+                            <col />
+                            <col />
+                            <col />
+                            <col />
+                            <col />
+                            <col width="75px" />
+                        </colgroup>
+                        <thead class="k-grid-header">
+                            <tr>
+                                <th class="k-header"><span class="k-link">Id</span></th>
+                                <th class="k-header"><span class="k-link">Boxes ID</span></th>
+                                <th class="k-header"><span class="k-link">Sizes</span></th>
+                                <th class="k-header"><span class="k-link">Boxes</span></th>
+                                <th class="k-header"><span class="k-link">Total Qty</span></th>
+                                <th class="k-header"><span class="k-link">Cost, $</span></th>
+                                <th class="k-header"><span class="k-link">Owned</span></th>
+                                @*<th class="k-header"><span class="k-link">Printed</span></th>*@
+                                <th class="k-header"><span class="k-link">Archived</span></th>
+                                <th class="k-header"><span class="k-link">Invoice Date</span></th>
+                                <th class="k-header"><span class="k-link">Entered On</span></th>
+                                <th class="k-header"><span class="k-link">Updated By</span></th>
+                                <th class="k-header"><span class="k-link">&nbsp;</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="OpenBox_#=data.Id#"></tbody>
+                    </table>
+                </div>
+            </div>
+        </td>
+    </tr>
+</script>
+
+
+<script type="text/kendo-tmpl" id="style-sealedbox-row-template">
+    <tr class="k-master-row #=data.Archived ? 'am-row-disabled am-row-disabled-bg': ''#">
+        <td>#=data.Id#</td>
+        <td>#=data.BoxBarcode#</td>
+        <td>#=data.Breakdown#</td>
+        <td>#=data.BoxQuantity#</td>
+        <td>#=data.TotalBoxesQuantity#</td>
+        <td>#=tmpl.isNullFormat(data.Price, '$0.00', '-')#</td>
+        <td>#=tmpl.yesNo(data.Owned)#</td>
+        @*<td>#=tmpl.yesNo(data.Printed)#</td>*@
+        <td><span class="#=data.Archived ? 'red' : ''#">#=tmpl.yesNo(data.Archived)#</span></td>
+        <td>#=data.CreateDateFormatted#</td>
+        <td>#=data.OriginCreateDateFormatted#</td>
+        <td>#=tmpl.isNull(data.UpdatedByName, '-')#</td>
+        @if (AccessManager.CanEditStyle())
+        {
+            <td>
+                <a href='javascript: void(0)' class='k-button' onclick='styleListVm.editSealedBox(this, "#=data.Id#", "#=data.StyleId#")'>Edit</a>
+                <a href='javascript: void(0)' class='k-button' style='margin-top:4px' onclick='styleListVm.copySealedBox(this, "#=data.Id#", "#=data.StyleId#")'>Copy</a>
+                @if (AccessManager.IsAdmin)
+                {
+                    <a href='javascript: void(0)' class='k-button' style='margin-top:4px' onclick='styleListVm.deleteSealedBox(this, "#=data.Id#", "#=data.StyleId#")'>Delete</a>
+                }
+            </td>
+        }
+    </tr>
+</script>
+
+<script type="text/kendo-tmpl" id="style-openbox-row-template">
+    <tr class="k-master-row #=data.Archived ? 'am-row-disabled am-row-disabled-bg': ''#">
+        <td>#=data.Id#</td>
+        <td>#=data.BoxBarcode#</td>
+        <td>
+            #for (var i = 0; i < data.StyleItems.Items.length; i++) {#
+            #if (data.StyleItems.Items[i].Quantity > 0) {#
+            <div><span class='gray'>#=data.StyleItems.Items[i].Size#</span> - #=data.StyleItems.Items[i].Quantity#</div>
+            #}#
+            #}#
+        </td>
+        <td>#=data.BoxQuantity#</td>
+        <td>#=data.TotalBoxesQuantity#</td>
+        <td>#=tmpl.isNullFormat(data.Price, '$0.00', '-')#</td>
+        <td>#=tmpl.yesNo(data.Owned)#</td>
+        @*<td>#=tmpl.yesNo(data.Printed)#</td>*@
+        <td><span class="#=data.Archived ? 'red' : ''#">#=tmpl.yesNo(data.Archived)#</span></td>
+        <td>#=data.CreateDateFormatted#</td>
+        <td>#=data.OriginCreateDateFormatted#</td>
+        <td>#=tmpl.isNull(data.UpdatedByName, '-')#</td>
+        @if (AccessManager.CanEditStyle())
+        {
+            <td>
+                <a href='javascript: void(0)' class='k-button' onclick='styleListVm.editOpenBox(this, "#=data.Id#", "#=data.StyleId#")'>Edit</a>
+                @if (AccessManager.IsAdmin)
+                {
+                    <a href='javascript: void(0)' class='k-button' style='margin-top:4px' onclick='styleListVm.deleteOpenBox(this, "#=data.Id#", "#=data.StyleId#")'>Delete</a>
+                }
+            </td>
+        }
+    </tr>
+</script>
+
+
+<script type="text/javascript">
+    var styleListVm = null;
+
+    $(document).ready(function() {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        var settings = {
+            marketTypes: {
+                amazon: @((int) MarketType.Amazon),
+                amazonEU: @((int) MarketType.AmazonEU),
+                amazonAU: @((int) MarketType.AmazonAU),
+                walmart: @((int) MarketType.Walmart),
+                walmartCA: @((int) MarketType.WalmartCA),
+                jet: @((int) MarketType.Jet),
+            },
+
+            styleTypes: {
+                default: '@((int)StyleTypes.Default)',
+                reference: '@((int)StyleTypes.References)'
+            },
+
+            pictureStatusList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.PictureStatuses)),
+            fillingStatusList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.FillingStatuses)),
+            noneSoldPeriodList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(ProductSearchFilterViewModel.SellingHistoryList)),
+            access: {
+                doStyleOperation: @(AccessManager.CanDoStyleOperations() ? 1 : 0),
+            },
+
+            itemTypes: {
+                pajama: @ItemType.Pajama,
+            },
+
+            urls: {
+                getIdListByFilters: '@Url.Action("GetIdListByFilters", "Inventory")',
+                getAllUpdates: '@Url.Action("GetAllUpdates", "Inventory")',
+
+                getStyles: '@Url.Action("GetAll", "Inventory")',
+
+                createDefaultStyle: '@Url.Action(MVC.Inventory.CreateStyle(ItemType.Pajama))',
+                createReferenceStyle: '@Url.Action(MVC.InventoryReferences.CreateStyleReferences())',
+
+                mergeStyle: '@Url.Action(MVC.InventoryMerge.MergeStyle())',
+
+                editDefaultStyle: '@Url.Action(MVC.Inventory.UpdateStyle())',
+                editReferenceStyle: '@Url.Action(MVC.InventoryReferences.EditStyleReferences())',
+                editStyleQuantity: '@Url.Action(MVC.InventoryQuantity.EditStyleQuantity())',
+                editStylePrice: '@Url.Action(MVC.InventoryPrice.EditStylePrice())',
+
+                deleteStyle: '@Url.Action(MVC.Inventory.DeleteStyle())',
+                setOnHold: '@Url.Action(MVC.Inventory.SetOnHold())',
+
+                getSealedBoxes: '@Url.Action("GetSealedBox", "SealedBox")',
+                createSealedBox: '@Url.Action(MVC.SealedBox.OnCreateItem())',
+                editSealedBox: '@Url.Action(MVC.SealedBox.OnUpdateItem())',
+                deleteSealedBox: '@Url.Action(MVC.SealedBox.DeleteBox())',
+                copySealedBox: '@Url.Action(MVC.SealedBox.CopyBox())',
+
+                getOpenBoxes: '@Url.Action("GetOpenBox", "OpenBox")',
+                createOpenBox: '@Url.Action(MVC.OpenBox.OnCreateItem())',
+                editOpenBox: '@Url.Action(MVC.OpenBox.OnUpdateItem())',
+                deleteOpenBox: '@Url.Action(MVC.OpenBox.DeleteBox())',
+
+                addInventoryGroup: '@Url.Action(MVC.InventoryGroup.AddGroup())',
+
+                createBoxWizard: '@Url.Action(MVC.SealedBox.OnCreateBoxWizard())',
+            }
+        };
+
+        styleListVm = new StyleListViewModel(model, settings);
+
+        ko.applyBindings(styleListVm, document.getElementById('page-content'));
+    });
+</script>

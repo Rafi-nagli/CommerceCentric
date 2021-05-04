@@ -1,0 +1,224 @@
+﻿@using Amazon.Core.Models
+<script>
+    var EditStyleDescPopupModel = function(model, settings) {
+        var self = this;
+        self.settings = settings;
+
+        console.log("model=" + model);
+
+        self.styleString = ko.observable(null);
+        self.styleId = ko.observable(null);
+        self.description = ko.observable(null);
+        self.bulletPoint1 = ko.observable(null);
+        self.bulletPoint2 = ko.observable(null);
+        self.bulletPoint3 = ko.observable(null);
+        self.bulletPoint4 = ko.observable(null);
+        self.bulletPoint5 = ko.observable(null);
+
+        self.isLoaded = ko.observable(false);
+        self.popupTask = null;
+
+        self.generateContentPopup = null;
+        
+        self.init = function (styleString) {
+            console.log('init, styleId=' + styleString);
+            $.ajax({
+                url: self.settings.urls.getStyleDesc,
+                data: {
+                    styleString: styleString
+                },
+                success: function (result) {
+                    console.log('init success');
+                    if (result.IsSuccess) {
+                        self.loadModel(result.Data);
+
+                        self.isLoaded(true);
+                    }
+                }
+            });
+        }
+
+        self.loadModel = function (data) {
+            self.styleId(data.StyleId);
+            self.styleString(data.StyleString);
+            self.description(data.Description);
+            self.bulletPoint1(data.BulletPoint1);
+            self.bulletPoint2(data.BulletPoint2);
+            self.bulletPoint3(data.BulletPoint3);
+            self.bulletPoint4(data.BulletPoint4);
+            self.bulletPoint5(data.BulletPoint5);
+        }
+
+        self.clear = function () {
+            self.isLoaded(false);
+
+            self.styleId(null);
+            self.styleString(null);
+            self.description(null);
+            self.bulletPoint1(null);
+            self.bulletPoint2(null);
+            self.bulletPoint3(null);
+            self.bulletPoint4(null);
+            self.bulletPoint5(null);
+        }
+
+        self.show = function (data) {
+            self.clear();
+
+            if (self.generateContentPopup == null) { //Create new when first open for style
+                console.log($(".editStyleDescContent").length);
+                $(".editStyleDescContent").each(function (i, n) {
+                    var popup = $(this).data("kendoWindow");
+                    if (popup != null) {
+                        console.log("close previous generate popup");
+
+                        popup.close();
+                        popup.destroy();
+                    }
+                });
+
+                console.log("create new generate popup");
+                $("#editStyleDescContent").kendoWindow({
+                    modal: true,
+                    width: "500px",
+                    title: "Edit Style Description",
+                    visible: false,
+                    actions: [
+                        "Close"
+                    ],
+                });
+
+                ko.applyBindings(this, $('#editStyleDescPopupContent')[0]);
+            }
+
+            var popup = $("#editStyleDescContent").data("kendoWindow");
+            popup.center().open();
+
+            self.generateContentPopup = popup;
+            self.init(data);
+        }
+        
+        self.onClose= function (data, e) {
+            console.log('EditStyleDescPopupModel.onClose');
+            $("#editStyleDescContent").data("kendoWindow").close();
+        }
+        
+        self.onSave = function(data, e) {
+            console.log('EditStyleDescPopupModel.onSave');
+             
+            var dataModel = {
+                StyleId: self.styleId(),
+                Description: self.description(),
+                BulletPoint1: self.bulletPoint1(),
+                BulletPoint2: self.bulletPoint2(),
+                BulletPoint3: self.bulletPoint3(),
+                BulletPoint4: self.bulletPoint4(),
+                BulletPoint5: self.bulletPoint5(),
+            };
+
+            var ajaxTask = $.ajax({
+                url: self.settings.urls.updateStyleDesc,
+                cache: false,
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                type: 'POST',
+                data: JSON.stringify(dataModel)
+            }).done(function(result) {
+                $("#editStyleDescContent").data("kendoWindow").close();
+            }).fail(function (ex) {
+                $("#editStyleDescContent").data("kendoWindow").close();
+            }).always(function() {
+                
+            });
+        }
+    }
+</script>
+
+<!-- ko stopBinding: true -->
+<div id="editStyleDescContent" class="editStyleDescContent" style="display: none">
+    <div id="editStyleDescPopupContent">
+        <div class="k-edit-form-container" style="width: auto; font-size: 13px; height: 500px" data-bind="visible: !isLoaded()">
+            Loading...
+        </div>
+        <div class="k-edit-form-container" style="width: auto; font-size: 13px" data-bind="visible: isLoaded">
+            <div class="inventory-popup">
+                <table style="width: 100%">
+                    <tr>
+                        <td style="vertical-align: top">
+                            <div class="panel panel-default">
+                                <div class="panel-heading"></div>
+                                <div class="panel-body">
+                                    <div class="editor-label">Description:</div>
+                                    <div class="editor-field">
+                                        <textarea class="k-textbox"
+                                                  rows="5"
+                                                  style="width: 260px"
+                                                  data-bind="value: description"></textarea>
+                                    </div>
+                                    <div class="editor-label">Bullet Point 1:</div>
+                                    <div class="editor-field">
+                                        <textarea class="k-textbox"
+                                                  rows="2"
+                                                  style="width: 260px"
+                                                  data-bind="value: bulletPoint1" />
+                                    </div>
+                                    <div class="editor-label">Bullet Point 2:</div>
+                                    <div class="editor-field">
+                                        <textarea class="k-textbox"
+                                                  rows="2"
+                                                  style="width: 260px" 
+                                                  data-bind="value: bulletPoint2" />
+                                    </div>
+                                    <div class="editor-label">Bullet Point 3:</div>
+                                    <div class="editor-field">
+                                        <textarea class="k-textbox"
+                                                  rows="2"
+                                                  style="width: 260px"
+                                                  data-bind="value: bulletPoint3" />
+                                    </div>
+                                    <div class="editor-label">Bullet Point 4:</div>
+                                    <div class="editor-field">
+                                        <textarea class="k-textbox"
+                                                  rows="2"
+                                                  style="width: 260px"
+                                                  data-bind="value: bulletPoint4" />
+                                    </div>
+                                    <div class="editor-label">Bullet Point 5:</div>
+                                    <div class="editor-field">
+                                        <textarea class="k-textbox"
+                                                  rows="2"
+                                                  style="width: 260px"
+                                                  data-bind="value: bulletPoint5" />
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+
+            <div class="k-edit-buttons k-state-default popup-button-panel" style="position: static">
+                <table style="margin-left: auto">
+                    <tr>
+                        <td style="margin-right: 5px">
+                            <button tabindex="-1"
+                                    data-bind="click: onSave"
+                                    class="k-button">
+                                <span class="k-icon k-update"></span>Save
+                            </button>
+                        </td>
+                        <td style="vertical-align: bottom">
+                            <button class="k-button k-button-icontext k-grid-cancel"
+                                    data-bind="click: onClose">
+                                <span class="k-icon k-cancel"></span>Cancel
+                            </button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- /ko -->

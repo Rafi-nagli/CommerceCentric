@@ -1,0 +1,357 @@
+﻿@using Amazon.Core.Models
+@using Amazon.Web.ViewModels
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Products
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Pages.MarketImagesPageViewModel
+@{
+    ViewBag.Title = "Market Images";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+
+}
+
+<script>
+    var MarketImagesViewModel = function(settings) {
+        var self = this;
+
+        self.settings = settings;
+
+        self.grid = $(settings.gridId).data("kendoGrid");
+
+        ko.BaseViewModel.call(self);
+
+        self.defaultMarketValue = self.settings.markets.amazon + "_" + self.settings.marketplaceIds.com;
+        self.marketValue = ko.observable(self.defaultMarketValue);
+        self.marketList = ko.observable(self.settings.marketList);
+
+        self.market = ko.computed(function() {
+            return self.marketValue().split('_')[0];
+        });
+        self.marketplaceId = ko.computed(function() {
+            return self.marketValue().split('_')[1];
+        });
+        self.keywords = ko.observable('');
+        self.onlyIgnored = ko.observable(false);
+
+        //NOTE: can't subscribed to marketValue, value updates after subscribe callback was processed
+        self.market.subscribe(function (newValue) { self.search(); });
+        self.marketplaceId.subscribe(function (newValue) { self.search(); });
+
+        self.getGridParams = function () {
+            console.log("getGridParams");
+
+            var market = self.market();
+            var marketplaceId = self.marketplaceId();
+
+            console.log(market + "_" + marketplaceId);
+
+            return {
+                market: market,
+                marketplaceId: marketplaceId,
+                keywords: self.keywords(),
+                onlyIgnored: self.onlyIgnored(),
+            };
+        };
+
+        self.search = function () {
+            var params = self.getGridParams();
+
+            console.log(self.marketValue());
+
+            self.resetRowNumber(0);
+
+            //if (self.grid.dataSource.page() != 1) {
+            //    self.grid.dataSource.page(1); //May call read
+            //}
+            //self.grid.dataSource.read();
+            self.grid.dataSource.read(params);
+        };
+
+        self.clear = function() {
+            self.marketValue(self.defaultMarketValue);
+            self.keywords('');
+            self.onlyIgnored(false);
+            self.search();
+        };
+
+        self.grid.bind("dataBinding", function(e) {
+            console.log("page=" + self.grid.dataSource.page());
+            self.resetRowNumber((self.grid.dataSource.page() - 1) * self.grid.dataSource.pageSize());
+            self.rowTotal(self.grid.dataSource.total());
+        });
+
+        self.resetMarketImage = function(sender, id) {
+            helper.ui.showLoading($(sender));
+            $.ajax({
+                url: self.settings.urls.resetImage,
+                data: { id: id },
+                success: function(result) {
+                    helper.ui.hideLoading($(sender));
+
+                    var row = kendo.helper.getRowById(self.grid, "Id", id);
+                    row.HasMarketImage = false;
+                    helper.ui.kendoFastRedrawRow(self.grid, row, $('tr[data-uid="' + row.uid + '"]'), [0]);
+                }
+            });
+        }
+
+        self.resetMarketImageIncludeParent = function(sender, id) {
+            helper.ui.showLoading($(sender));
+            $.ajax({
+                url: self.settings.urls.resetWithParentImage,
+                data: { id: id },
+                success: function(result) {
+                    helper.ui.hideLoading($(sender));
+
+                    var row = kendo.helper.getRowById(self.grid, "Id", id);
+                    row.HasMarketImage = false;
+                    helper.ui.kendoFastRedrawRow(self.grid, row, $('tr[data-uid="' + row.uid + '"]'), [0]);
+                }
+            });
+        }
+
+        self.calcDiffValue = function(sender, id) {
+            console.log("calcDiffValue");
+            helper.ui.showLoading($(sender));
+            $.ajax({
+                url: self.settings.urls.resetDiffValue,
+                data: { id: id },
+                success: function(result) {
+                    console.log("calcDiffValue.done");
+                    helper.ui.hideLoading($(sender));
+
+                    var row = kendo.helper.getRowById(self.grid, "Id", id);
+                    row.DiffValue = null;
+                    helper.ui.kendoFastRedrawRow(self.grid, row, $('tr[data-uid="' + row.uid + '"]'), [0]);
+                }
+            });
+        }
+
+        self.toggleIgnored = function(sender, id, isIgnored) {
+            console.log(isIgnored);
+
+            var toggledIgnored = isIgnored == "false" ? true : false;
+            console.log(toggledIgnored);
+
+           
+            helper.ui.showLoading($(sender));
+            $.ajax({
+                url: self.settings.urls.toggleIgnoreItemImage,
+                data: { id: id, isIgnored: toggledIgnored },
+                cache: false,
+                async: false,
+                success: function() {
+                    helper.ui.hideLoading($(sender));
+
+                    var row = kendo.helper.getRowById(self.grid, "Id", id);
+                    if (row != null) {
+                        row.ImagesIgnored = toggledIgnored;
+
+                        //var button = $(sender).closest('button');;
+                        //button.html(toggledIgnored ? "Enable" : "Ignore");
+
+                        helper.ui.kendoFastRedrawRow(self.grid, row, $('tr[data-uid="' + row.uid + '"]'), [0]);
+                    } else {
+                        console.log('row == null');
+                    }
+                }
+            });
+        };
+
+        helper.ui.addTopPager(self.grid);
+
+        //Init
+        self.search();
+    };
+</script>
+
+<div id="page-content">
+    <ol class="breadcrumb">
+        <li><a href="#">Images</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <div class="messages-block">
+                <div><span id="infoMessage" class="text-info"></span></div>
+                <div><span id="errorMessage" class="label label-danger"></span></div>
+                <div><span id="successMessage" class="label label-success"></span></div>
+            </div>
+
+            <table>
+                <tr>
+                    <th>Market:</th>
+                    <td>
+                        <input style="width: 180px"
+                               data-bind="kendoDropDownList: {data: marketList, value: marketValue, dataTextField: 'Text', dataValueField: 'Value' }"/>
+                    </td>
+                    <th>Keywords:</th>
+                    <td><input type="text" data-bind="value: keywords, valueUpdate: 'afterkeydown'" class="k-textbox"/></td>
+                    <th>
+                        <input type="checkbox" data-bind="checked: onlyIgnored"/> Only ignored
+                    </th>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <div style="padding-top: 10px; text-align: left">
+                            <button class="k-button" style="margin: 0 10px 0 0; padding: 3px 20px 3px 20px" data-bind="click: search">Search</button>
+                            <button class="k-button" style="margin: 0 0 0 0; padding: 3px 20px 3px 20px" data-bind="click: clear">Clear</button>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div>
+        @(Html.Kendo().Grid<MarketImageViewModel>()
+              .Name("grid")
+              .Columns(columns =>
+              {
+                  columns.Bound(c => c.Id)
+                      .ClientTemplate("#= marketImagesModel.renderNumber(data) #")
+                      .Title("#")
+                      .Width(50)
+                      .Sortable(false);
+
+                  columns.Bound(c => c.MarketImageThumbnail)
+                      .Sortable(true)
+                      .Filterable(true)
+                      .Title("Hi-res (market) Image")
+                      .Width(140)
+                      .ClientTemplate("#if(HasMarketImage){# <div class='image-box-holder'><a href='#=MarketUrl#' target='_blank'><img src='#=MarketImageThumbnail#' style='max-width: 75px' /></a></div> #}#");
+
+                  columns.Bound(c => c.DiffWithLocalImageValue)
+                      .Sortable(false)
+                      .Filterable(false)
+                      .Title("Listing Image")
+                      .Width(120)
+                      .ClientTemplate("<div>#= DiffWithLocalImageValue == null ? '-' : tmpl.f(DiffWithLocalImageValue, '0.00%') #</div>" +
+                                      "#if(HasLocalImage){# <div class='image-box-holder'><a href='#=ProductUrl#' target='_blank'><img src='#=LocalImageThumbnail#' style='max-width: 75px' /></a></div> #}#");
+
+                  columns.Bound(c => c.DiffWithStyleImageValue)
+                        .Sortable(false)
+                        .Filterable(false)
+                        .Width(120)
+                        .ClientTemplate("<div>#= DiffWithStyleImageValue == null ? '-' : tmpl.f(DiffWithStyleImageValue, '0.00%') # #= StyleImageFromAmazon ? 'amz' : 'man'#</div>" +
+                            "#if(HasStyleImage){# <div class='image-box-holder'><a href='#=StyleUrl#' target='_blank'><img src='#=StyleImageThumbnail#' style='max-width: 75px' /></a></div> #}#")
+                        .Title("Style Image");
+
+                  columns.Bound(c => c.ASIN)
+                      .Sortable(true)
+                      .Filterable(true)
+                      .ClientTemplate("<div><a class='asin' style='font-weight:normal' target='_blank' href='#=ProductUrl#'>#=ASIN#</a></div>" +
+                                      "<div>#=tmpl.isNull(Name, '-')#</div>")
+                      .Title("ASIN");
+
+                  columns.Bound(c => c.StyleString)
+                    .Sortable(true)
+                    .Filterable(true)
+                    .Width(120)
+                    .ClientTemplate("<div><a target='_blank' href='#=StyleUrl#'>#=StyleString#</a> - #=StyleSize#</div>")
+                    .Title("Style Id");
+
+                  columns.Bound(c => c.Id)
+                      .Sortable(false)
+                      .Filterable(false)
+                      .Width(180)
+                      .ClientTemplate("#=tmpl.t('buttons-column-template', data)#")
+                      .Title("Actions");
+              })
+              //.Events(e => e.DataBound("dataBound"))
+              .Sortable(conf => conf.Enabled(true).SortMode(GridSortMode.SingleColumn))
+              .Filterable(conf => conf.Enabled(true))
+              .Navigatable(conf => conf.Enabled(false))
+              .Scrollable(conf => conf.Enabled(false))
+              .Selectable(conf => conf.Enabled(false))
+              .Pageable(conf => conf.Enabled(true).Refresh(true))
+              .AutoBind(false)
+              .DataSource(dataSource => dataSource
+                  .Ajax()
+                  .ServerOperation(true)
+                  .Sort(conf =>
+                  {
+                      conf.Add(s => s.DiffWithStyleImageValue).Descending();
+                      conf.Add(s => s.Id).Ascending();
+                  })
+                  .PageSize(200)
+                  .Model(conf => conf.Id(m => m.ASIN))
+                  .Read(read => read.Action("GetAllMarketImages", "Image").Data("GetGridParams")))
+              )
+    </div>
+</div>
+
+<script type="text/x-kendo-template" id="buttons-column-template">
+    @*<button class='k-button k-button-icontext'
+            id='resetButton'
+            style='display:block;margin-top:4px'
+            onclick='marketImagesModel.resetMarketImage(this, "#=Id#")'>
+        Reset market/UL image
+    </button>*@
+
+    <button class='k-button k-button-icontext'
+            id='resetWithParentButton'
+            style='display:block;margin-top:4px'
+            onclick='marketImagesModel.resetMarketImageIncludeParent(this, "#=Id#")'>
+        Reset market image
+    </button>
+    @*<button class='k-button k-button-icontext'
+            id='calcDiffValueButton'
+            style='display:block;margin-top:4px'
+            onclick='marketImagesModel.calcDiffValue(this, "#=Id#")'>Reset diff. value</button>*@
+    <button class='k-button k-button-icontext'
+            id='calcDiffValueButton'
+            style='display:block;margin-top:4px'
+            onclick='marketImagesModel.toggleIgnored(this, "#=Id#", "#=ImagesIgnored#")'>
+        #if (ImagesIgnored) {# Enable #} else {# <span class='glyphicon glyphicon-ban-circle am-icon'></span>Ignore #}#
+    </button>
+</script>
+
+
+<script>
+    var marketImagesModel = null;
+
+    $(document).ready(function () {
+        var settings = {
+            gridId: "#grid",
+            markets: {
+                walmart: @((int) MarketType.Walmart),
+                amazon: @((int) MarketType.Amazon),
+            },
+            marketplaceIds: {
+                com: '@MarketplaceKeeper.AmazonComMarketplaceId'
+            },
+            marketList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MarketList)),
+            urls: {
+                resetImage: '@Url.Action("ResetItemLargeImage", "Image")',
+                resetWithParentImage: '@Url.Action("ResetItemLargeIncludeParentImage", "Image")',
+                resetDiffValue: '@Url.Action("ResetItemImageDiff", "Image")',
+                toggleIgnoreItemImage: '@Url.Action("ToggleIgnoreItemImage", "Image")',
+            }
+        };
+
+        marketImagesModel = new MarketImagesViewModel(settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+        ko.applyBindings(marketImagesModel, document.getElementById('page-content'));
+    });
+
+    function GetGridParams() {
+        console.log("GetGridParams");
+        if (marketImagesModel != null)
+            return marketImagesModel.getGridParams();
+        return {};
+    }
+
+</script>

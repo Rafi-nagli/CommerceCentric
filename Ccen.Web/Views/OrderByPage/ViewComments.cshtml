@@ -1,0 +1,178 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Core.Models.Settings
+@using Amazon.Web.Models
+@model Amazon.Web.ViewModels.Orders.ViewCommentsViewModel
+@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var CommentModel = function(comments, settings) {
+        var self = this;
+
+        self.settings = settings;
+        self.commentTypeList = ko.observableArray(settings.commentTypeList);
+
+        if (comments == null)
+            comments = [];
+        
+        if (comments.length == 0)
+            comments.push({
+                Id: 0,
+                Comment: '',
+                Type: self.settings.defaultCommentType || 0,
+                TypeName: '-',
+                HasEmailLink: false,
+                EmailUrl: null,
+                CommentDate: new Date(),
+                CommentByName: '',
+            });
+
+        self.prepareRow = function(row) {
+            row.CommentDate = ko.observable(kendo.parseDate(row.CommentDate)).extend({ format: 'MM.dd.yyyy HH:mm' });
+            row.TypeName = ko.observable(row.TypeName);
+            row.Type = ko.observable(row.Type);
+            row.Type.subscribe(function() {
+                console.log('Type changed');
+                var typeEntry = $.grep(self.commentTypeList(), function(n, i) { return n.Value == row.Type(); });
+                if (typeEntry.length > 0)
+                {
+                    console.log(typeEntry[0]);
+                    row.TypeName(typeEntry[0].Text);
+                }
+            });
+        }
+
+        self.comments = ko.observableArray(comments);
+
+        self.comments().forEach(function(entry) {
+            self.prepareRow(entry);
+        });
+
+        self.addComment = function() {
+            var newRow = {
+                Id: 0,
+                Comment: '',
+                Type: self.settings.defaultCommentType || 0,
+                TypeName: '-',
+                HasEmailLink: false,
+                EmailUrl: null,
+                CommentDate: new Date(),
+                CommentByName: '',
+            };
+            self.prepareRow(newRow);
+
+            self.comments.push(newRow);
+        };
+
+        self.removeComment = function(comment) {
+            self.comments.remove(comment);
+        };
+
+        self.hasNotEmpty = function() {
+            var notEmptyList = $.grep(self.comments(), function(n, i) { return n.Comment != '' && n.Comment != null; });
+            return notEmptyList.length > 0;
+        };
+    };
+</script>
+
+<script>
+    var ViewCommentsViewModel = function(model, settings) {
+        var self = this;
+
+        self.comment = new CommentModel(model.Comments, settings);
+
+    };
+
+    var settings = {
+        
+        commentTypeList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.CommentTypes)),
+
+        commentTypes: {
+            address: @((int)CommentType.Address),
+            none: @((int)CommentType.None),
+        },
+    };
+    var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+    var viewCommentsModel = new ViewCommentsViewModel(model, settings);
+
+    ko.applyBindings(viewCommentsModel, document.getElementById('viewCommentsContent'));
+</script>
+<div id="viewCommentsContent">
+    <div>
+
+        <table class="noborder">
+            <tr>
+                <td class="edit-order" style="padding-right: 10px; width: 450px">
+                    <table class="noborder">
+                        <colgroup>
+                            <col style="width: 440px" />
+                        </colgroup>
+                        <tr>
+                            <th style="vertical-align: top">Comments:</th>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div data-bind="with: comment" style="padding-top: 2px; padding-bottom: 12px; font-size: 13px">
+                                    <div data-bind='foreach: comments' style="margin-bottom: 9px">
+                                        <div class="editor-label">
+                                            <div>#<span data-bind='text: $index() + 1'></span>: <span data-bind='text: CommentDate' class='gray'></span></div>
+                                            <div class='gray'>by <span data-bind='textFormatted: CommentByName, ifEmpty: "system"'></span></div>
+                                        </div>
+                                        <div class="editor-field">
+                                            <table style="margin-bottom: 0px; margin-top: 2px" class="noborder">
+                                                <tr>
+                                                    <td style="margin: 0px; vertical-align: top">
+                                                        <input type="hidden" data-bind='value: Id, attr: { name: "Comments[" + $index() + "].Id" }'/>
+                                                        <input type="hidden" data-bind='value: Type, attr: { name: "Comments[" + $index() + "].Type" }'/>
+
+                                                        <div data-bind='text: Comment, attr: { name: "Comments[" + $index() + "].Comment" }'></div>
+                                                        <div style="padding-top: 4px">
+                                                            <span class="gray">Type:</span>
+                                                            <span data-bind="text: TypeName"></span>
+                                                        </div>
+                                                    </td>
+                                                    <td style="vertical-align: top; font-size: 13px">
+                                                        <div data-bind="style: { visibility: HasEmailLink ? 'visible' : 'hidden' }" style="margin-bottom: 30px;">
+                                                            <a href="" target="_blank" data-bind='attr: { href: EmailUrl }'><span class='glyphicon glyphicon-envelope am-icon'></span></a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+
+                                            </table>
+                                        </div>
+                                        <div class="clear"></div>
+
+                                    </div>
+                                    <div class="clear"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="k-edit-buttons k-state-default popup-button-panel" style="position: static">
+        <table style="width: 100%">
+            <tr>
+                <td>
+                    <table style="margin-left: auto">
+                        <tr>
+                            <td style="padding-left: 4px">
+                                <button class="k-button k-button-icontext k-grid-cancel"
+                                        type="reset"
+                                        id="cancel"
+                                        onclick="popupWindow.close()">
+                                    <span class="k-icon k-cancel"></span> Close
+                                </button>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>

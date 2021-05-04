@@ -1,0 +1,131 @@
+﻿@{
+    ViewBag.Title = "Check Barcode";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+
+}
+
+<script>
+    var CheckBarcodeModel = function() {
+        var self = this;
+
+        self.barcode = ko.observable('');
+        self.urlList = ko.observable([]);
+
+        self.errorMessage = ko.observable('');
+
+        self.status = ko.observable(null);
+
+        self.isSuccess = ko.computed(function() {
+            return self.status() == 1;
+        });
+        self.isError = ko.computed(function() {
+            return self.status() == 2;
+        });
+        self.isLoading = ko.computed(function() {
+            return self.status() == 0;
+        });
+
+        self.check = function() {
+            self.status(0);
+
+            var data = { barcode: self.barcode() };
+            $.ajax({
+                url: '@Url.Action("GetBarcode", "Item")',
+                data: data,
+                cache: false,
+                success: function(result) {
+                    if (result.IsSuccess) {
+                        if (result.Data == null) {
+                            self.status(2);
+                            self.errorMessage("No barcode info");
+                        }
+                        else {
+                            self.status(1);
+                            self.urlList(result.Data.Items);
+                        }
+                    } else {
+                        self.status(2);
+                        self.errorMessage(result.Message);
+                    }
+                }
+            });
+        }
+    }
+    
+    $(document).ready(function () {
+        var model = new CheckBarcodeModel();
+        ko.applyBindings(model, document.getElementById("page-content"));
+    });
+</script>
+
+<style>
+    .admin-panel { color: black; }
+    
+    .operation {
+        margin: 10px 0px;
+        padding: 5px 10px;
+        border-left: 4px solid gray;
+    }
+</style>
+
+
+<div style="padding-left:7px">
+    <div><span id="infoMessage" style="color: red; font-size: 13px;"></span></div>
+    <div><span id="errorMessage" style="color: red; font-size: 13px;"></span></div>
+    <div><span id="successMessage" style="color: lightgreen; font-size: 13px;"></span></div>
+</div>
+
+<div id="page-content" class="admin-panel">
+    <ol class="breadcrumb">
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+    <div>
+        <div class="operation">
+            <div>Barcode:</div>
+            <div>
+                <input type="text" data-bind="value: barcode" /> <button data-bind="click: check"><span class='glyphicon glyphicon-search am-icon'></span></button>
+            </div>
+            <div style="padding: 20px 0px; display: none" data-bind="visible: isLoading">
+                <div class="text-success">Loading...</div>
+            </div>
+            <div style="padding: 20px 0px; display: none" data-bind="visible: isSuccess">
+                <div class="text-success">Barcode: #<span style="font-weight: bold" data-bind="textFormatted: barcode, pattern: '###,###,###,##0'"></span></div>
+            </div>
+            <div style="padding: 20px 0px; display: none" data-bind="visible: isError">
+                <div class="text-danger">Can't retrieve information. Details: <span data-bind="text: errorMessage"></span></div>
+            </div>
+
+            <div class="closest-listings" data-bind="visible: isSuccess">
+                <div>Matching listings:</div>
+                <div class="k-widget k-grid k-secondary grid-small" style="width: 600px">
+                    <table style="width: 100%">
+                        <colgroup>
+                            <col style="width: 100px" />
+                            <col style="width: 180px" />
+                        </colgroup>
+                        <thead class="k-grid-header">
+                            <tr>
+                                <th class="k-header">Marketplace</th>
+                                <th class="k-header">Link</th>
+                            </tr>
+                        </thead>
+                        <tbody data-bind="foreach: urlList">
+                            <tr class="k-master-row" data-bind="css: { 'k-alt': $index() % 2 == 1 }">
+                                <td>
+                                    #<span data-bind="textFormatted: Marketplace"></span>
+                                </td>
+                                <td>
+                                    <a data-bind="attr: { 'href': Url }" target="_blank"><span data-bind="text: Url"></span></a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

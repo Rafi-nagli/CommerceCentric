@@ -1,0 +1,419 @@
+﻿.checked-status {
+    margin-left: 12px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.checked-status .count {
+    margin-right: 12px;
+}
+
+.checked-status .count a {
+    color: white;
+}
+
+.checked-status .count-highlight {
+    padding: 9px 4px;
+    background: #e51400;
+    cursor: pointer;
+}
+
+.checked-status .count-selected {
+    
+    border-bottom: 2px solid White;
+}
+
+.checked-status .checked-title {
+    margin-right: 15px;
+    padding-bottom: 4px;
+    display: block;
+}
+
+.search-block {
+    
+}
+
+.a-right {
+    text-align: right;
+}
+
+.filter {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.filter table td {
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+@font-face {
+  font-family: 'Glyphicons Halflings';
+
+  src: url('../fonts/glyphicons-halflings-regular-v2.eot');
+  src: url('../fonts/glyphicons-halflings-regular-v2.eot?#iefix') format('embedded-opentype'), url('../fonts/glyphicons-halflings-regular-v2.woff') format('woff'), url('../fonts/glyphicons-halflings-regular-v2.ttf') format('truetype'), url('../fonts/glyphicons-halflings-regular-v2.svg#glyphicons_halflingsregular') format('svg');
+}
+
+/*http://glyphicons.com/*/
+.glyphicon {
+    position: relative;
+    top: 1px;
+    display: inline-block;
+    font-family: 'Glyphicons Halflings';
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.glyphicon-envelope:before {
+    content: "\2709";
+}
+
+.glyphicon-arrow-left:before {
+    content: "\e091";
+}
+
+.glyphicon-pencil:before {
+    content: "\270f";
+}
+
+.glyphicon-print:before {
+    content: "\e045";
+}
+
+.glyphicon-warning-sign:before {
+    content: "\e107";
+}
+
+.glyphicon-exclamation-sign:before {
+    content: "\e101";
+}
+
+
+.glyphicon-ban-circle:before {
+    content: "\e090";
+}
+
+.glyphicon-remove:before {
+    content: "\e014";
+}
+
+.glyphicon-minus-sign:before {
+    content: "\e082";
+}
+
+.glyphicon-minus:before {
+    content: "\2212";
+}
+
+
+.glyphicon-join:before {
+    content: "\e097";
+}
+
+
+.glyphicon-ok-circle:before {
+    content: "\e089";
+}
+
+.glyphicon-chevron-down:before {
+    content: "\e114";
+}
+
+
+.glyphicon-transfer:before {
+    content: "\e178";
+}
+
+.glyphicon-refresh:before {
+    content: "\e031";
+}
+
+.glyphicon-info:before {
+    content: "\e086";
+}
+
+
+.glyphicon-upgrade:before {
+    content: "\e167";
+}
+
+.glyphicon-calc:before {
+    content: "\e030";
+}
+
+.glyphicon-ok:before {
+    content: "\e013";
+}
+
+
+.glyphicon-search:before {
+    content: "\e003";
+}
+
+.glyphicon-list:before {
+    content: "\e032";
+}
+
+.glyphicon-new-window:before {
+    content: "\e164";
+}
+
+.glyphicon-menu:before {
+    content: "\e236";
+}
+
+.glyphicon-log-out:before {
+    content: "\e163";
+}
+
+.glyphicon-log-in:before {
+    content: "\e161";
+}
+
+.glyphicon-link:before {
+    content: "\e144";
+}
+
+.glyphicon-save-file:before {
+    content: "\e022"
+}
+
+
+
+.am-icon {
+    margin-right: 4px;
+    margin-left: 0px;
+}
+
+.k-grid .am-icon {
+    margin-left: 2px;
+}
+
+
+.edit-order input[type='text'] {
+    width: 250px;
+}
+
+.edit-order .base-address {
+    font-size: 11px;
+    color: #efefef;
+    margin-bottom: 4px;
+}
+
+.edit-order th {
+    vertical-align: bottom;
+}
+
+.edit-order-items {
+    padding-left: 5px;
+    padding-bottom: 5px;
+}
+
+.edit-order-items .caption {
+    font-weight: bold;
+    padding-bottom: 5px;
+}
+
+.edit-order-items table {
+    margin-left: 10px;
+}
+
+
+.dark .info-list,
+.dark .info-list .block-items,
+.dark .info-list .block-items a {
+    color: #333;
+}
+
+.light .info-list,
+.light .info-list .block-items,
+.light .info-list .block-items a {
+    color: #333;
+}
+
+.dark .warning-list,
+.dark .warning-list .block-items,
+.dark .warning-list .block-items a {
+    color: #ff9999
+}
+
+.light .warning-list,
+.light .warning-list .block-items,
+.light .warning-list .block-items a {
+    color: red
+}
+
+.dark .address-warning-list,
+.dark .address-warning-list .block-items,
+.dark .address-warning-list .block-items a:not(.warning):not(.error) {
+    color: white;
+}
+
+.light .address-warning-list,
+.light .address-warning-list .block-items,
+.light .address-warning-list .block-items a:not(.warning):not(.error) {
+    color: black;
+}
+
+.warning-list, .address-warning-list, .info-list  {
+    padding-left: 7px; 
+    padding-top: 5px; 
+}
+
+.warning-list .block-items, .address-warning-list .block-items, .info-list .block-items {
+    padding-left: 20px;
+    padding-top: 2px;
+    padding-bottom: 5px;
+}
+
+.warning-list a, .address-warning-list, .info-list a {
+    font-size: 12px;
+}
+
+
+.address-warning-list {
+    padding-left: 7px; 
+    padding-top: 5px; 
+}
+
+
+
+.button-table {
+    margin-top: 5px;
+}
+
+.batchContent {
+    padding-bottom: 10px;
+}
+
+.amz .flag-button {
+    border: 1px solid #666;
+}
+
+.amz .k-grid .flag-link, .amz .k-grid .flag-link-active {
+    display: block;
+    margin: 2px;
+    padding: 0px;
+    width: 32px;
+    height: 26px;
+    border: 1px solid #666;
+    -moz-border-radius: 2px;
+    -webkit-border-radius: 2px;
+    border-radius: 2px;
+    opacity: 0.5;
+}
+
+.amz .k-grid .flag-link-active {
+    opacity: 1.0;
+}
+
+.amz .k-grid .flag-link:hover {
+    border: 1px solid #888;
+    opacity: 1;
+}
+
+.amz .flag-US, .amz .k-content .flag-US {
+    background: url('/Images/Flags/United-states-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-UK, .amz .k-content .flag-UK {
+    background: url('/Images/Flags/United-kingdom-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-AU, .amz .k-content .flag-AU {
+    background: url('/Images/Flags/Australia-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-CA, .amz .k-content .flag-CA {
+    background: url('/Images/Flags/Canada-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-eBay, .amz .k-content .flag-eBay {
+    background: url('/Images/Flags/Ebay-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-eBay, .amz .k-content .flag-eBay4kids {
+    background: url('/Images/Flags/Ebay-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-eBay, .amz .k-content .flag-eBayPA {
+    background: url('/Images/Flags/Ebay-flag.png') no-repeat center center;
+    background-size: 32px 32px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-MG, .amz .k-content .flag-MG {
+    background: url('/Images/Flags/Magento-flag.png') no-repeat center center;
+    background-size: 26px 26px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-GP, .amz .k-content .flag-GP {
+    background: url('/Images/Flags/Groupon-flag.png') no-repeat center center;
+    background-size: 26px 26px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .flag-Walmart, .amz .k-content .flag-Walmart {
+    background: url('/Images/Flags/Walmart-flag.png') no-repeat center center;
+    background-size: 26px 26px;
+    background-color: #efefef;
+    padding: 1px 1px;
+    width: 36px;
+    height: 26px;
+    content: "\e020";
+}
+
+.amz .market-higtlight {
+    border-bottom: 2px solid #e51400;
+    background: #efefef;
+    padding: 2px 0px;
+}
+

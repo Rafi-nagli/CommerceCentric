@@ -1,0 +1,616 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.HtmlExtend
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Inventory.StyleQuantityViewModel
+@{
+    Layout = null;
+}
+
+
+<script type="text/javascript">
+    var StyleQuantityModel = function(model, settings) {
+        var self = this;
+
+        self.isLoaded = ko.observable(false);
+
+        self.settings = settings;
+        self.model = model;
+
+        self.id = model.StyleId;
+        self.type = model.Type;
+
+        self.styleString = model.StyleString;
+
+        console.log("Type=" + self.type);
+        console.log(settings.styleTypes.reference);
+        self.isReferenceType = ko.observable(self.type == settings.styleTypes.reference);
+        self.canEdit = ko.observable(settings.editAccess && !self.isReferenceType());
+
+        self.listings = ko.observableArray(model.Listings);
+
+        self.sizes = ko.observableArray(model.Sizes);
+
+        self.sizes().forEach(function(entry) {
+            console.log(entry);
+
+            entry.manuallyQuantity = ko.observable(entry.ManuallyQuantity);
+            entry.boxQuantity = ko.observable(entry.BoxQuantity);
+            entry.boxSoldQuantity = ko.observable(entry.BoxSoldQuantity);
+            entry.NewRestockDate = ko.observable(entry.NewRestockDate);
+
+            entry.newManuallyQuantity = ko.observable(entry.NewManuallyQuantity).extend({
+                required: {
+                    message: '*',
+                    onlyIf: function() {
+                        console.log("onlyIf: " + entry.NewRestockDate());
+                        return entry.NewRestockDate() != null;
+                    }
+                },
+                pattern: {
+                    message: '*',
+                    params: '^([-,0-9][-,0-9]*)$'
+                }
+            });
+
+            entry.IsRemoveRestockDate = ko.observable(entry.IsRemoveRestockDate);
+
+            entry.useBoxQuantity = ko.observable(entry.UseBoxQuantity);
+            entry.useBoxQuantity.subscribe(function(newValue) {
+                if (newValue == true) {
+                    if (entry.newManuallyQuantity() >= 0)
+                        entry.newManuallyQuantity(null);
+                } else {
+                    if (!(entry.newManuallyQuantity() > 0))
+                        entry.newManuallyQuantity(0);
+                }
+            })
+
+            entry.isManuallyMode = ko.computed(function() {
+                return !entry.useBoxQuantity();
+            });
+            entry.isBoxMode = ko.computed(function() {
+                return entry.useBoxQuantity();
+            });
+
+            entry.ManuallyQuantitySetDate = ko.observable(kendo.parseDate(entry.ManuallyQuantitySetDate)).extend({
+                format: "MM/dd/yyyy HH:mm"
+            });
+
+            entry.RestockDate = ko.observable(kendo.parseDate(entry.RestockDate)).extend({
+                format: "MM/dd/yyyy"
+            });
+
+            entry.HasRestockDate = ko.computed(function() {
+                return entry.RestockDate() != '-';
+            });
+
+            entry.RemainingQuantity = ko.computed(function() {
+                if (!entry.HasRestockDate()) {
+                    if (entry.isManuallyMode()) {
+                        if (entry.manuallyQuantity() != null && entry.ManuallySoldQuantity != null) {
+                            if (self.isReferenceType())
+                                return entry.manuallyQuantity();
+                            return Math.max(entry.manuallyQuantity() - entry.ManuallySoldQuantity, 0);
+                        }
+                    } else {
+                        return Math.max(entry.boxQuantity() - entry.boxSoldQuantity(), 0);
+                    }
+
+                    return "-";
+                } else {
+                    return "0";
+                }
+            });
+
+            entry.BaseManuallyQuantity = ko.observable(entry.RemainingQuantity() || 0);
+
+            entry.RemoveRestockDate = function() {
+                entry.RestockDate('-');
+                entry.IsRemoveRestockDate(true);
+            };
+
+            entry.onViewHistory = function() {
+                console.log("viewHistory, id=" + entry.StyleItemId);
+                popupWindow.initAndOpenWithSettings({
+                    content: self.settings.urls.viewHistory + "?styleItemId=" + entry.StyleItemId,
+                    title: "View History, " + entry.Size + "/" + tmpl.isNull(entry.Color, '-') + ", " + entry.StyleItemId,
+                    level: 2,
+                    width: 800,
+                    customAction: null,
+                    submitSuccess: function (result) {
+                        console.log("onViewHistory.success");
+                    }
+                });
+            };
+        });
+
+        self.listings().forEach(function(entry) {
+            entry.Price = ko.observable(entry.Price).extend({
+                format: entry.Currency + "0.00"
+            });
+            entry.Rank = ko.observable(entry.Rank).extend({
+                format: "0,000"
+            });
+            entry.Quantity = ko.observable(entry.Quantity);
+
+            entry.RestockDate = ko.observable(kendo.parseDate(entry.RestockDate)).extend({
+                format: "MM/dd/yyyy"
+            });
+            entry.HasRestockDate = ko.computed(function() {
+                return entry.RestockDate() != '-';
+            });
+            entry.HasDisplayQuantity = ko.computed(function() {
+                return entry.DisplayQuantity != null;
+            });
+            entry.MarketCss = ko.computed(function() {
+                if (entry.Market == self.settings.markets.amazonCom)
+                {
+                    if (entry.MarketplaceId == self.settings.marketplaces.amazonCa)
+                        return "order-canada-channel";
+                    if (entry.MarketplaceId == self.settings.marketplaces.amazonMx)
+                        return "order-mexico-channel";
+                    return "order-us-channel";
+                }
+                if (entry.Market == self.settings.markets.amazonUk)
+                    return "order-europe-channel";
+                if (entry.Market == self.settings.markets.eBay)
+                    return "order-ebay-market";
+                if (entry.Market == self.settings.markets.magento)
+                    return "order-magento-market";
+                if (entry.Market == self.settings.markets.walmart)
+                    return "order-walmart-market";
+                if (entry.Market == self.settings.markets.jet)
+                    return "order-jet-market";
+            });
+        });
+
+
+        self.redistribute = function(data, e) {
+            var sender = $(e.target);
+            helper.ui.showLoading(sender);
+            $.ajax({
+                cache: false,
+                url: '@Url.Action(MVC.InventoryQuantity.Redistribute())' + "?styleId=" + model.StyleId,
+                success: function(data) {
+                    if (data.IsSuccess) {
+                        self.listings().forEach(function(entry) {
+                            var changeItem = $.grep(data.Data, function(item) { return item.Id == entry.Id; });
+                            if (changeItem.length > 0) {
+                                entry.Quantity(changeItem[0].RealQuantity);
+                            }
+                        });
+                    }
+                },
+                complete: function() {
+                    helper.ui.hideLoading(sender);
+                }
+            });
+        };
+
+        self.generateOpenBox = function(data, e) {
+            var sender = $(e.target);
+            helper.ui.showLoading(sender);
+            $.ajax({
+                cache: false,
+                url: '@Url.Action(MVC.InventoryQuantity.GenerateOpenBox())' + "?styleId=" + model.StyleId,
+                success: function(data) {
+                    if (data.IsSuccess) {
+                        self.sizes().forEach(function(entry) {
+                            entry.boxQuantity(entry.RemainingQuantity());
+                            entry.boxSoldQuantity(0);
+                            entry.manuallyQuantity(null);
+                            entry.ManuallyQuantitySetDate(null);
+                        });
+                    } else {
+                        if (data.Messages.length > 0)
+                            Message.popup(data.Messages[0].Message);
+                    }
+                },
+                complete: function() {
+                    helper.ui.hideLoading(sender);
+                }
+            });
+        };
+
+        self.switchToEdit = function() {
+            console.log("switchToEdit, id=" + self.id);
+            popupWindow.customAction("openStyleEdit", {
+                id: self.id,
+                type: self.type,
+            });
+        };
+        self.canSwitchToEdit = ko.observable(settings.editAccess);
+
+        self.switchToPrice = function() {
+            console.log("switchToPrice, id=" + self.id);
+
+            popupWindow.customAction("openStylePrice", {
+                id: self.id,
+                type: self.Type,
+            });
+        };
+
+        self.canSwitchToPrice = ko.computed(function() {
+            return self.canSwitchToEdit();
+        });
+
+        self.isVisibleListings = ko.observable(false);
+        self.isNotVisibleListings = ko.computed(function() {
+            return !self.isVisibleListings();
+        });
+        self.toggleListings = function() {
+            self.isVisibleListings(!self.isVisibleListings());
+        };
+
+        self.getModel = function() {
+            var sizes = $.map(self.sizes(), function(s) {
+                return {
+                    StyleItemId: s.StyleItemId,
+                    Size: s.Size,
+                    BaseManuallyQuantity: s.BaseManuallyQuantity(),
+                    NewManuallyQuantity: s.newManuallyQuantity(),
+                    UseBoxQuantity: s.useBoxQuantity()
+                }
+            });
+
+            return {
+                Sizes: sizes,
+            };
+        }
+
+        self.validationAsync = function() {
+            var model = self.getModel();
+            var url = '@Url.Action("Validate", "InventoryQuantity")';
+            return validationUtils.callAsyncValidation(url, model);
+        };
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function() {
+            return self.errors().length === 0;
+        });
+        self.onSubmit = function(data, e) { // function(data, e) {
+            var sender = $(e.target);
+
+            //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+            //http://jsfiddle.net/KHFn8/3238/
+            if (self.isValid() && locationVm.isValid()) { //validator.validate() &&
+                helper.ui.showLoading(sender);
+                self.validationAsync().done(function() {
+                    helper.ui.hideLoading(sender);
+                    $('#submit').click();
+                }).fail(function() {
+                    helper.ui.hideLoading(sender);
+                });
+
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                locationVm.errors.showAllMessages();
+                e.preventDefault();
+                return false;
+            }
+        };
+
+        self.isLoaded(true);
+    };
+
+    $(document).ready(function() {
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+            markets: {
+                amazonCom: '@((int)MarketType.Amazon)',
+                amazonUk: '@((int)MarketType.AmazonEU)',
+                amazonAu: '@((int)MarketType.AmazonAU)',
+                walmart: '@((int)MarketType.Walmart)',
+                walmartCA: '@((int)MarketType.WalmartCA)',
+                jet: '@((int)MarketType.Jet)',
+                magento: '@((int)MarketType.Magento)',
+                eBay: '@((int)MarketType.eBay)',
+            },
+            marketplaces: {
+                amazonCa: '@(MarketplaceKeeper.AmazonCaMarketplaceId)',
+                amazonMx: '@(MarketplaceKeeper.AmazonMxMarketplaceId)'
+            },
+
+            styleTypes: {
+                default: '@((int)StyleTypes.Default)',
+                reference: '@((int)StyleTypes.References)'
+            },
+
+            urls: {
+                viewHistory: '@(Url.Action("ViewInventoryHistory", "InventoryHistory"))',
+            },
+            editAccess: @(AccessManager.CanEditStyle() ? 1 : 0),
+        };
+
+        var viewModel = new StyleQuantityModel(model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(viewModel, $('#edit-quantity-container')[0]);
+
+        $('#edit-quantity-container input[type=checkbox][data-toggle^=toggle]').bootstrapToggle({
+            size: 'mini',
+        });
+    });
+</script>
+
+<div id="edit-quantity-container">
+    @Html.ValidationSummary(true)
+
+    @Html.HiddenFor(m => m.Id)
+    @Html.HiddenFor(m => m.StyleId)
+
+    <div class="inventory-popup">
+        <div class="k-edit-form-container" style="width: auto">
+            <div>
+                <div style="padding: 5px 15px 0px 15px">
+                    <table class="noborder" style="width: 100%; padding-bottom: 0px">
+                        <tr>
+                            <td style="vertical-align: top; padding-top: 10px; width: 90px">
+                                <img height='75' style='border: 0' src='@Model.Thumbnail'/>
+                            </td>
+                            <td style="vertical-align: top; padding-top: 10px">
+                                <b><span class="gray">Style:</span></b>
+                                <span style="font-size: 14px" data-bind="text: styleString"></span>
+                            </td>
+                            <td style="vertical-align: top; padding-top: 10px; width: 200px">
+                                <div class="style-panel" style="padding-bottom: 0px">
+                                    <div class="title">Locations</div>
+                                    @Html.Partial("_ItemLocations", Model.Locations)
+                                    <div class="clear"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="clear"></div>
+                <div style="padding: 0px 15px 0px 15px" class="qty-panel">
+                    <div style="padding: 0px 0px 4px 0px; font-weight: bold">Quantities</div>
+                    <div class="k-widget k-grid k-secondary grid-small">
+                        <table style="width: 100%;">
+                            <colgroup>
+                                <col style=""/>
+                                <col style="width: 100px"/>
+                                <col style="width: 110px"/>
+                                <col style="width: 110px"/>
+                                <col style="width: 80px"/>
+                                <col style="width: 120px"/>
+                                <col style=""/>
+                                <col style="width: 70px" />
+                            </colgroup>
+                            <thead class="k-grid-header">
+                            <tr>
+                                <th class="k-header">Size / Color</th>
+                                <th class="k-header" data-bind="visible: canEdit">Qty Offset</th>
+                                <th class="k-header" data-bind="visible: canEdit">Restock Date</th>
+                                <th class="k-header">Last Set Qty</th>
+                                <th class="k-header" data-bind="visible: !isReferenceType()">Box Qty</th>
+                                <th class="k-header">Sold Qty</th>
+                                <th class="k-header">Remaining</th>
+                                <th class="k-header">On Hold</th>
+                            </tr>
+                            </thead>
+
+                            <tbody data-bind='foreach: sizes'>
+                            <tr class="k-master-row" data-bind="css: { 'k-alt': $index() % 2 == 1 }">
+                                <td>
+                                    <input type="hidden" data-bind='value: Size, attr: { name: "Sizes[" + $index() + "].Size" }'/>
+                                    <input type="hidden" data-bind='value: StyleItemId, attr: { name: "Sizes[" + $index() + "].StyleItemId" }'/>
+                                    <input type="hidden" data-bind='value: IsRemoveRestockDate, attr: { name: "Sizes[" + $index() + "].IsRemoveRestockDate" }'/>
+                                    <div class="gray remark">
+                                        <label data-bind="text: SizeGroupName"></label>
+                                    </div>
+                                    <span data-bind="text: Size"></span> / <span data-bind="textFormatted: Color, ifEmpty: '-'"></span>
+                                </td>
+                                <td data-bind="visible: $root.canEdit" style="text-align: right">
+                                    <input type="hidden" data-bind='value: BaseManuallyQuantity, attr: { name: "Sizes[" + $index() + "].BaseManuallyQuantity" }'/>
+                                    <span data-bind="text: BaseManuallyQuantity"></span> + <input style='width: 40px'
+                                                                                                  class="k-textbox"
+                                                                                                  autocomplete="off"
+                                                                                                  data-bind='value: newManuallyQuantity, attr: { name: "Sizes[" + $index() + "].NewManuallyQuantity", tabindex: $index() + 10 }' />
+                                </td>
+                                <td data-bind="visible: $root.canEdit">
+                                    <input style="width: 110px" data-bind='kendoDatePicker: { value: NewRestockDate, format: "MM/dd/yyyy" }, attr: { name: "Sizes[" + $index() + "].NewRestockDate", tabindex: $index() + 100 }'/>
+                                </td>
+                                <td data-bind="css: { 'use-qty-cell': isManuallyMode }">
+                                    <div class="text-normal" data-bind="text: manuallyQuantity"></div>
+                                    <div class="remark" data-bind="text: ManuallyQuantitySetDate"></div>
+                                    <div data-bind="visible: HasRestockDate()" class="remark" style="font-weight: bold">
+                                        <div>restock date: </div>
+                                        <div>
+                                            <span data-bind="text: RestockDate"></span>
+                                            <a href="#" data-bind='click: RemoveRestockDate' style="width: 20px; height: 20px; min-width: 20px; padding: 2px 0px 0px 2px" class="k-button"><span class='glyphicon glyphicon-remove am-icon'></span></a>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td data-bind="css: { 'use-qty-cell': isBoxMode }, visible: !$root.isReferenceType()">
+                                    <span data-bind="text: boxQuantity"></span>
+                                    <div data-bind="visible: $root.canEdit() && isManuallyMode()">
+                                        <div>
+                                            <span class="remark" style="vertical-align: top">use boxes</span>
+                                            <input type="checkbox"
+                                                   data-toggle="toggle"
+                                                   data-onstyle="success"
+                                                   data-height="14"
+                                                   data-bind='bsChecked: useBoxQuantity, attr: { name: "Sizes[" + $index() + "].UseBoxQuantity", tabindex: $index() + 200 }'/>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div data-bind="visible: isManuallyMode">
+                                        <span class="remark gray">since set qty:</span> <span data-bind="text: ManuallySoldQuantity"></span>
+                                    </div>
+                                    <div data-bind="visible: isBoxMode">
+                                        <span class="remark gray">since get boxes:</span> <span data-bind="text: boxSoldQuantity"></span>
+                                    </div>
+                                    <div>
+                                        <span class="remark gray">total:</span>
+                                        <span data-bind="text: TotalMarketsSoldQuantity" /><span class="remark gray" title="Sold Online">(<span class="tip">o</span>)</span>
+                                        + <span data-bind="text: TotalScannedSoldQuantity" /><span class="remark gray" title="Sold in store">(<span class="tip">s</span>)</span>
+                                        + <span data-bind="text: TotalSentToFBAQuantity" /><span class="remark gray" title="Sent to FBA">(<span class="tip">f</span>)</span>
+                                        + <span data-bind="text: TotalSpecialCaseQuantity" /><span class="remark gray" title="Inventory special cases">(<span class="tip">c</span>)</span>
+                                        + <span data-bind="text: TotalSentToPhotoshootQuantity" /><span class="remark gray" title="Sent to Photoshoot">(<span class="tip">ps</span>)</span>
+                                    </div>
+                                </td>
+                                <td class="text-normal">
+                                    <b><span data-bind="text: RemainingQuantity"></span></b>
+                                    <div><a href="javascript:;" class="remark" data-bind="click: onViewHistory">details...</a></div>
+                                </td>
+                                <td>
+                                    <input type="checkbox" 
+                                           data-toggle="toggle"
+                                           data-onstyle="danger"
+                                           data-height="16"
+                                           data-bind='checked: OnHold, attr: { name: "Sizes[" + $index() + "].OnHold", tabindex: $index() + 300 }' />
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="clear"></div>
+                <div style="padding: 0px 15px 15px 15px">
+                    <div style="padding: 15px 0px 4px 0px;">
+                        Listings
+                        <button class="k-button" data-bind="click: toggleListings, visible: isNotVisibleListings">show listings >></button>
+                        <button class="k-button" data-bind="click: toggleListings, visible: isVisibleListings"><< hide listings</button>
+                        @if (AccessManager.CanEditStyle())
+                        {
+                            <button data-bind="click: redistribute" class="k-button">Distribute Quantity</button>
+                        }
+                        @if (AccessManager.CanEditStyle())
+                        {
+                            <button style="margin-left: 310px; margin-top: -15px" data-bind="click: generateOpenBox" class="k-button">Generate Open Box</button>
+                        }
+                    </div>
+                    <div style="display: none" data-bind="visible: isVisibleListings">
+                        <div class="k-widget k-grid k-secondary grid-small">
+                            <table style="width: 100%;">
+                                <colgroup>
+                                    <col style="width: 90px"/>
+                                    <col style="width: 90px"/>
+                                    <col style="width: 90px"/>
+                                    <col style="width: 120px"/>
+                                </colgroup>
+                                <thead class="k-grid-header">
+                                <tr>
+                                    <th class="k-header">Market</th>
+                                    <th class="k-header">Parent ASIN</th>
+                                    <th class="k-header">ASIN</th>
+                                    <th class="k-header">Size / Color</th>
+                                    <th class="k-header">SKU</th>
+                                    <th class="k-header">Price</th>
+                                    <th class="k-header">Real Qty</th>
+                                </tr>
+                                </thead>
+                                <tbody data-bind='foreach: listings'>
+                                <tr class="k-master-row" data-bind="css: { 'onhold-row': OnHold, 'k-alt': $index() % 2 == 1 }">
+                                    <td>
+                                        @*<div data-bind='component: {
+                                                    name: "marketname-display",
+                                                    params: { Market: Market, MarketplaceId: MarketplaceId, MarketName: MarketName }}'></div>*@
+                                        <span data-bind="text: MarketName, css: MarketCss()"></span>
+                                    </td>
+                                    <td>
+                                        <a target='_blank' data-bind="text: ParentASIN, attr: { href: ProductUrl }"></a>
+                                        <div class="remark gray">rank: <span data-bind="text: Rank"></span></div>
+                                    </td>
+                                    <td>
+                                        <a target='_blank' data-bind="text: ASIN, attr: { href: SellerMarketUrl }"></a>
+                                        <a target='_blank' data-bind='attr: { href: SellerMarketUrl }'><img height='50' data-bind='attr: { src: Thumbnail }' style='border: 0'/></a>
+                                    </td>
+                                    <td>
+                                        <span data-bind="text: StyleSize"></span> / <span data-bind="textFormatted: StyleColor, ifEmpty: '-'"></span>
+                                        <div class="gray note">
+                                            <div>on market:</div>
+                                            <div><span data-bind="text: ListingSize"></span> / <span data-bind="textFormatted: ListingColor, ifEmpty: '-'"></span></div>
+                                        </div>
+                                    </td>
+                                    <td><span data-bind="text: SKU"></span></td>
+                                    <td><span data-bind="text: Price"></span></td>
+                                    <td>
+                                        <div>
+                                            <span data-bind="text: Quantity"></span>
+                                            <span data-bind="visible: HasDisplayQuantity" class="gray">(<span data-bind="text: DisplayQuantity"></span>)</span>
+                                        </div>
+                                        <div data-bind="visible: OnHold" class="gray">on hold</div>
+                                        <div data-bind="visible: HasRestockDate" class="gray">
+                                            restock:
+                                            <div data-bind="text: RestockDate"></div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="clear"></div>
+
+    <div class="k-edit-buttons k-state-default popup-button-panel"
+         style="position: static">
+        <table style="margin-left: auto">
+            <tr>
+                <td style="display: none; padding-right: 15px;"
+                    data-bind="visible: canSwitchToPrice()  && isLoaded()">
+                    <button class="k-button"
+                            data-bind="click: switchToPrice">
+                        <span class="glyphicon glyphicon-usd am-icon"></span>Switch to Price
+                    </button>
+                </td>
+
+                <td style="display: none; padding-right: 25px"
+                    data-bind="visible: canSwitchToEdit() && isLoaded()">
+                    <button class="k-button"
+                            data-bind="click: switchToEdit, visible: isLoaded">
+                        <span class="glyphicon glyphicon-pencil am-icon"></span>Switch to Edit
+                    </button>
+                </td>
+                @if (AccessManager.CanDoStyleOperations())
+                {
+                    <td>
+                        <button id="preSubmit"
+                                type="button"
+                                tabindex="300"
+                                data-bind="click: onSubmit"
+                                class="k-button k-button-icontext k-grid-update">
+                            <span class="k-icon k-update"></span>Save
+                        </button>
+
+                        <button type="submit"
+                                style="display: none"
+                                id="submit">Save</button>
+                    </td>
+                }
+                <td>
+                    <button class="k-button k-button-icontext k-grid-cancel"
+                            type="reset"
+                            id="cancel"
+                            tabindex="301"
+                            onclick="popupWindow.close()">
+                        <span class="k-icon k-cancel"></span>Cancel
+                    </button>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>

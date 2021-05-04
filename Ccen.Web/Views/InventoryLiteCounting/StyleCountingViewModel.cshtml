@@ -1,0 +1,162 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.HtmlExtend
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Inventory.StyleLiteCountingViewModel
+@{
+    Layout = null;
+}
+
+
+<script type="text/javascript">
+    var StyleCountingModel = function(model, settings) {
+        var self = this;
+
+        self.sizes = ko.observableArray(model.StyleItems);
+        self.statusList = ko.observableArray(settings.liteCountingStatusList);
+
+        self.activeSizeId = ko.observable(null);
+
+        self.sizes().forEach(function(entry) {
+            console.log(entry);
+
+            entry.setActiveSize = function() {
+                self.activeSizeId(entry.Id);
+            }
+
+            entry.isActive = ko.computed(function() {
+                return self.activeSizeId() == entry.Id;
+            });
+
+            entry.countingStatus = ko.observable(entry.CountingStatus);
+        });
+
+        if (self.sizes().length > 0) {
+            self.activeSizeId(self.sizes()[0].Id);
+        }
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function() {
+            return self.errors().length === 0;
+        });
+        self.onSubmit = function(data, e) { // function(data, e) {
+            var sender = $(e.target);
+
+            //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+            //http://jsfiddle.net/KHFn8/3238/
+            if (self.isValid()) { //validator.validate() &&
+                helper.ui.showLoading(sender);
+                $('#submit').click();
+
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                e.preventDefault();
+                return false;
+            }
+        };
+    };
+
+    $(document).ready(function() {
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+            liteCountingStatusList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.LiteCountingStatusList)),
+        };
+
+        var viewModel = new StyleCountingModel(model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(viewModel, $('#edit-style-counting-container')[0]);
+    });
+</script>
+
+<div id="edit-style-counting-container">
+    @Html.ValidationSummary(true)
+
+    @Html.HiddenFor(m => m.Id)
+    @Html.HiddenFor(m => m.StyleId)
+
+    <div class="inventory-popup">
+        <div class="k-edit-form-container" style="width: auto">
+            <div>
+                <div class="clear"></div>
+
+
+                <table style="width: 100%" class="wizard">
+                    <tr>
+                        <td style="vertical-align: top; width: 120px">
+                            <div style="padding-top: 10px">
+                                <ul class="nav nav-tabs" 
+                                    style="padding-top: 10px; min-height: 300px"
+                                    data-bind="foreach: sizes">
+                                    <li role="presentation" data-bind="css: { 'active': $root.activeSizeId() == Id }">
+                                        <a href="#" data-bind="click: setActiveSize"><span data-bind="text: Name"></span></a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                        <td style="vertical-align: top">
+                            <div data-bind="foreach: sizes">
+                                <div data-bind="visible: isActive" style="padding: 15px">
+                                    <input type="hidden" data-bind="value: Id, attr: { name: 'StyleItems[' + $index() + '].Id' }" />
+                                    <div>Counted by: <span data-bind="textFormatted: CountingName, ifEmpty: '-'"></span></div>
+                                    <div style="padding-top: 15px">Status: </div>
+                                    <div data-bind="foreach: $root.statusList">
+                                        <div style="margin: 15px">
+                                            <label><input type="radio" data-bind="checked: $parent.countingStatus(), value: Value, attr: { name: 'StyleItems[' + $parentContext.$index() + '].CountingStatus' }" /> <span data-bind="text: Text"></span></label>
+                                        </div>
+                                    </div>
+
+
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+    </div>
+    
+    <div class="clear"></div>
+
+    <div class="k-edit-buttons k-state-default popup-button-panel"
+         style="position: static">
+        <table style="margin-left: auto">
+            <tr>
+                <td>
+                    <button id="preSubmit"
+                            type="button"
+                            tabindex="300"
+                            data-bind="click: onSubmit"
+                            class="k-button k-button-icontext k-grid-update">
+                        <span class="k-icon k-update"></span>Save
+                    </button>
+
+                    <button type="submit"
+                            style="display: none"
+                            id="submit">Save</button>
+                </td>
+                <td>
+                    <button class="k-button k-button-icontext k-grid-cancel"
+                            type="reset"
+                            id="cancel"
+                            tabindex="301"
+                            onclick="popupWindow.close()">
+                        <span class="k-icon k-cancel"></span>Cancel
+                    </button>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>

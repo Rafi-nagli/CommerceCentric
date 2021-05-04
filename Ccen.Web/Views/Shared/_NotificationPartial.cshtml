@@ -1,0 +1,100 @@
+﻿@using Amazon.Core.Models
+<script type="text/javascript">
+    var NotificationInfoModel = function () {
+        var self = this;
+
+        self.notificationUndeliveredCount = ko.observable(0);
+        self.notificationUnshippedCount = ko.observable(0);
+        self.messageCount = ko.observable(0);
+        self.dhlPickupDate = ko.observable(null);
+        self.dhlReadyByTime = ko.observable(null);
+        self.dhlCloseTime = ko.observable(null);
+        self.dhlPickupIsSuccess = ko.observable(true);
+
+        self.init = function () {
+            $.ajax({
+                cache: false,
+                url: '@Url.Action("GetInfo", "Notification")',
+                success: function (result) {
+                    var now = moment().startOf('day');
+                    var readyByTimeSpan = moment.duration(result.DhlReadyByTime);
+                    var readyByTime = now.add(readyByTimeSpan);
+
+                    now = moment().startOf('day');
+                    var closeTimeSpan = moment.duration(result.DhlCloseTime);
+                    var closeTime = now.add(closeTimeSpan);
+
+                    self.notificationUndeliveredCount(result.UnreadNotificationUndeliveredCount);
+                    self.notificationUnshippedCount(result.UnreadNotificationUnshippedCount);
+                    self.messageCount(result.UnansweredMessageCount);
+
+                    if (result.DhlPickupDate != null) {
+                        self.dhlPickupDate(dataUtils.parseDate(result.DhlPickupDate));
+                        self.dhlReadyByTime(readyByTime.format('HH:mm'));
+                        self.dhlCloseTime(closeTime.format('HH:mm'));
+                    }
+                    self.dhlPickupIsSuccess(result.DhlPickupIsSuccess);
+                }
+            });
+        };
+
+        self.init();
+    };
+
+    var notificationInfoModel = null;
+    $(document).ready(function () {
+        notificationInfoModel = new NotificationInfoModel();
+        ko.applyBindings(notificationInfoModel, document.getElementById("notification-block"));
+    });
+</script>
+
+<div id="notification-block" style="padding-bottom: 5px">
+    <div>
+        @*<span style="margin-right: 15px">
+            <span class="glyphicon glyphicon-upgrade am-icon"
+                  style="font-size: 16px; margin-right: 0px">
+            </span>
+            <span>Next DHL pickup: </span>
+            <span data-bind="visible: !dhlPickupIsSuccess()" class="label label-danger" style="display:none">scheduling error</span>
+            <span data-bind="visible: dhlPickupIsSuccess" class="label label-success">
+                <span data-bind="textFormatted: dhlPickupDate, pattern: 'MM/dd', ifEmpty: '-'"></span>
+                <span data-bind="textFormatted: dhlReadyByTime"></span>-<span data-bind="textFormatted: dhlCloseTime"></span>
+            </span>
+        </span>*@
+        
+        <span>
+            <a href="@Url.Action("Index", "Email")">
+                <span class='glyphicon glyphicon-envelope'
+                      style="font-size: 16px; vertical-align: middle">
+                </span>
+            </a>
+            <a href="@Url.Action("Index", "Email")">
+                <span style="font-weight: bold"
+                      class="label"
+                      data-bind="text: messageCount, css: { 'label-danger': messageCount() > 0, 'label-success': messageCount() == 0 }"></span>
+            </a>
+        </span>
+        
+        <span style="margin-left: 5px">
+            <a target="_blank" href="@Url.Action("Index", "Notification")?type=@(NotificationType.LabelNeverShipped)">
+                <img src="~/Images/no-envelope.png" width="24" />
+            </a>
+            <a target="_blank" href="@Url.Action("Index", "Notification")?type=@(NotificationType.LabelNeverShipped)">
+                <span style="font-weight: bold"
+                      class="label"
+                      data-bind="text: notificationUnshippedCount, css: { 'label-danger': notificationUnshippedCount() >0, 'label-success': notificationUnshippedCount() == 0 }"></span>
+            </a>
+        </span>
+
+        <span style="margin-left: 5px">
+            <a target="_blank" href="@Url.Action("Index", "Notification")?type=@(NotificationType.LabelGotStuck)">
+                <img src="~/Images/mailbox_empty.png" width="24" />
+            </a>
+            <a target="_blank" href="@Url.Action("Index", "Notification")?type=@(NotificationType.LabelGotStuck)">
+                <span style="font-weight: bold"
+                      class="label"
+                      data-bind="text: notificationUndeliveredCount, css: { 'label-danger': notificationUndeliveredCount() >0, 'label-success': notificationUndeliveredCount() == 0 }"></span>
+            </a>
+        </span>
+    </div>
+</div>

@@ -1,0 +1,8 @@
+﻿table { padding: 0px; margin: 0px; border-spacing: 0px; border-collapse: collapse; }
+th { background: #333; font-weight:normal; color: white;padding: 3px;font-size: 14px; }
+td { padding: 3px; }
+.cell { padding: 10px 1px; border: 1px solid #333;font-size: 16px; }
+.t { font-size: 12px;font-weight: bold;padding: 2px 0px 0px 4px;float: left; }
+.v { padding-right: 4px;float: right; }
+
+.cell table { border: none; }

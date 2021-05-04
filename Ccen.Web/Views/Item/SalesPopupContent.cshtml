@@ -1,0 +1,257 @@
+﻿@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Products
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Products.SalesPageViewModel
+@{
+    Layout = null;
+}
+
+<div class="sales-graph" id="item-sales-graph">
+    <div class="graph" style="overflow: hidden; min-height: 400px">
+        <div id="chart"
+             data-bind="visible: !emptyChartData()"
+             style="min-width: 850px; height: 400px; max-width: 900px; margin: 0 auto"></div>
+        <div class="empty-data-message" data-bind="visible: emptyChartData">Empty Sales information</div>
+    </div>
+
+    <div class="filter-panel">
+        <div class="info">
+            @if (Model.Mode == SalesPageViewModel.SalesGraphMode.SKU)
+            {
+                <div class="caption gray">Parent ASIN:</div>
+                <div class="value" data-bind="text: parentASIN"></div>
+            }
+            <div class="caption gray">Picture:</div>
+            <div class="value"><img height='75' data-bind="attr: { src: imageSource }" style='border: 0'/>
+            </div>
+        </div>
+        <div class="filters">
+            <div>
+                Period:
+                <input style="width: 180px" data-bind="kendoDropDownList: { data: salesPeriodList, value: period, dataTextField: 'Text', dataValueField: 'Value' }"/>
+            </div>
+
+            @if (Model.Mode == SalesPageViewModel.SalesGraphMode.SKU)
+            {
+                <div class="child-items">
+                    <div>SKU</div>
+                    <div class="sku-list" data-bind="foreach: items">
+                        <div><input type="checkbox" class="child" data-bind="value: SKU, checked: IsChecked"/> <span data-bind="text: SKU"></span> (<span data-bind="text: ASIN"></span> - <span data-bind="text: Size"></span>)
+                        </div>
+                    </div>
+                </div>
+            }
+            <div class="button-panel">
+                <button class="k-button" style="margin: 0px 10px 0px 0px; padding: 3px 20px 3px 20px" data-bind="click: updateChart">Apply</button>
+            </div>
+        </div>
+
+        <div class="clear"></div>
+    </div>
+
+</div>
+
+<script>
+
+    var salesGraphModes = {
+        SKU: @((int)SalesPageViewModel.SalesGraphMode.SKU),
+        StyleItem: @((int)SalesPageViewModel.SalesGraphMode.StyleItem),
+    }
+
+    var ItemSalesGraphViewModel = function(settings, model) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+
+        self.chart = null;
+        self.chartData = null;
+
+        self.parentASIN = ko.observable(model.ParentASIN);
+        self.styleItemId = ko.observable(model.StyleItemId);
+        self.imageSource = ko.observable(model.ImageSource);
+
+        $.each(model.Items, function(i, n) {
+            n.IsChecked = ko.observable(true);
+        });
+        self.items = ko.observableArray(model.Items);
+
+        self.period = ko.observable(model.Period);
+        self.salesPeriodList = ko.observableArray(settings.salesPeriodList);
+
+        self.isSKUMode = ko.computed(function() {
+            return self.settings.mode == salesGraphModes.SKU;
+        });
+
+        self.isStyleItemMode = ko.computed(function() {
+            return self.settings.mode == salesGraphModes.StyleItem;
+        });
+
+        self.emptyChartData = ko.observable(true);
+
+        self.updateChart = function() {
+            self.requestData();
+        };
+
+        self.requestData = function () {
+            console.log('requestData');
+            console.log(self.chart.series.length);
+            while (self.chart.series.length > 0)
+                self.chart.series[0].remove(true);
+
+            self.chart.showLoading();
+
+            var children = $.grep(self.items(), function(n) {
+                return n.IsChecked();
+            });
+            var skuList = $.map(children, function(n) {
+                return n.SKU;
+            });
+
+            var getDataUrl = "";
+            console.log("isSKUMode=" + self.isSKUMode());
+            if (self.isSKUMode())
+                getDataUrl = self.settings.urls.getSalesBySKU;
+            else
+                getDataUrl = self.settings.urls.getSalesByStyleItem;
+
+            $.ajax({
+                url: getDataUrl,
+                traditional: true,
+                data: {
+                    market: self.model.Market,
+                    marketplaceId: self.model.MarketplaceId,
+                    asin: self.model.ParentASIN,
+                    styleItemIdList: self.model.StyleItemIdList,
+                    skuList: skuList,
+                    period: self.period()
+                },
+                success: function (result) {
+                    self.chart.hideLoading();
+
+                    if (result.IsSuccess) {
+                        console.log('setCategories');
+                        self.chart.xAxis[0].setCategories(result.Data.LabelsX, true);
+                        self.chartData = self.buildSeries(result.Data);
+                        self.emptyChartData(self.chartData == null);
+                        self.showChartData();
+                    } else {
+                        self.emptyChartData(true);
+                    }
+                }
+            });
+        };
+
+        self.buildSeries = function(data) {
+            var series = [];
+
+            var sales = data.Sales;
+            var labels = data.SeriesLabels;
+
+            if (sales != null && sales.length > 0) {
+                for (var j = 0; j < sales.length; j++) {
+                    series.push({
+                        name: labels[j],
+                        //spacing: 0.10,
+                        //gap: 1.5,
+                        data: sales[j]
+                    });
+                }
+
+                return series;
+            }
+            return null;
+        };
+
+        self.showChartData = function () {
+            while (self.chart.series.length > 0)
+                self.chart.series[0].remove(true);
+            self.chart.yAxis[0].setExtremes(null, null);
+
+            if (self.chartData == null)
+                return;
+
+            console.log('showChartData');
+            for (var i = 0; i < self.chartData.length; i++) {
+                self.chart.addSeries(self.chartData[i]);
+            }
+        }
+
+        self.ticksToDate = function(ticks) {
+            var date = new Date(ticks / 10000);
+            var utc = new Date(date.getTime() + date.getTimezoneOffset() * 60000); @* Without this going to show previous month in case of -5/-4 hours *@
+            return utc;
+        }
+
+        self.init = function () {
+            self.chart = new Highcharts.Chart({
+                chart: {
+                    renderTo: 'chart',
+                    plotBackgroundColor: null,
+                    plotBorderWidth: null,
+                    plotShadow: false,
+                    type: 'column',
+                    events: {
+                        load: function() {
+                            self.chart = this;
+                            self.requestData();
+                        }
+                    },
+                    //spacing: [0,0,0,0]
+                },
+                title: {
+                    text: ""
+                },
+                yAxis: {
+                    allowDecimals: false,
+                    title: {
+                        text: 'Units',
+                    },
+                    plotLines: [{
+                        value: 0,
+                        width: 1,
+                        color: '#808080'
+                    }]
+                },
+                tooltip: {
+                    headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+                    pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+                        '<td style="padding:0"><b>{point.y}</b></td></tr>',
+                    footerFormat: '</table>',
+                    shared: true,
+                    useHTML: true
+                },
+                series: [],
+                //legend: {
+                //    layout: 'horizontal',
+                //    align: 'center',
+                //    verticalAlign: 'bottom',
+                //    borderWidth: 0
+                //},
+                plotOptions: {
+                    column: {
+                        pointPadding: 0.2,
+                        borderWidth: 0
+                    }
+                },
+            });
+        }
+
+        self.init();
+    }
+
+    $(document).ready(function() {
+        var settings = {
+            salesPeriodList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.SalesPeriods)),
+            mode: @((int)Model.Mode),
+            urls: {
+                getSalesBySKU: '@Url.Action("GetSalesByASIN", "Item")',
+                getSalesByStyleItem: '@Url.Action("GetSalesByStyleItem", "Item")'
+            }
+        };
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        itemSalesGraphViewModel = new ItemSalesGraphViewModel(settings, model);
+        ko.applyBindings(itemSalesGraphViewModel, document.getElementById("item-sales-graph"));
+    });
+</script>

@@ -1,0 +1,163 @@
+﻿@using Amazon.Web.HtmlExtend
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.InventoryGroup.InventoryGroupViewModel
+@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var InventoryGroupViewModel = function (model, settings) {
+        self.settings = settings;
+
+        self.newName = ko.observable(model.Name);
+        self.selectName = ko.observable("");
+
+        self.groupItems = ko.observable(model.GroupItems);
+        self.createGroupMode = ko.observable("0");
+
+        self.isNew = ko.computed(function () {
+            return self.createGroupMode() == "0";
+        });
+        self.isExist = ko.computed(function () {
+            return self.createGroupMode() == "1";
+        });
+
+        self.groupName = ko.computed(function () {
+            var name = self.isNew() ? self.newName() : self.selectName();
+            console.log("name: " + name);
+            return name;
+        });
+
+        self.styleGroupNameSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: self.settings.getStyleGroupNameListUrl,
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if (action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.errors = ko.validation.group(self, { deep: false });
+        self.isValid = ko.computed(function () {
+            return self.errors().length === 0;
+        });
+        self.onSubmit = function (data, e) { // function(data, e) {
+            //console.log(data);
+            console.log(e);
+            console.log("save click");
+
+            //var validator = $("#form").kendoValidator().data('kendoValidator');
+
+            //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+            //http://jsfiddle.net/KHFn8/3238/
+            if (self.isValid()) {
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                e.preventDefault();
+                return false;
+            }
+        };
+    }
+
+    $(document).ready(function() {
+        console.log("onready");
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+            getStyleGroupNameListUrl: '@Url.Action("GetStyleGroupNameList", "AutoComplete")',
+        };
+
+        var vm = new InventoryGroupViewModel(model, settings);
+        ko.applyBindings(vm, document.getElementById('style-group-edit-container'));
+    });
+</script>
+
+<!-- ko stopBinding: true -->
+<div id="style-group-edit-container">
+    @Html.ValidationSummary(true)
+
+    @Html.HiddenFor(m => m.Id)
+    <div class="k-edit-form-container">
+        <input type="hidden" name="Name" data-bind="value: groupName" />
+
+        <div class="editor-label">Name <span>*</span></div>
+        <div class="editor-field">
+            <div>
+                <input type="radio" value="0" name="CreateGroupMode" data-bind="checked: createGroupMode" />New
+                <input type="text" class="k-textbox" data-bind="value: newName, enable: isNew()" />
+            </div>
+            <div>
+                <input type="radio" value="1" name="CreateGroupMode" data-bind="checked: createGroupMode" />To exist
+                <input type="text"
+                       style="width: 180px"
+                       data-bind="kendoAutoComplete: {
+                                            value: selectName,
+                                            data: {},
+                                            highlightFirst: true,
+                                            minLenght: 3,
+                                            enabled: isExist,
+                                            dataSource: styleGroupNameSource },
+                                        valueUpdate: 'afterkeydown'"
+                       class="k-textbox" />
+            </div>
+        </div>
+        <div class="editor-label">Style List <span>*</span></div>
+        <div class="editor-field">
+            <div data-bind="foreach: groupItems" style="overflow-y: scroll; max-height: 250px">
+                <div style="padding: 4px;">
+                    <input type="hidden" data-bind='value: StyleId, attr: { name: "GroupItems[" + $index() + "].StyleId" }' />
+                    <span data-bind="text: StyleString"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="clear"></div>
+    </div>
+
+    <div class="clear"></div>
+
+    <div class="k-edit-buttons k-state-default popup-button-panel"
+         style="position: static">
+        <table style="margin-left: auto">
+            <tr>
+                <td>
+                    <button type="submit"
+                            id="submit"
+                            tabindex="300"
+                            data-bind="click: onSubmit"
+                            class="k-button k-button-icontext k-grid-update">
+                        <span class="k-icon k-update"></span>Save
+                    </button>
+                </td>
+                <td>
+                    <button class="k-button k-button-icontext k-grid-cancel"
+                            type="reset"
+                            id="cancel"
+                            tabindex="301"
+                            onclick="popupWindow.close()">
+                        <span class="k-icon k-cancel"></span>Cancel
+                    </button>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+</div>
+<!-- /ko -->

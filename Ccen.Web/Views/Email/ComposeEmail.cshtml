@@ -1,0 +1,1031 @@
+﻿@using Amazon.Core.Models
+@using Amazon.Core.Models.Settings
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Pages
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Emails.ComposeEmailViewModel
+
+@{
+    ViewBag.Title = "Compose Email";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/feedback.ico" />
+}
+
+<style>
+    .k-content body {
+        background-color: white;
+    }
+</style>
+
+<script>
+
+
+    var ComposeEmailModel = function(model, settings) {
+        var self = this;
+
+        //Init
+        self.model = model;
+        self.settings = settings;
+
+        self.gridId = self.settings.gridId;
+        self.gridNode = $(self.gridId);
+        self.grid = self.gridNode.data("kendoGrid");
+
+        self.messages = ko.observableArray([]);
+
+        self.isLoading = ko.observable(false);
+        self.isExchangeLoading = ko.observable(false);
+
+        self.NONE = 0;
+        self.SENDING = 1;
+        self.SENDED = 2;
+        self.sendStatus = ko.observable(self.NONE);
+
+        self.inputOrderNumber = ko.observable(model.OrderNumber);
+        self.inputEmailType = ko.observable(model.EmailType);
+        self.inputEmailType.subscribe(function() { self.refreshContent(); });
+
+        self.emailTypeList = ko.observableArray(settings.emailTypeList);
+
+
+        self.orderNumber = ko.observable();
+        self.orderId = ko.observable();
+        self.market = ko.observable();
+        self.shipmentProvider = ko.observable();
+        self.exchangeInfo = {
+            orderItems: ko.observable([]),
+        };
+
+        self.emailType = ko.observable();
+        self.emailType.subscribe(function(newValue) {
+            console.log("emailType=" + newValue);
+            self.newComment('');
+            if (newValue == '@((int)EmailTypes.LostPackage)') {
+                self.newComment('"Lost Package" email sent');
+            }
+            if (newValue == '@((int)EmailTypes.LostPackage2)') {
+                self.newComment('"Lost Package 2" email sent');
+            }
+            if (newValue == '@((int)EmailTypes.UndeliverableAsAddressed)') {
+                self.newComment('Undelivered As Addressed email sent to customer');
+            }
+            if (newValue == '@((int)EmailTypes.ReturnInstructions)') {
+                self.newComment('Return instructions sent');
+            }
+            if (newValue == '@((int)EmailTypes.AddressVerify)') {
+                self.newComment('Address verification email sent');
+            }
+            if (newValue == '@((int)EmailTypes.NotOurs)') {
+                self.newComment('Emailed client about wrong item we received, gave him 7 days to respond');
+            }
+
+            if (newValue == '@((int)EmailTypes.ExchangeInstructions)') {
+                self.getExchangeInfo();
+            } else {
+                self.clearExchangeInfo();
+            }
+        });
+        self.emailTypeString = ko.observable();
+
+        self.isExchange = ko.computed(function() {
+            return self.emailType() == '@((int)EmailTypes.ExchangeInstructions)';
+        });
+
+        self.subject = ko.observable();
+        self.body = ko.observable();
+        self.sourceBody = ko.observable();
+
+        self.newComment = ko.observable();
+
+
+        self.fromEmail = ko.observable();
+        self.fromName = ko.observable();
+        self.toEmail = ko.observable();
+        self.toName = ko.observable();
+        self.replyToEmailId = ko.observable();
+
+        self.replyMode = ko.computed(function() {
+            return self.replyToEmailId() != null;
+        });
+
+        self.title = ko.computed(function() {
+            if (self.replyMode())
+                return "Reply to";
+            return "Compose Email";
+        });
+
+        self.attachedFile = ko.observable(null);
+        self.attachedLabel = ko.observable(null);
+
+        self.attachStyleId = ko.observable(null);
+        self.attachedStyleImages = ko.observableArray([]);
+
+        self.removeStyleImage = function(model) {
+            console.log(model);
+            self.attachedStyleImages.remove(model);
+        }
+
+        self.hasAttachedStyleImages = ko.computed(function() {
+            return self.attachedStyleImages().length > 0;
+        });
+
+        self.hasAttachedLabel = ko.computed(function() {
+            return self.attachedLabel() != null && !dataUtils.isEmpty(self.attachedLabel().ViewUrl);
+        });
+
+        self.filteredEmailList = ko.computed(function() {
+            var allTypes = self.emailTypeList();
+            console.log("filtered, shipmentProvider=" + self.shipmentProvider());
+
+            if (self.shipmentProvider() == self.settings.shipmentProviders.amazon)
+                return allTypes;
+
+            return $.grep(allTypes, function(n) {
+                console.log(n.Value + " - " + self.settings.emailTypes.lostPackage2);
+                return n.Value != self.settings.emailTypes.lostPackage2;
+            });
+        });
+
+
+        self.styleIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: self.settings.getStyleIdListUrl,
+                parameterMap: function(data, action) {
+                    console.log("action=" + action);
+                    if (action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+
+        self.orderIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetOrderIdList", "AutoComplete")',
+                parameterMap: function(data, action) {
+                    console.log("action=" + action);
+                    if (action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.styleIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetStyleIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if(action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        
+        self.updateBody = function() {
+            console.log("updateBody");
+            var exchangeItems = $.grep(self.exchangeInfo.orderItems(), function(item) {
+                return item.inputQuantity() > 0;
+            });
+            if (exchangeItems.length > 0) {
+                var text = "";
+                for (var i = 0; i < exchangeItems.length; i++) {
+                    console.log(exchangeItems[i].StyleId);
+                    console.log(exchangeItems[i].exchangeStyleId());
+                    var toTitle = exchangeItems[i].StyleId != exchangeItems[i].exchangeStyleId() ? "\"" + exchangeItems[i].exchangeStyleName() + "\", " : "";
+                    text += "<br/>" + "\"" + exchangeItems[i].ItemTitle + "\", " + exchangeItems[i].SourceSize + " to " + toTitle + exchangeItems[i].Size;
+                }
+                self.body(self.sourceBody().replace("%ExchangeDetails%", text));
+            } else {
+                self.body(self.sourceBody());
+            }
+        }
+
+        self.clearExchangeInfo = function() {
+            self.exchangeInfo.orderItems([]);
+        }
+
+        self.getExchangeInfo = function() {
+            console.log('GetExchangeInfo');
+            self.isExchangeLoading(true);
+            self.clearExchangeInfo();
+
+            if (self.inputOrderNumber() == ''
+                || self.inputOrderNumber() == null)
+                return;
+
+            $.ajax({
+                url: '@Url.Action("GetExchangeInfo", "ReturnOrder")?orderNumber=' + self.inputOrderNumber(),
+                success: function(result) {
+                    if (result.IsSuccess) {
+                        result.Data.forEach(function(item) {
+                            item.originalItemCount = ko.observable(item.InputQuantity);
+                            item.inputQuantity = ko.observable(0);
+                            item.inputQuantity.subscribe(function() {
+                                console.log("inputQuantity changed");
+                                self.updateBody();
+                            });
+
+                            item.SourceSize = item.Size;
+                            item.sizeList = ko.observableArray([]);
+                            item.weight = ko.observable(item.Weight);
+
+                            item.exchangeStyleItemId = ko.observable(item.StyleItemId);
+                            item.exchangeStyleItemId.subscribe(function() {
+                                console.log("exchangeStyleItemId changed");
+                                var sizeItem = $.grep(item.sizeList(), function(nItem) { return nItem.Value == item.exchangeStyleItemId(); });
+                                if (sizeItem.length > 0) {
+                                    console.log(sizeItem);
+                                    item.Size = sizeItem[0].Text;
+                                }
+
+                                if (item.exchangeStyleItemId() != '' && item.exchangeStyleItemId() != null) {
+                                    self.getStyleItemByIdAsync(item.exchangeStyleItemId()).done(function(data) {
+                                        console.log(data);
+                                        item.weight(data.Weight);
+                                        item.exchangeStyleName(data.StyleName);
+                                        item.exchangeStyleId(data.StyleId);
+
+                                        self.updateBody();
+                                    });
+                                } else {
+                                    item.weight(0);
+                                    item.exchangeStyleId(null);
+                                    item.exchangeStyleName(null);
+                                    self.updateBody();
+                                }
+                            });
+
+                            item.styleErrorMessage = ko.observable('');
+                            item.exchangeStyleName = ko.observable('');
+                            item.exchangeStyleId = ko.observable(item.StyleId);
+                            item.exchangeStyleString = ko.observable('');
+                            item.exchangeStyleStringLoading = ko.observable(false);
+                            item.exchangeStyleString.subscribe(function() {
+                                item.styleErrorMessage('');
+                                item.exchangeStyleStringLoading(true);
+                                $.ajax({
+                                    url: '@Url.Action("GetStyleSizes", "AutoComplete")',
+                                    data: { styleString: item.exchangeStyleString(), onlyWithQty: true },
+                                    cache: false,
+                                    success: function(data) {
+                                        item.exchangeStyleStringLoading(false);
+                                        if (data.Data != null && data.Data.length > 0) {
+                                            item.sizeList(data.Data);
+                                            item.exchangeStyleItemId(data.Data[0].Value);
+                                        } else {
+                                            item.styleErrorMessage('StyleId is not found');
+                                            item.sizeList([]);
+                                            item.exchangeStyleItemId('');
+                                        }
+                                    }
+                                });
+                            });
+
+                            item.exchangeStyleString(item.StyleString);
+                        });
+
+                        self.exchangeInfo.orderItems(result.Data);
+                    }
+
+                    self.isExchangeLoading(false);
+                }
+            });
+        }
+
+        self.getStyleItemByIdAsync = function(styleItemId) {
+            return $.ajax({
+                cache: false,
+                data: { styleItemId: styleItemId },
+                url: '@Url.Action(MVC.ReturnOrder.GetStyleSizeInfo())'
+            });
+        };
+
+        self.getTemplateInfo = function() {
+            if (self.inputOrderNumber() == ''
+                || self.inputOrderNumber() == null)
+                return;
+
+            console.log(self.inputEmailType());
+
+            var replyToEmailId = self.replyToEmailId();
+
+            self.messages.removeAll();
+            self.clearModel();
+            self.sendStatus(self.NONE);
+            self.isLoading(true);
+            $.ajax({
+                url: '@Url.Action("GetTemplateInfo", "Email")?orderNumber=' + self.inputOrderNumber()
+                    + "&type=" + self.inputEmailType()
+                    + "&replyToId=" + replyToEmailId,
+                success: function(result) {
+                    if (result.IsSuccess) {
+                        self.loadModel(result.Data);
+                    }
+
+                    self.isLoading(false);
+                }
+            });
+
+            $.publish('ordernumber-changed', self.inputOrderNumber());
+        }
+
+        self.searchByKeyCmd = function(data, event) {
+            if (event.keyCode == 13)
+                self.refreshContent();
+            return true;
+        };
+
+        self.refreshContent = function() {
+            self.getTemplateInfo();
+        }
+
+        self.loadModel = function(data) {
+            console.log("loadModel");
+
+            self.orderNumber(data.OrderNumber);
+            self.orderId(data.OrderId);
+            self.market(data.Market);
+            self.shipmentProvider(data.ShipmentProvider);
+            self.emailType(data.EmailType);
+            self.emailTypeString(data.EmailTypeString);
+
+            self.subject(data.Subject);
+
+            var formattedBody = self.cleanBodyFormatting(data.Body);
+            self.body(formattedBody);
+            self.sourceBody(formattedBody);
+
+            self.fromEmail(data.FromEmail);
+            self.fromName(data.FromName);
+            self.toEmail(data.ToEmail);
+            self.toName(data.ToName);
+
+            self.replyToEmailId(data.ReplyToEmailId);
+        }
+
+        self.cleanBodyFormatting = function(body) {
+            //amazon
+            return (body || "").replace(/background-color:#e4e3e4/g, '')
+            .replace(/color:#999999/g, '')
+            //ebay
+            .replace(/background-color:#f9f9f9/g, '');
+        }
+
+        self.clearModel = function() {
+            console.log("clearModel");
+
+            self.orderNumber('');
+            self.orderId('');
+            self.market(0);
+            self.shipmentProvider(null);
+            self.emailType('');
+            self.emailTypeString('');
+
+            self.subject('');
+            self.body('');
+            self.sourceBody('');
+            self.fromEmail('');
+            self.fromName('');
+            self.toEmail('');
+            self.toName('');
+
+            self.replyToEmailId(null);
+
+            self.attachedFile(null);
+            self.attachedLabel(null);
+        }
+
+        self.getModel = function() {
+            console.log(self.attachedFile());
+
+            var exchangeItems = self.exchangeInfo.orderItems();
+            for (var i = 0; i < exchangeItems.length; i++) {
+                exchangeItems[i].ExchangeStyleItemId = exchangeItems[i].exchangeStyleItemId();
+                exchangeItems[i].ExchangeStyleString = exchangeItems[i].exchangeStyleString();
+                exchangeItems[i].ExchangeStyleId = exchangeItems[i].exchangeStyleId();
+                exchangeItems[i].InputQuantity = exchangeItems[i].inputQuantity();
+            };
+
+            var model = {
+                OrderNumber: self.orderNumber(),
+                OrderId: self.orderId(),
+                Market: self.market(),
+                EmailType: self.emailType(),
+                
+                Subject: self.subject(),
+                Body: self.body(),
+                NewComment: self.newComment(),
+
+                FromEmail: self.fromEmail(),
+                FromName: self.fromName(),
+                ToEmail: self.toEmail(),
+                ToName: self.toName(),
+
+                ReplyToEmailId: self.replyToEmailId(),
+
+                ExchangeItems: exchangeItems,
+
+                AttachedFile: self.attachedFile(),
+                AttachedLabel: self.attachedLabel(),
+                AttachedStyleImages: self.attachedStyleImages(),
+            }
+
+            return model;
+        }
+
+        self.enableGenerateReturnLabel = ko.computed(function() {
+            return !dataUtils.isEmpty(self.orderNumber())
+                && self.emailType() == self.settings.emailTypes.returnWrongDamaged;
+        });
+
+        self.onGenerateReturnLabel = function() {
+            console.log("onGenerateReturnLabel, orderNumber=" + self.orderNumber());
+            var rateConfirmAsync = $.Deferred();
+
+            $.ajax({
+                url: '@Url.Action("GetQuickReturnLabelCost", "Mailing")',
+                data: {
+                    orderNumber: self.orderNumber(),
+                }
+            }).done(function(result) {
+                if (result.IsSuccess) {
+                    Message.popupAsync({
+                        title: 'Confirm',
+                        message: 'Are you sure you would like to generate return label, label cost - $' + tmpl.f(result.Data.Rate, '0.00') + '?',
+                        type: Message.YES_NO
+                    }).done(function() {
+                        rateConfirmAsync.resolve(result.Data);
+                    }).fail(function() {
+                        rateConfirmAsync.reject();
+                    });
+                } else {
+                    var message = $.map(result.Messages, function(n) { return "<li>" + n.Message + "</li>" }).join(" ");
+
+                    Message.popupAsync({
+                        title: 'Warning',
+                        message: 'The return label hasn\'t printed. <br/><ul>' + message + '<ul>',
+                        type: Message.CLOSE
+                    });
+                    rateConfirmAsync.reject();
+                }
+            });
+
+            rateConfirmAsync.done(function(result) {
+                console.log("before QuickPrintReturnLabel");
+                $.ajax({
+                    url: '@Url.Action("QuickPrintReturnLabel", "Mailing")',
+                    data: {
+                        orderNumber: self.orderNumber(),
+                        shippingMethodId: result.Id,
+                    },
+                    success: function(result) {
+                        console.log("success QuickPrintReturnLabel");
+                        if (result.IsSuccess) {
+                            console.log(result.Data);
+                            self.attachedLabel(result.Data);
+                        }
+                        self.messages(result.Messages);
+                    }
+                });
+            });
+        }
+
+        self.onClearStyleImages = function() {
+            self.attachedStyleImages.removeAll();
+        }
+
+        self.onAttachStyleImage = function() {
+            console.log("attachStyleImage, styleId=" + self.attachStyleId());
+            $.ajax({
+                url: '@Url.Action("AttachStyleImage", "Email")',
+                data: {
+                    styleId: self.attachStyleId(),
+                },
+                type: 'GET',
+                success: function(result) {
+                    console.log(result.IsSuccess);
+                    if (result.IsSuccess && result.Data != null) {
+                        self.attachStyleId("");
+                        self.attachedStyleImages.push(result.Data);
+                    }
+                    self.messages(result.Messages);
+                }
+            });
+        }
+
+
+        self.onUploadSuccess = function (e) {
+            console.log("onUploadSuccess");
+            var data = e.response.Data;
+            console.log(data);
+            if (data != null && data.length > 0 && data[0].length > 0) {
+                console.log(data[0][0]);
+                self.attachedFile(data[0][0]);
+            }
+
+            //$.publish("PV_Grid_Access_OnAddNewRecord_Event");
+        }
+
+        self.onUploadError = function (e) {
+            console.log("onUploadError");
+            console.log(e);
+            self.uploadedFile(null);
+            self.messages.push(new MessageString("Unable to upload attachment", MessageStatus.ERROR));
+        }
+
+        self.validate = function() {
+            var defer = $.Deferred();
+
+            console.log("checkModel");
+            $.ajax({
+                url: '@Url.Action("Validate", "Email")',
+                data: JSON.stringify(self.getModel()),
+                type: 'POST',
+                contentType: 'application/json',
+                success: function(result) {
+                    console.log(result);
+                    var confirmationTask = $.Deferred().resolve();
+                    for (var i = 0; i < result.Data.length; i++) {
+                        var message = result.Data[i].Message;
+                        console.log('show message=' + message);
+
+                        confirmationTask = confirmationTask.then(function() {
+                            return Message.popupAsync({
+                                title: 'Confirm',
+                                message: message,
+                                type: Message.YES_NO
+                            });
+                        });
+                    }
+
+                    confirmationTask.done(function() {
+                        console.log("resolve");
+                        defer.resolve();
+                    }).fail(function() {
+                        console.log("reject");
+                        defer.reject();
+                    });
+                }
+            });
+
+            return defer;
+        }
+
+        self.submit = function() {
+            self.validate().done(function() {
+                self.sendStatus(self.SENDING);
+                $.ajax({
+                    url: '@Url.Action("SendEmail", "Email")',
+                    data: JSON.stringify(self.getModel()),
+                    type: 'POST',
+                    contentType: 'application/json',
+                    success: function(result) {
+                        console.log(result.IsSuccess);
+                        if (result.IsSuccess) {
+                            self.sendStatus(self.SENDED);
+                        } else {
+                            self.sendStatus(self.NONE);
+                        }
+                        self.messages(result.Messages);
+                    }
+                });
+            });
+        }
+
+        self.onSubmit = function() {
+            self.submit();
+        }
+
+        self.onClose = function() {
+            window.close();
+        }
+
+        self.loadModel(model);
+    }
+</script>
+
+
+<script>
+    var composeEmailVm = null;
+
+    $(document).ready(function() {
+        var settings = {
+            emailTypeList: @(Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.EmailTypeList))),
+            getStyleIdListUrl: '@Url.Action("GetStyleIdList", "AutoComplete")',
+            emailTypes: {
+                lostPackage2: @((int)EmailTypes.LostPackage2),
+                returnWrongDamaged: @((int)EmailTypes.ReturnWrongDamagedItem),
+            },
+            markets: {
+                walmart: @((int)MarketType.Walmart),
+                walmartCA: @((int)MarketType.WalmartCA),
+            },
+            shipmentProviders: {
+                amazon: @((int)ShipmentProviderType.Amazon)
+            },
+        };
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        composeEmailVm = new ComposeEmailModel(model, settings);
+
+        ko.applyBindings(composeEmailVm, document.getElementById('page-content'));
+    });
+
+</script>
+
+<script type="text/javascript">
+    onResize = function () {
+        var size = $(window).height() - $('#page-header').height() - 490;
+        $('#page-content').find('.k-editor').height(size + 'px');
+        console.log(size);
+    };
+    
+    $(window).resize(function () {
+        onResize();
+    });
+
+    $(window).load(function () {
+        onResize();
+    });
+
+    $(window).ready(function () {
+        onResize();
+    });
+</script>
+
+
+<div id="page-content">
+    <div id="MessagePopupWindow0" style="display: none;"></div>
+    <div id="MessagePopupWindow1" style="display: none;"></div>
+
+    <ol class="breadcrumb">
+        <li><a href="@Url.Action("Index", "Email")">Emails</a></li>
+        <li class="active" data-bind="text: title"></li>
+    </ol>
+
+
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <div class="form-inline">
+                <div class="form-group">
+                    <label>Order #:</label>
+                    <input style="width: 200px"
+                           data-bind="kendoAutoComplete: {
+                                    value: inputOrderNumber,
+                                    data: {},
+                                    minLenght: 3,
+                                    enabled: !replyMode(),
+                                    dataSource: orderIdSource },
+                                valueUpdate: 'afterkeydown',
+                                event: { keypress: searchByKeyCmd }"
+                           class="k-textbox" />
+                </div>
+                <div class="form-group">
+                    <label>Template:</label>
+                    <input style="width: 180px"
+                           data-bind="kendoDropDownList: {data: filteredEmailList, value: inputEmailType, dataTextField: 'Text', dataValueField: 'Value' }" />
+                </div>
+                <button type="submit"
+                        class="btn btn-default"
+                        data-bind="click: refreshContent">
+                    Set
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <table style="width: 100%">
+        <tr>
+            <td style="vertical-align: top">
+                <div class="panel panel-default center-block" data-bind="visible: isLoading">
+                    <div class="panel-heading">
+                        <span style="font-size: 14px">
+                            Loading...
+                        </span>
+                    </div>
+                </div>
+                <div class="panel panel-default center-block" data-bind="visible: !isLoading()">
+                    <div class="panel-heading">
+                        <span style="font-size: 14px">
+                            <span data-bind="text: emailTypeString"></span>
+                            for # <span data-bind="text: orderNumber"></span>
+                        </span>
+                    </div>
+                    <div class="panel-body" data-bind="visible: sendStatus() == NONE">
+                        <div class="form-group">
+                            <label>From:</label>
+                            <span data-bind="text: fromName"></span> <<span data-bind="text: fromEmail"></span>>
+                        </div>
+
+                        <div class="form-group">
+                            <label>To <span class="gray">Name: </span></label><input style="width: 400px; margin-left: 5px" class="k-textbox" data-bind="value: toName"/>
+                            <div>
+                                <label>To <span class="gray">Email: </span></label><input class="k-textbox" style="width: 400px; margin-left: 5px" data-bind="value: toEmail"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Subject: </label>
+                            <input class="k-textbox" style="width: 100%" data-bind="value: subject"/>
+                        </div>
+                        <div class="form-group" data-bind="visible: isExchange">
+                            <label>Exchange:</label>
+                            <div data-bind="visible: isExchangeLoading()">
+                                Loading...
+                            </div>
+                            <div data-bind="visible: !isExchangeLoading()">
+                                <table>
+                                    <colgroup>
+                                        <col/>
+                                        <col/>
+                                        <col/>
+                                    </colgroup>
+                                    <thead class="k-grid-header">
+                                        <tr>
+                                            <th class="k-header"></th>
+                                            <th class="k-header" style="">From</th>
+                                            <th class="k-header" style="">To</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody data-bind="foreach: exchangeInfo.orderItems">
+                                        <tr>
+                                            <td style="padding-right: 5px;">
+                                                <a data-bind='attr: { href: ProductUrl }'
+                                                   style="color: black"
+                                                   target='_blank'>
+                                                    <img height='75' data-bind='attr: { src: Thumbnail }' style='border: 0' />
+                                                </a>
+                                            </td>
+                                            <td>
+                                                <table>
+                                                    <tr>
+                                                        <td colspan="3" style="vertical-align: top;">
+                                                            <div style="margin: 3px 0px">
+                                                                <a data-bind='attr: { href: StyleUrl }'
+                                                                   style='color: black'
+                                                                   target='_blank'>
+                                                                    <span data-bind="text: StyleString" />
+                                                                </a> - <span data-bind="text: Size" />
+                                                            </div>
+                                                            <input type="hidden" data-bind="value: ItemOrderId" />
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+
+                                            <td style="vertical-align: bottom; padding-left: 18px; padding-top: 8px">
+                                                <table>
+                                                    <tr>
+                                                        <td>StyleId:</td>
+                                                        <td>
+                                                            <input type="hidden"
+                                                                   data-bind="value: exchangeStyleId" />
+
+                                                            <input style='width: 180px' class="k-textbox" data-bind="kendoAutoComplete: {
+                                                                value: exchangeStyleString,
+                                                                data: {},
+                                                                minLenght: 3,
+                                                                dataSource: $root.styleIdSource }" />
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Size/Color:</td>
+                                                        <td>
+                                                            <input style="width: 100px"
+                                                                   data-bind="kendoDropDownList: {data: sizeList, value: exchangeStyleItemId, dataTextField: 'Text', dataValueField: 'Value' }" />
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Qty:</td>
+                                                        <td>
+                                                            <input data-bind="value: inputQuantity, valueUpdate:'afterkeydown'"
+                                                                   style="width: 40px"
+                                                                   class="k-textbox" />
+                                                            /<span data-bind="text: originalItemCount"></span>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Message:</label>
+
+                            <textarea data-bind='kendoEditor: {
+                    value: body,
+                    encoded: false,
+                    tools: [
+                            "viewhtml",
+                            "bold" ,
+                            "italic" ,
+                            "fontName" ,
+                            "fontSize" ,
+                            "foreColor" ,
+                            "backColor" ,
+                            "justifyLeft",
+                            "justifyCenter",
+                            "justifyRight",
+                            "justifyFull",
+                            "insertUnorderedList",
+                            "insertOrderedList",
+                            "indent",
+                            "outdent",
+                            "createLink",
+                            "unlink",
+                            "insertImage",
+                            "subscript",
+                            "superscript",
+                            "cleanFormatting"]
+                    }'
+                                      style="height: 400px; width: 100%"
+                                      spellcheck="true"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Comment:</label>
+                            <div>
+                                <textarea rows="3"
+                                          style="width: 350px"
+                                          class="k-textbox"
+                                          data-bind="value: newComment"></textarea>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <table>
+                                <tr>
+                                    <td style="width: 300px; vertical-align: top">
+                                        <label>Attach File: </label>
+
+                                        <input type="file" name="files" data-bind="kendoUpload: {
+                                       async: {
+                                           saveUrl: '@Url.Action("UploadAttachment", "Email")',
+                                           autoUpload: true,
+                                       },
+                                       showFileList: true,
+                                       multiple: false,
+                                       success: onUploadSuccess,
+                                       error: onUploadError
+                                       }"/>
+                                    </td>
+                                    <td style="padding-left: 15px; width: 250px; vertical-align: top"
+                                        data-bind="visible: enableGenerateReturnLabel">
+                                        <div class="form-group">
+                                            <label>Return label:</label>
+                                            <div>
+                                                <div data-bind="visible: !hasAttachedLabel()">
+                                                    <button class="k-button"
+                                                            data-bind="click: onGenerateReturnLabel">
+                                                        Generate Return Label...
+                                                    </button>
+                                                </div>
+                                                <div data-bind="visible: hasAttachedLabel"
+                                                     style="padding-top: 4px">
+                                                    <div data-bind="with: attachedLabel">
+                                                        Attached Label: <a target='_blank' data-bind='attr: { href: ViewUrl }'>download</a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style="padding-left: 35px; vertical-align: top">
+                                        <label>Attach Style Image: </label>
+
+                                        <div>
+                                            Style Id: <input type="text"
+                                                             style="width: 180px"
+                                                             data-bind="kendoAutoComplete: {
+                                    value: attachStyleId,
+                                    data: {},
+                                    minLenght: 3,
+                                    highlightFirst: true,
+                                    dataSource: styleIdSource,
+                                    valueUpdate: 'afterkeydown' }"
+                                                             class="k-textbox"/>
+                                        </div>
+                                        <div style="padding: 8px 0px; text-align: right">
+                                            <button class="k-button"
+                                                    data-bind="click: onAttachStyleImage">
+                                                Attach
+                                            </button>
+                                        </div>
+
+                                        <div data-bind="foreach: attachedStyleImages">
+                                            <div style="padding-bottom: 8px">
+                                                <div class="image-box-holder">
+                                                    <table>
+                                                        <tr>
+                                                            <td>
+                                                                <a target='_blank' data-bind='attr: { href: ViewUrl }'>
+                                                                    <img data-bind='attr: { src: ViewUrl}' style="max-width: 75px" />
+                                                                </a>
+                                                            </td>
+                                                            <td>
+                                                                <a href="javascript:;" data-bind="click: $parent.removeStyleImage"
+                                                                   style="margin: 5px">X</a>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                    
+                                                    
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div style="padding: 8px 0px; text-align: right" data-bind="visible: hasAttachedStyleImages">
+                                            <button class="k-button"
+                                                    data-bind="click: onClearStyleImages">
+                                                Clear
+                                            </button>
+                                        </div>
+                                    </td>
+
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div class="center-block">
+                            <button style="width: 150px; padding: 3px;" data-bind="click: onSubmit" class="k-button">Send</button>
+                            <button style="width: 150px; padding: 3px;" data-bind="click: onClose" class="k-button">Cancel</button>
+                        </div>
+
+                        <messages params="{ messages: messages }"></messages>
+                    </div>
+
+                    <div class="panel-body" data-bind="visible: sendStatus() == SENDED">
+                        <messages params="{ messages: messages }"></messages>
+                        <a href="javascript: window.close()" class="k-button" style="width: 140px">Close</a>
+                    </div>
+                </div>
+
+                <div class="panel panel-default center-block" data-bind="visible: sendStatus() == SENDING">
+                    <div class="panel-heading">
+                        <span style="font-size: 14px">
+                            Sending...
+                        </span>
+                    </div>
+                </div>
+            </td>
+            <td style="width: 450px; padding-left: 20px; vertical-align: top">
+                @Html.Partial("_OrderMessageSummary", new OrderHistoryControlViewModel()
+                {
+                    OrderNumber = Model.OrderNumber,
+                    EmailId = Model.ReplyToEmailId
+                })
+
+                @Html.Partial("_OrderSummary", new OrderHistoryControlViewModel()
+                {
+                    OrderNumber = Model.OrderNumber,
+                    IsCollapsed = true
+                })
+
+                @Html.Partial("_OrderHistory", new OrderHistoryControlViewModel()
+                {
+                    OrderNumber = Model.OrderNumber,
+                    IsCollapsed = true
+                })
+            </td>
+
+        </tr>
+    </table>
+</div>

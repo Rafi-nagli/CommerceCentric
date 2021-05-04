@@ -1,0 +1,237 @@
+﻿@using Amazon.Core.Models
+@using Amazon.Web.Models
+@using Amazon.Web.Models.SearchFilters
+@using Amazon.Web.ViewModels
+@using Amazon.Web.ViewModels.CustomBarcodes
+@using Amazon.Web.ViewModels.Inventory.FBAPickLists
+@using Kendo.Mvc.UI
+
+@{
+    ViewBag.Title = "Photoshoot";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<script src="~/Scripts/knockout-kendo.min.js" type="text/javascript"></script>
+<script type="text/javascript">
+
+    var PhotoshootPickListModel = function(gridId, model, settings) {
+        var self = this;
+        ko.BaseViewModel.call(self);
+
+        self.settings = settings;
+        self.model = model;
+
+        self.hasChanges = ko.observable(false);
+        self.showArchived = ko.observable(false);
+
+        //Grid
+        self.gridId = gridId;
+        self.gridNode = $(gridId);
+        self.grid = $(gridId).data("kendoGrid");
+
+        self.onEdit = function(sender, id) {
+            console.log("onEdit, id=" + id);
+            popupWindow.initAndOpenWithSettings(
+                {
+                    content: '@Url.Action(MVC.Photoshoot.OnEdit())' + "?id=" + id,
+                    title: "Edit Photoshoot Pick List",
+                    width: 750,
+                    customAction: self.onPopupCustomAction,
+                    closeSuccess: self.onPopupCloseSuccess,
+                });
+        }; 
+
+        self.onNew = function() {
+            console.log("onNew");
+            popupWindow.initAndOpenWithSettings(
+                {
+                    content: '@Url.Action(MVC.Photoshoot.OnEdit())',
+                    title: "New Photoshoot Pick List",
+                    width: 750,
+                    customAction: self.onPopupCustomAction,
+                    closeSuccess: self.onPopupCloseSuccess,
+                });
+        }; 
+
+        self.onPopupCustomAction = function(action, data) {
+            self.hasChanges(true);
+        };
+
+        self.onPopupCloseSuccess = function() {
+            if (self.hasChanges())
+            {
+                self.search();
+                self.hasChanges(false);
+            }
+        }
+
+        self.setArchiveStatus = function(id, sender) {
+            //Find button
+            var button = $(sender);
+            var newStatus = !(button.is(":checked"));
+            //var grid = self.grid;
+            //var gridData = grid.dataSource.data();
+            //$.each(gridData, function (i, row) {
+            //    if (row.Id == batchId) {
+            //        var $tr = $('tr[data-uid="' + row.uid + '"]');
+            //        button = $tr.find("#archiveButton");
+            //    }
+            //});
+
+            helper.ui.showLoading(button);
+
+            $.ajax({
+                url: '@Url.Action("SetArchiveStatus", "Photoshoot")',
+                data: {
+                    id: id,
+                    status: newStatus
+                },
+                cache: false,
+                async: true,
+                success: function (result) {
+                    if (result.IsSuccess) {
+                        button.html(result.Data ? "UnArchive" : "Archive");
+                    }
+                    helper.ui.hideLoading(button);
+                }
+            });
+        }
+
+        //Search
+
+        self.search = function () {
+            console.log("search");
+            var params = self.getGridParams();
+
+            self.resetRowNumber(0);
+
+            if (self.grid.dataSource.page() != 1) {
+                self.grid.dataSource.page(1); //May call read
+            }
+            self.grid.dataSource.read(params);
+        };
+
+        self.searchByKeyCmd = function (data, event) {
+            if (event.keyCode == 13)
+                self.search(true);
+            return true;
+        };
+
+        self.getGridParams = function () {
+            console.log("getGridParams");
+
+            var params = {
+                showArchived: self.showArchived()
+            };
+            console.log(params);
+            return params;
+        };
+
+        self.clear = function () {
+
+        };
+
+        self.clearAndSearch = function () {
+            self.clear();
+            self.search();
+        };
+
+        self.searchByButton = function () {
+            self.search();
+        };
+
+        helper.ui.addTopPager(self.grid);
+
+        self.showArchived.subscribe(function () {
+            self.search();
+        });
+        self.search();
+    };
+
+</script>
+
+<div id="page-content">
+    <div id="windowContainer"></div>
+
+    <div class="info-panel" style="padding-bottom: 10px">
+        <ol class="breadcrumb">
+            <li><a href="#">Inventory</a></li>
+            <li class="active">@ViewBag.Title</li>
+        </ol>
+    </div>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <input type='checkbox' data-bind="checked: showArchived" /> Show Archived
+        </div>
+    </div>
+
+    <div id="commands" class="k-toolbar k-grid-toolbar k-grid-top">
+        <button class="k-button" data-bind="click: onNew"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> New Pick List</button>
+    </div>
+
+    @(Html.Kendo().Grid<PhotoshootPickListViewModel>()
+                  .Name("grid")
+                  .Columns(columns =>
+                  {
+                      columns.Bound(c => c.Id)
+                          .Encoded(false)
+                          .Title("#")
+                          .Width(25);
+
+                      columns.Bound(c => c.Name)
+                        .Title("Name");
+                      columns.Bound(c => c.CreateDate)
+                        .Title("Create Date")
+                        .Width(180)
+                        .Format("{0:MM.dd.yyyy HH\\:mm}");
+
+                      columns.Bound(o => o.Id)
+                          .ClientTemplate("#= tmpl.t('actions-column-template', data)#")
+                          .Title(" ")
+                          .Width(120);
+                  })
+                  .Pageable(conf => conf.Enabled(true).Refresh(true))
+                  .AutoBind(false)
+
+                  .DataSource(dataSource => dataSource
+                      .Ajax()
+                      .Model(conf => conf.Id(m => m.Id))
+                      .Sort(conf => conf.Add(o => o.CreateDate).Descending())
+                      .PageSize(100)
+                      .Read(read => read.Action("GetAll", "Photoshoot").Data("GetGridParams"))))
+
+</div>
+
+<script type="text/kendo-tmpl" id="actions-column-template">
+    <a class='k-button k-button-icontext' style="margin-bottom: 3px" onclick="photoshootPickList.onEdit(this, '#=Id#')"><span class="glyphicon glyphicon-pencil am-icon"></span> Edit</a>
+    <a class='k-button k-button-icontext' target="_blank" href="@Url.Action("PrintPhotoshootPickList", "Print")?photoshootId=#=Id#"><span class="glyphicon glyphicon-list am-icon"></span> Pick List</a>
+    <button class='k-button k-button-icontext' id='archiveButton' style='margin-top:4px' onclick='photoshootPickList.setArchiveStatus("#=Id#", this)'>#if(Archived) {# UnArchive #} else {# Archive #}#</button>
+</script>
+
+
+<script>
+    var photoshootPickList = null;
+
+    $(document).ready(function () {
+        console.log("begin ready");
+
+        var settings = {
+
+        };
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        photoshootPickList = new PhotoshootPickListModel('#grid', model, settings);
+        ko.applyBindings(photoshootPickList, document.getElementById("page-content"));
+    });
+
+
+    function GetGridParams() {
+        console.log("GetGridParams");
+        if (photoshootPickList != null)
+            return photoshootPickList.getGridParams();
+        return {};
+    }
+</script>

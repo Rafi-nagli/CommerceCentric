@@ -1,0 +1,144 @@
+﻿<table style="border: 1px solid #333; width: 100%; font-size: 14px; border-collapse: collapse;">
+    <tr>
+        <th colspan="4" align="center" style="padding: 5px 10px 20px 10px; font-size:24px;">Commercial Invoice</th>
+    </tr>
+    <tr>
+        <td style="width: 50%" class="cell" colspan="2">
+            <div class="t">Date:</div>
+            <div class="v">{Date}</div>
+        </td>
+        <td style="width: 50%" class="cell" colspan="2">
+            <div class="t">Destination Country:</div>
+            <div class="v">{DestinationCountry}</div>
+        </td>
+    </tr>
+    <tr>
+        <td class="cell" colspan="2">
+            <div class="t">Shipper:</div>
+            <div class="v">{ShipperName}</div>
+        </td>
+        <td class="cell" colspan="2">
+            <div class="t">Consignee:</div>
+            <div class="v">{ConsigneeName}</div>
+        </td>
+    </tr>
+    <tr>
+        <td class="cell" colspan="2">
+            <div class="t">Contact:</div>
+            <div class="v">{FromContact}</div>
+        </td>
+        <td class="cell" colspan="2">
+            <div class="t">Contact:</div>
+            <div class="v">{ToContact}</div>
+        </td>
+    </tr>
+    <tr>
+        <td class="cell" colspan="2">
+            <div class="t" style="padding-bottom: 5px; float:none">Shipper Address:</div>
+            {ShipperAddress}
+        </td>
+        <td class="cell" colspan="2">
+            <div class="t" style="padding-bottom: 5px; float:none">Receiver Address:</div>
+            {ReceiverAddress}
+        </td>
+    </tr>
+    <tr>
+        <td class="cell" style="width: 25%">
+            <div class="t">Carrier:</div>
+            <div class="v">DHL</div>
+        </td>
+        <td class="cell" style="width: 25%">
+            <div class="t">Shipper<br />Ref:</div>
+            <div class="v">{ShipperRef}</div>
+        </td>
+        <td class="cell" style="width: 25%">
+            <div class="t">ITN#:</div>
+            <div class="v"></div>
+        </td>
+        <td class="cell" style="width: 25%">
+            <div class="t">Terms<br />of Trade:</div>
+            <div class="v">DAP - Delivered At Place</div>
+        </td>
+    </tr>
+    <tr>
+        <td class="cell">
+            <div class="t">Number of Pieces:</div>
+            <div class="v">1</div>
+        </td>
+        <td class="cell">
+            <div class="t">Total Weight:</div>
+            <div class="v">{Weight} lb(s)</div>
+        </td>
+        <td class="cell">
+            <div class="t">Waybill No.:</div>
+            <div class="v">{Waybill}</div>
+        </td>
+        <td class="cell">
+            <div class="t">Receiver Tax ID/<br />VAT NO.:</div>
+            <div class="v"></div>
+        </td>
+    </tr>
+    <tr>
+        <td class="cell" colspan="2">
+            <div class="t">Package Marks:</div>
+            <div class="v"></div>
+        </td>
+        <td class="cell" colspan="2">
+            <div class="t">Shipment Contents:</div>
+            <div class="v">Children Clothing - pajama</div>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="4">
+            <div style="padding-top: 10px">Invoice Items:</div>
+            <table style="width: 100%; border: 1px solid #333">
+                <tr>
+                    <th>Description of Merchandise</th>
+                    <th>HTS#</th>
+                    <th>Country of Origin</th>
+                    <th>Qty</th>
+                    <th>Unit</th>
+                    <th>Unit Value</th>
+                    <th>Total</th>
+                </tr>
+                {Lines}
+            </table>
+        </td>
+    </tr>
+    <tr>
+        <td style="width: 50%" colspan="2"></td>
+        <td style="width: 50%" colspan="2">
+            <table style="border: 1px solid #333; width: 100%">
+                <tr>
+                    <th style="width: 60%">Miscellaneous Charges</th>
+                    <th style="width: 40%">Amount</th>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td>0.00 {Currency}</td>
+                </tr>
+                <tr>
+                    <th>Inoice Total</th>
+                    <th>Amount</th>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td>{TotalAmount} {Currency}</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="4" style="padding: 8px">
+            These commodities, technology or software were exported from the United States in accordance with the Export Administration Regulations. Diversion contrary to U.S. law is prohibited.
+        </td>
+    </tr>
+    <tr>
+        <td colspan="3" style="padding: 28px 8px 38px 8px">
+            Signature:_____________________________________________________
+        </td>
+        <td colspan="1" style="padding: 28px 8px 38px 8px">
+            Date:______________
+        </td>
+    </tr>
+</table>

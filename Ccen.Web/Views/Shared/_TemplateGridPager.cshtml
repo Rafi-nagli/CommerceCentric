@@ -1,0 +1,45 @@
+﻿<template id="grid-pager-template">
+    <div class="k-pager-wrap k-grid-pager pagerTop k-widget" style="border-width: 0px 0px 1px;">
+        <a href="#"
+           title="Go to the first page"
+           class="k-link k-pager-nav k-pager-first"
+           data-bind="css: { 'k-state-disabled': isFirstPage }, click: firstPage"
+           tabindex="-1">
+            <span class="k-icon k-i-seek-w">Go to the first page</span>
+        </a>
+        <a href="#"
+           title="Go to the previous page"
+           class="k-link k-pager-nav  k-state-disabled"
+           data-bind="css: { 'k-state-disabled': isFirstPage }, click: previousPage"
+           tabindex="-1">
+            <span class="k-icon k-i-arrow-w">Go to the previous page</span>
+        </a>
+        <ul class="k-pager-numbers k-reset" data-bind="foreach: pageNumbers">
+            <li data-bind="if: isCurrentPage"><span class="k-state-selected" data-bind="text: label"></span></li>
+            <li data-bind="if: !isCurrentPage"><a tabindex="-1" href="#" data-bind="text: label, click: function() { $component.setPage(page); }" class="k-link"></a></li>
+        </ul>
+        <a href="#"
+           title="Go to the next page"
+           class="k-link k-pager-nav"
+           data-bind="css: { 'k-state-disabled': isLastPage }, click: nextPage"
+           tabindex="-1">
+            <span class="k-icon k-i-arrow-e">Go to the next page</span>
+        </a>
+        <a href="#" title="Go to the last page"
+           class="k-link k-pager-nav k-pager-last"
+           data-bind="css: { 'k-state-disabled': isLastPage }, click: lastPage"
+           tabindex="-1">
+            <span class="k-icon k-i-seek-e">Go to the last page</span>
+        </a>
+        <a href="#" 
+           class="k-pager-refresh k-link"
+           title="Refresh"
+           data-bind="click: refresh">
+                <span class="k-icon k-i-refresh">Refresh</span>
+        </a>
+        <span class="k-pager-info k-label"><span data-bind="text: itemBegin"></span> - <span data-bind="text: itemEnd"></span> of <span data-bind="text: itemCount"></span> items</span>
+        
+    </div>
+</template>
+
+

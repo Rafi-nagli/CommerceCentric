@@ -1,0 +1,312 @@
+﻿@using Amazon.Common.Helpers
+@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Feeds
+@using Amazon.Web.ViewModels.Inventory
+@using Amazon.Web.ViewModels.Messages
+@using Amazon.Web.ViewModels.ScanOrders
+@using Amazon.Web.ViewModels.UploadOrders
+@using Amazon.Web.ViewModels.Vendors
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.UploadOrders.UploadOrderFeedFilterViewModel
+@{
+    ViewBag.Title = "Upload Orders";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/inventory.ico" />
+}
+
+<style>
+    .k-grid tbody a.k-button {
+        min-width: 78px;
+    }
+</style>
+
+<script src="~/Scripts/knockout-kendo.min.js" type="text/javascript"></script>
+
+
+<script>
+    var UploadOrderFeedListModel = function (model, settings) {
+        var self = this;
+        ko.BaseViewModel.call(self);
+
+        //Init
+        self.model = model;
+        self.settings = settings;
+
+        self.gridId = self.settings.gridId;
+        self.gridNode = $(self.gridId);
+        self.grid = self.gridNode.data("kendoGrid");
+
+
+        //Params
+        self.minDate = new Date(2000, 1, 1);
+        self.maxDate = new Date();
+        self.maxDate.setHours(23);
+        self.maxDate.setMinutes(59);
+
+        self.dateFrom = ko.observable('');
+        self.dateTo = ko.observable('');
+
+        self.addFeed = function() {
+            console.log("addFeed");
+
+            var settings = {
+                urls: {
+                    addFeed: '@Url.Action("AddFeed", "UploadOrders")',
+                    editFeed: '@Url.Action(MVC.CustomIncomingFeed.EditFeed())',
+                    submit: '@Url.Action("Submit", "UploadOrders")',
+                },
+                submitCallback: function() { self.search(); }
+            };
+            var model = {
+                FieldMappingsList: self.model.FieldMappingsList,
+            };
+            var popupModel = new UploadOrderFeedModel(model,
+                settings);
+            popupModel.show();
+
+            //popupWindow.initAndOpen(self.settings.urls.addSaleFeed, "Upload Sales", 600);
+        };
+
+        //Search
+        self.search = function () {
+            var params = self.getGridParams();
+
+            self.resetRowNumber(0);
+
+            if (self.grid.dataSource.page() != 1) {
+                self.grid.dataSource.page(1); //May call read
+            }
+            self.grid.dataSource.read(params);
+        };
+
+        self.searchByKeyCmd = function (data, event) {
+            if (event.keyCode == 13)
+                self.search(true);
+            return true;
+        };
+
+        self.getGridParams = function () {
+            console.log("getGridParams");
+
+            var from = kendo.toString(self.dateFrom(), 'MM/dd/yyyy');
+            var to = kendo.toString(self.dateTo(), 'MM/dd/yyyy');
+            //var type = self.typeValue();
+
+            return {
+                DateFrom: from,
+                DateTo: to,
+                //Type: type
+            };
+        };
+
+        self.clear = function () {
+            self.dateFrom('');
+            self.dateTo('');
+            //self.typeValue(self.model.Type);
+        };
+
+        self.clearAndSearch = function () {
+            self.clear();
+            self.search(false);
+        };
+
+        self.searchByButton = function () {
+            self.search(true);
+        };
+
+
+        //Grid
+
+        self.onDataBound = function (e) {
+            console.log("dataBound");
+            var start = (self.grid.dataSource.page() - 1) * self.grid.dataSource.pageSize();
+            self.resetRowNumber(start);
+            //var items = self.grid.dataSource.data();
+            //var index = start + 1;
+            //console.log(items);
+            //items.forEach(function(i) {
+            //    console.log(i);
+            //    i.Index = index++;
+            //    console.log(i.Index);
+            //});
+        };
+
+        helper.ui.addTopPager(self.grid);
+
+        self.search(false);
+    };
+</script>
+
+<div id="page-content">
+    <div id="windowContainer"></div>
+
+    <ol class="breadcrumb">
+        <li><a href="#">Orders</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    @Html.Partial("UploadOrderFeedViewModel")
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <table>
+                <colgroup>
+                    <col style="width: 120px" />
+                    <col style="width: 210px" />
+                    <col style="width: 70px" />
+                    <col style="width: 500px" />
+                </colgroup>
+                <tr>
+                    <th>Date: </th>
+                    <td colspan="2">
+                        <table>
+                            <tr>
+                                <td>from</td>
+                                <td>
+                                    <input class="data-picker" data-bind="kendoDatePicker: { value: dateFrom, format: 'MM/dd/yyyy', min: minDate, max: maxDate }" />
+                                </td>
+                                <td>to</td>
+                                <td>
+                                    <input class="data-picker" data-bind="kendoDatePicker: { value: dateTo, format: 'MM/dd/yyyy', min: minDate, max: maxDate }" />
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                @*<tr>
+                        <th>Type:</th>
+                        <td>
+                            <input style="width:180px"
+                                   data-bind="kendoDropDownList: {data: typeList, value: typeValue, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'All' }" />
+                        </td>
+                    </tr>*@
+            </table>
+            <button class="k-button filter-button"
+                    data-bind="click: searchByButton">
+                <span class='glyphicon glyphicon-search am-icon'></span>Search
+            </button>
+            <button class="k-button filter-button"
+                    data-bind="click: clearAndSearch">
+                <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+            </button>
+        </div>
+    </div>
+
+    <div class="k-toolbar k-grid-toolbar">
+        <a href="#"
+           class="k-button k-button-icontext k-grid-add"
+           data-bind="click: addFeed">
+            <span class="k-icon k-add"></span>
+            Add Orders Feed
+        </a>
+
+        <a href="/Templates/orders-feed-template-v1.csv"
+           class="k-button k-button-icontext k-grid-add">
+            <img src="~/Images/download-icon4.png" width="16px" />
+            Download template
+        </a>
+    </div>
+
+    @(Html.Kendo().Grid<UploadOrderFeedViewModel>()
+                  .Name("UploadOrdersFeedList")
+                  .Editable(e => e.Mode(GridEditMode.PopUp))
+                  .Columns(columns =>
+                  {
+                      columns.Bound(c => c.Id)
+                          .ClientTemplate("#=uploadOrderFeedListVm.renderNumber(data)#")
+                          .Title("#")
+                          .Width(20)
+                          .Sortable(false);
+                      columns.Bound(c => c.FileName)
+                            .ClientTemplate("<a href='" + @Url.Action("GetFeed", "UploadOrders") + "?id=#=Id#' target='_blank'>#=FileName#</a>")
+                          .Title("File Name");
+                      columns.Bound(c => c.Status)
+                        .Width(200)
+                        .ClientTemplate("#= tmpl.t('status-column-template', data)#")
+                        .Title("Status");
+                      columns.Bound(c => c.CreateDate)
+                          .ClientTemplate("#=tmpl.f(FormattedCreateDate, 'MM.dd.yyyy HH:mm')#")
+                          .Width(150)
+                          .Title("Create Date");
+                  })
+                  .Sortable(conf => conf.Enabled(true).SortMode(GridSortMode.SingleColumn))
+                  .Pageable(conf => conf.Enabled(true).Refresh(true))
+                  .Filterable(conf => conf.Enabled(true))
+                  .AutoBind(false)
+                  .Events(e =>
+                  {
+                      e.DataBound("onDataBound");
+                  })
+                  .DataSource(dataSource => dataSource
+                      .Ajax()
+                      .ServerOperation(false)
+                      .PageSize(50)
+                      .Model(conf => conf.Id(m => m.Id))
+                      .Sort(conf =>
+                      {
+                          conf.Add(n => n.CreateDate).Descending();
+                      })
+                      .Read(read => read.Action(MVC.UploadOrders.ActionNames.GetAll, MVC.UploadOrders.Name)
+                          .Data("GetGridParams"))))
+
+</div>
+
+<script type="text/kendo-tmpl" id="status-column-template">
+    <div>#=FormattedStatus#</div>
+    <div class="note">
+        <div>Found lines: #=tmpl.isNull(ParsedCount, '-')#</div>
+        <div>Matched SKUs: #=tmpl.isNull(MatchedCount, '-')#</div>
+        @*#if (Mode == '@((int)PublishFeedModes.Publish)') {#
+                <div>Created listings: #=tmpl.isNull(Processed1OperationCount, '-')#</div>
+                <div>Price updated: #=tmpl.isNull(Processed2OperationCount, '-')#</div>
+            #}#
+            #if (Mode == '@((int)PublishFeedModes.Hold)' || Mode == '@((int)PublishFeedModes.UnHold)') {#
+                <div>Processed SKUs: #=tmpl.isNull(MatchedCount, '-')#</div>
+            #}#*@
+    </div>
+</script>
+<script>
+    var uploadOrderFeedListVm = null;
+
+    function GetGridParams() {
+        console.log("GetGridParams");
+        if (uploadOrderFeedListVm != null)
+            uploadOrderFeedListVm.getGridParams();
+        return {};
+    }
+
+    function onDataBound(e) {
+        if (uploadOrderFeedListVm != null)
+            uploadOrderFeedListVm.onDataBound(e);
+    }
+
+    $(document).ready(function() {
+        var settings = {
+            gridId: "#UploadOrdersFeedList",
+            idFieldName: "Id",
+            urls: {
+                addFeed: '@Url.Action(MVC.UploadOrders.AddFeed())',
+
+                editFeed: '@Url.Action(MVC.CustomIncomingFeed.EditFeed())',
+            }
+        };
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        uploadOrderFeedListVm = new UploadOrderFeedListModel(model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+        ko.applyBindings(uploadOrderFeedListVm, document.getElementById('page-content'));
+    });
+
+</script>

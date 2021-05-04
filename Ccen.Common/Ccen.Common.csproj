@@ -1,0 +1,242 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{447F53F9-324D-479E-849A-8AF262EF8537}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ccen.Common</RootNamespace>
+    <AssemblyName>Ccen.Common</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+    <TargetFrameworkProfile />
+    <AssemblyVersion>2016.5.1553.17</AssemblyVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="BarcodeLib, Version=1.3.0.0, Culture=neutral, PublicKeyToken=5f09bda868cc39e7, processorArchitecture=MSIL">
+      <HintPath>..\packages\BarcodeLib.1.3.0.0\lib\net20\BarcodeLib.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="CsvHelper, Version=2.0.0.0, Culture=neutral, PublicKeyToken=8c4959082be5c823, processorArchitecture=MSIL">
+      <HintPath>..\packages\CsvHelper.2.11.0\lib\net40-client\CsvHelper.dll</HintPath>
+    </Reference>
+    <Reference Include="ICSharpCode.SharpZipLib, Version=0.86.0.518, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
+      <HintPath>..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="ImageResizer, Version=3.4.3.103, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\ImageResizer.3.4.3\lib\ImageResizer.dll</HintPath>
+    </Reference>
+    <Reference Include="itextsharp, Version=5.5.9.0, Culture=neutral, PublicKeyToken=8354ae6d2174ddca, processorArchitecture=MSIL">
+      <HintPath>..\packages\iTextSharp.5.5.9\lib\itextsharp.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="itextsharp.xmlworker">
+      <HintPath>..\packages\itextsharp.xmlworker.5.5.9\lib\itextsharp.xmlworker.dll</HintPath>
+    </Reference>
+    <Reference Include="log4net, Version=1.2.15.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+      <HintPath>..\packages\log4net.2.0.5\lib\net45-full\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="NPOI, Version=2.2.1.0, Culture=neutral, PublicKeyToken=0df73ec7942b34e1, processorArchitecture=MSIL">
+      <HintPath>..\packages\NPOI.2.2.1\lib\net40\NPOI.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="NPOI.OOXML, Version=2.2.1.0, Culture=neutral, PublicKeyToken=0df73ec7942b34e1, processorArchitecture=MSIL">
+      <HintPath>..\packages\NPOI.2.2.1\lib\net40\NPOI.OOXML.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="NPOI.OpenXml4Net, Version=2.2.1.0, Culture=neutral, PublicKeyToken=0df73ec7942b34e1, processorArchitecture=MSIL">
+      <HintPath>..\packages\NPOI.2.2.1\lib\net40\NPOI.OpenXml4Net.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="NPOI.OpenXmlFormats, Version=2.2.1.0, Culture=neutral, PublicKeyToken=0df73ec7942b34e1, processorArchitecture=MSIL">
+      <HintPath>..\packages\NPOI.2.2.1\lib\net40\NPOI.OpenXmlFormats.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Configuration.Install" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.ServiceProcess" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="Z.EntityFramework.Plus.EF6, Version=1.4.23.0, Culture=neutral, PublicKeyToken=59b66d028979105b, processorArchitecture=MSIL">
+      <HintPath>..\packages\Z.EntityFramework.Plus.EF6.1.4.23\lib\net40\Z.EntityFramework.Plus.EF6.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Emails\AttachmentHelper.cs" />
+    <Compile Include="Emails\EmailImapSettings.cs" />
+    <Compile Include="Emails\EmailSmtpSettings.cs" />
+    <Compile Include="Emails\SmtpAccessor.cs" />
+    <Compile Include="ExcelExport\CsvExport.cs" />
+    <Compile Include="ExcelExport\ExcelColumnInfo.cs" />
+    <Compile Include="ExcelExport\ExcelColumnOverrideInfo.cs" />
+    <Compile Include="ExcelExport\ExportColumnBuilder.cs" />
+    <Compile Include="Helpers\AddressHelper.cs" />
+    <Compile Include="Helpers\AmazonPrimeHelper.cs" />
+    <Compile Include="Helpers\ArrayHelper.cs" />
+    <Compile Include="Helpers\CustomsHelper.cs" />
+    <Compile Include="Helpers\AmazonFeedTypeHelper.cs" />
+    <Compile Include="Helpers\DictionaryExtensions.cs" />
+    <Compile Include="Helpers\EnumHelper.cs" />
+    <Compile Include="Helpers\ItemHistoryHelper.cs" />
+    <Compile Include="Helpers\JsonHelper.cs" />
+    <Compile Include="Helpers\RefundHelper.cs" />
+    <Compile Include="Helpers\SizeHelper.cs" />
+    <Compile Include="Helpers\StyleHistoryHelper.cs" />
+    <Compile Include="Helpers\OrderHistoryHelper.cs" />
+    <Compile Include="Helpers\RefundReasonCodeHelper.cs" />
+    <Compile Include="Emails\SettingsBuilder.cs" />
+    <Compile Include="Helpers\SystemTypeHelper.cs" />
+    <Compile Include="Helpers\TagHelper.cs" />
+    <Compile Include="Helpers\ThumbnailHelper.cs" />
+    <Compile Include="Helpers\UserHelper.cs" />
+    <Compile Include="Helpers\XmlHelper.cs" />
+    <Compile Include="Models\CustomDateTimeWithTimeZoneConverter.cs" />
+    <Compile Include="Models\MonitoringHub.cs" />
+    <Compile Include="Models\WalmartPageParser.cs" />
+    <Compile Include="Models\AmazonPageParser.cs" />
+    <Compile Include="Helpers\AppConfigWrapper.cs" />
+    <Compile Include="Helpers\BarcodeHelper.cs" />
+    <Compile Include="Helpers\BatchTimeStatusHelper.cs" />
+    <Compile Include="Helpers\CommentHelper.cs" />
+    <Compile Include="Helpers\CompanyHelper.cs" />
+    <Compile Include="Helpers\DhlInvoiceHelper.cs" />
+    <Compile Include="Helpers\EmailHelper.cs" />
+    <Compile Include="Helpers\ExportDataHelper.cs" />
+    <Compile Include="Helpers\StyleFeatureHelper.cs" />
+    <Compile Include="Helpers\TrackingHelper.cs" />
+    <Compile Include="Models\CommercialInvoiceHelper.cs" />
+    <Compile Include="Models\WebPageParserFactory.cs" />
+    <Compile Include="Services\EmptyLogService.cs" />
+    <Compile Include="Services\FileService.cs" />
+    <Compile Include="Services\HtmlScraperService.cs" />
+    <Compile Include="Helpers\ItemStyleHelper.cs" />
+    <Compile Include="Helpers\MailLabelReasonCodeHelper.cs" />
+    <Compile Include="Helpers\Comparers.cs" />
+    <Compile Include="Helpers\DateHelper.cs" />
+    <Compile Include="ExcelExport\ExcelHelper.cs" />
+    <Compile Include="Helpers\ExceptionHelper.cs" />
+    <Compile Include="Helpers\FileHelper.cs" />
+    <Compile Include="Helpers\MathHelper.cs" />
+    <Compile Include="Helpers\OrderHelper.cs" />
+    <Compile Include="Helpers\PdfHelper.cs" />
+    <Compile Include="Helpers\PriceHelper.cs" />
+    <Compile Include="Helpers\ImageExtensions.cs" />
+    <Compile Include="Helpers\ImageHelper.cs" />
+    <Compile Include="Helpers\RankHelper.cs" />
+    <Compile Include="Helpers\RateHelper.cs" />
+    <Compile Include="Helpers\RetryHelper.cs" />
+    <Compile Include="Helpers\SettingsHelper.cs" />
+    <Compile Include="Helpers\ShippingServiceUtils.cs" />
+    <Compile Include="Helpers\ShippingUtils.cs" />
+    <Compile Include="Helpers\SkuHelper.cs" />
+    <Compile Include="Helpers\StreamHelper.cs" />
+    <Compile Include="Helpers\StringExtensions.cs" />
+    <Compile Include="Helpers\StringHelper.cs" />
+    <Compile Include="Helpers\StyleSortHelper.cs" />
+    <Compile Include="Helpers\WeightHelper.cs" />
+    <Compile Include="Models\RetriesResult.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Services\CommandServiceRunner.cs" />
+    <Compile Include="Services\FileLogEntity.cs" />
+    <Compile Include="Services\FileLogService.cs" />
+    <Compile Include="Services\IService.cs" />
+    <Compile Include="Services\LogFactory.cs" />
+    <Compile Include="Services\ServiceBaseStarter.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Services\ServiceBaseStarter.Designer.cs">
+      <DependentUpon>ServiceBaseStarter.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Services\TimeService.cs" />
+    <Compile Include="Threads\IThread.cs" />
+    <Compile Include="Threads\TimerThreadBase.cs" />
+    <Compile Include="Threads\ThreadBase.cs" />
+    <Compile Include="Threads\ThreadCmd.cs" />
+    <Compile Include="Threads\ThreadHelper.cs" />
+    <Compile Include="Xml\ExXmlWriter.cs" />
+    <Compile Include="Xml\Utf8StringWriter.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ccen.Core\Ccen.Core.csproj">
+      <Project>{b852ab63-645f-4f09-b314-29c3d46be832}</Project>
+      <Name>Ccen.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.DTO\Ccen.DTO.csproj">
+      <Project>{8342451d-92ab-4b34-80dc-ed20fbbe6a32}</Project>
+      <Name>Ccen.DTO</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Utils\Ccen.Utils.csproj">
+      <Project>{05434995-742D-4164-9852-3BD23E7C47DD}</Project>
+      <Name>Ccen.Utils</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Contracts\" />
+    <Folder Include="Enums\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
+  </Target>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

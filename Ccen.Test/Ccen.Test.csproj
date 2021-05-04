@@ -1,0 +1,124 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{ADEC310A-091C-47F8-836E-71A820D70B51}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Ccen.Test</RootNamespace>
+    <AssemblyName>Ccen.Test</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.0.0\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.0.0\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ccen.Common\Ccen.Common.csproj">
+      <Project>{447f53f9-324d-479e-849a-8af262ef8537}</Project>
+      <Name>Ccen.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Core\Ccen.Core.csproj">
+      <Project>{b852ab63-645f-4f09-b314-29c3d46be832}</Project>
+      <Name>Ccen.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.DAL.Inventory\Ccen.DAL.Inventory.csproj">
+      <Project>{ece0ddee-f59e-4a9d-a551-ae851d37ddaa}</Project>
+      <Name>Ccen.DAL.Inventory</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.DAL\Ccen.DAL.csproj">
+      <Project>{64bd5177-22dc-43c8-a8e3-ddd30dc49831}</Project>
+      <Name>Ccen.DAL</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.DTO.Inventory\Ccen.DTO.Inventory.csproj">
+      <Project>{98cc47f5-2fe8-4db8-8cd4-e59003af03e0}</Project>
+      <Name>Ccen.DTO.Inventory</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.DTO\Ccen.DTO.csproj">
+      <Project>{8342451d-92ab-4b34-80dc-ed20fbbe6a32}</Project>
+      <Name>Ccen.DTO</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.ImageProcessing\Ccen.ImageProcessing.csproj">
+      <Project>{4b3e9daa-7ad3-44bd-aa34-185b399e5e68}</Project>
+      <Name>Ccen.ImageProcessing</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Model.General\Ccen.Model.General.csproj">
+      <Project>{b51f8c91-9759-499e-9e38-5d3eedf86265}</Project>
+      <Name>Ccen.Model.General</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Model.SyncService\Ccen.Model.SyncService.csproj">
+      <Project>{9301d880-c846-4e1d-9061-b5cd8e483f14}</Project>
+      <Name>Ccen.Model.SyncService</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Model\Ccen.Model.csproj">
+      <Project>{4851ede3-4eae-4c12-b5ac-19e86915aad2}</Project>
+      <Name>Ccen.Model</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.ReportParser\Ccen.ReportParser.csproj">
+      <Project>{216db70d-656b-455d-9222-d29deca1a12e}</Project>
+      <Name>Ccen.ReportParser</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Templates\Ccen.Templates.csproj">
+      <Project>{8ddf37ab-d90d-4dc0-bbdd-cd9a4eeed1f3}</Project>
+      <Name>Ccen.Templates</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Utils\Ccen.Utils.csproj">
+      <Project>{05434995-742d-4164-9852-3bd23e7c47dd}</Project>
+      <Name>Ccen.Utils</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Web.General\Ccen.Web.General.csproj">
+      <Project>{a7351bed-4f7d-468d-9c4e-4497bfec3e1d}</Project>
+      <Name>Ccen.Web.General</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Web\Ccen.Web.csproj">
+      <Project>{2ae4af03-61fa-4be3-930c-72b47703c210}</Project>
+      <Name>Ccen.Web</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

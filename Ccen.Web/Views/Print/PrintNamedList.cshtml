@@ -1,0 +1,98 @@
+﻿@using Amazon.Web.ViewModels
+@using Kendo.Mvc.UI
+@{
+    ViewBag.Title = "Named list";
+    Layout = "~/Views/Shared/_PrintLayout.cshtml";
+}
+@model long
+
+<script>
+    var rowNumber = 0;
+
+    function resetRowNumber() {
+        rowNumber = 0;
+    }
+
+    function renderNumber(data) {
+        if (data.IsOrder) {
+            $('#total').text(rowNumber + 1 + " items");
+            return ++rowNumber;
+        }
+        return "";
+    }
+</script>
+
+<style>
+    .k-header, .k-widget {
+        background-image: none;
+        background-color: white;
+        color: black;
+    }
+
+    .k-grid, .k-alt {
+        background-color: white;
+        color: black;
+    }
+
+    .order-item {
+        background-color: #ccc;
+    }
+
+    /*.avoid {
+        page-break-inside: avoid !important;
+    }*/
+
+</style>
+
+<script>
+    function orderDataBound()
+    {
+        var dataView = this.dataSource.view();
+        for (var i = 0; i < dataView.length; i++) 
+        {
+            var uid = dataView[i].uid;
+            if (dataView[i].IsOrder == true) 
+            {
+                $("#grid tbody").find("tr[data-uid=" + uid + "]").addClass("order-item");
+            }
+            var height = $("#grid tbody").find("tr[data-uid=" + uid + "]").height();
+            console.log(height);
+            var items = $("#grid tbody").find("tr[data-uid=" + uid + "]").find(".avoid");
+            items.each(function () { $(this).css('height', height + 'px'); });
+        }
+
+    }
+
+</script>
+
+@(Html.Kendo().Grid<OrderViewModel>()
+    .Name("grid")
+        .Columns(columns =>
+                     {
+                         columns.Bound(c => c.OrderId).ClientTemplate("<div class='avoid'>#= renderNumber(data) #</div>").Title("#").Width(25);
+                         columns.Bound(c => c.OrderId)
+                             .Width(100)
+                             .ClientTemplate("<div class='avoid'> #if(IsOrder){# <div class='order-num' style='color:black'>#=OrderId#</div> #}else{# <img height='75' src='#=Thumbnail#' /> #}# </div>")
+                             .Title("Picture");
+                         columns.Bound(c => c.PersonName)
+                             .ClientTemplate("<div class='avoid'> #if(IsOrder){# <div class='person'>#: PersonName #</div> #}else{# <div><span class='asin' style='color:black'>#=ASIN#</span> #=Title#</div> <div>Size: <span class='size-num'>#=Size#</span></div> <div>Color: <span class='size-num'>#=Color#</span></div> #}# </div>")
+                             .Title("Buyer name");
+                         columns.Bound(c => c.Quantity)
+                             .Title("Qty").Width(25).ClientTemplate("<div class='avoid'>#=Quantity#</div>");
+                         columns.Bound(c => c.ShippingMethodName)
+                             .Title("Service").Width(60).ClientTemplate("<div class='avoid'>#if(IsOrder){# #=ShippingMethodName# #}#</div>");
+                         columns.Bound(c => c.ItemPrice)
+                             .Width(100)
+                             .Title("Price")
+                             .ClientTemplate("<div class='avoid'> #if(IsOrder){# <div>#=Currency##=ItemPrice# %2B#=Currency##=ShippingPrice# #if (ShippingDiscount > 0) {# <span> -#=Currency##=ShippingDiscount#</span #}#</div> #}else{# <div>#=Currency##=ItemPrice#</div> #}# </div>");
+                     })
+                    .Events(e => e.DataBound("orderDataBound"))
+                .DataSource(dataSource => dataSource
+                         .Ajax()
+                         .Model(conf => conf.Id(m => m.OrderDate))
+                                     .Read(read => read.Action("GetNamedListOrders", "Print", new { batchId = Model })))
+      )
+<div class="k-pager-wrap k-grid-pager k-widget">
+    <span class="k-pager-info k-label" id="total">0 items</span>
+</div>
+

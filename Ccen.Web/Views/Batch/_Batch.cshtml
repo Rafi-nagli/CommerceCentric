@@ -1,0 +1,678 @@
+﻿@using Amazon.Common.Helpers
+@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Core.Models.Settings
+@using Amazon.Core.Models.Stamps
+@using Amazon.Web
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels
+@using Ccen.Web
+@using Amazon.Model.Implementation.Markets
+@using Kendo.Mvc.UI
+@model OrderBatchViewModel
+
+<style>
+    .k-grid tbody a.k-button {
+        min-width: 78px;
+    }
+</style>
+
+
+<div class="orders" id="page-content_@(Model.Id)">
+
+
+    <div class="panel panel-default">
+        <div style="padding: 5px 5px 5px 15px;"><span class='gray'>Batch ID:</span> <span data-bind="text: batchId"></span>, <span class='gray'>Created at:</span> <span data-bind="textFormatted: batchCreateDate, pattern: 'MM/dd/yyyy HH:mm'"></span>, <span class='gray'>Labels purchased:</span> <span data-bind="text: labelPurchasedFromDate"></span> - <span data-bind="text: labelPurchasedToDate" /></div>
+
+        <div class="filters">
+            <table style="width: 100%">
+                <colgroup>
+                    <col style="width: 130px" />
+                    <col style="width: 150px" />
+                    <col style="width: 150px" />
+                    <col style="width: auto" />
+                    <col style="width: 310px" />
+                </colgroup>
+                <tr>
+                    <td class="">
+                        <a class="k-button"
+                           target="_blank"
+                           style="display: none"
+                           data-bind="click: lockBatch, visible: !isBatchLocked()"><span class="fa fa-unlock fa-lg am-icon"></span>Lock Batch</a>
+                        <span data-bind="visible: isBatchLocked" class="gray" style="display: none"><span class="fa fa-lock fa-lg am-icon"></span>Batch Locked</span>
+                    </td>
+                    <td class="right-block">
+                        <a class="k-button"
+                           target="_blank"
+                           data-bind="attr: { 'disabled': (!isBatchLocked() ? 'disabled' : null) }, css: { 'k-state-disabled': !isBatchLocked() }"
+                           href="@Url.Action(MVC.Print.PrintPickList(Model.Id))"><span class="glyphicon glyphicon-list am-icon"></span>Pick List</a>
+                    </td>
+                    <td class="right-block">
+                        <button class="k-button"
+                                data-bind="click: function() { OnPrintPackingSlip() }, enable: enabledPackingSlip(), css: { 'k-state-disabled': !enabledPackingSlip() }">
+                            <span class="glyphicon glyphicon-duplicate am-icon"></span>Packing Slips
+                        </button>
+                    </td>
+                    <td></td>
+                    <td class="right-block">
+                        @if (AccessManager.CanPrintLabel() && !AppSettings.IsDemo)
+                        {
+                            <button class="k-button"
+                                    style="display: none"
+                                    data-bind="click: function() {OnPrintLabels() }, visible: !isAllLabelPurchased(), disable: !enabledPrintLabels(), css: { 'k-state-disabled': !enabledPrintLabels() }">
+                                <span class='glyphicon glyphicon-print am-icon'></span>Buy Postage
+                            </button>
+                            if (AccessManager.IsAdmin)
+                            {
+                                <button class="k-button"
+                                        style="display: none; margin-right: 50px"
+                                        data-bind="click: function() {OnRebuildLabelsPdf() }, visible: isAllLabelPurchased(), disable: !enabledPrintLabels(), css: { 'k-state-disabled': !enabledPrintLabels() }">
+                                    <span class='glyphicon glyphicon-print am-icon'></span>Rebuild Pdf
+                                </button>
+                            }
+                        }
+                        <a target='_blank'
+                           class="k-button"
+                           style="display: none; padding-left: 10px"
+                           data-bind="visible: batchHasPrintPack, attr: { href: batchPrintPackUrl }">
+                            <span class="glyphicon glyphicon-save am-icon"></span>Download labels
+                        </a>
+                    </td>
+                </tr>
+            </table>
+
+            <div class="messages-block">
+                <div id="infoMessage_@(Model.Id)" class="text-info"></div>
+                <div class="text-danger">
+                    <span id="errorMessageIcon_@(Model.Id)" class="label label-danger" style="display: none">Error</span>
+                    <span id="errorMessage_@(Model.Id)"></span>
+                </div>
+                <div class="text-success">
+                    <span id="successMessageIcon_@(Model.Id)" class="label label-success" style="display: none">Success</span>
+                    <span id="successMessage_@(Model.Id)"></span>
+                </div>
+            </div>
+
+            <details class="warning-list" data-bind="visible: unprintedOrdersCount() != 0">
+                <summary>Unprinted labels: <span data-bind="text: unprintedOrdersCount"></span></summary>
+                <div data-bind='foreach: unprintedOrderList' class="block-items">
+                    <div class="text-danger">
+                        <a href="javascript:;" data-bind="click: function(data, event) { $root.onEditOrder(data.entityId); }"><span data-bind="text: orderId"></span></a> - <span data-bind="text: message"></span>
+                    </div>
+                </div>
+            </details>
+            @if (AccessManager.CanEditOrder())
+            {
+                <details class="warning-list" data-bind="visible: invalidAddressOrdersCount() != 0">
+                    <summary>Order address with warnings: <span data-bind="text: invalidAddressOrdersCount"></span></summary>
+                    <div data-bind='foreach: invalidAddressOrderList' class="block-items">
+                        <div>
+                            <a href="javascript:;" data-bind="css: { 'danger-text': isWarning, 'bold': isBold }, click: function(data, event) { $root.onEditOrder(data.entityId); }"><span data-bind="text: orderId"></span></a>
+                            &nbsp;<span data-bind="html: message"></span>
+                        </div>
+                    </div>
+                </details>
+            }
+        </div>
+    </div>
+
+    <div>
+        <div class="panel panel-default" style="width: 55%; float: left">
+            <div class="filters">
+                <table>
+                    <colgroup>
+                        <col style="width: 90px" />
+                        <col style="width: 210px" />
+                        <col style="width: 90px" />
+                        <col style="width: 210px" />
+                    </colgroup>
+                    <tr>
+                        <th>Filter:</th>
+                        <td>
+                            <input style="width: 180px"
+                                   data-bind="kendoDropDownList: { data: shippingStatusList, value: shippingStatus, dataTextField: 'Text', dataValueField: 'Value' }" />
+                        </td>
+                        <th>Order #:</th>
+                        <td>
+                            <div class="input-group history-button">
+                                <div class="input-group-btn">
+                                    <button type="button" class="btn btn-primary dropdown-toggle"
+                                            data-bind="event: { mouseover: searchHistory.init }"
+                                            data-toggle="dropdown"
+                                            aria-haspopup="true"
+                                            aria-expanded="false">
+                                        <span class='glyphicon glyphicon-menu am-icon'
+                                              style="font-size: 14px">
+                                        </span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" data-bind="foreach: searchHistory.lastSearchedOrderIdList">
+                                        <li data-bind="click: function() { $root.searchHistory.setSearchOrderId($data) }">
+                                            <a href="#" data-bind="text: $data"></a>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <input type="text"
+                                       style="width: 180px"
+                                       data-bind="kendoAutoComplete: {
+                                        value: orderNumber,
+                                        data: {},
+                                        highlightFirst: true,
+                                        minLenght: 3,
+                                        dataSource: orderIdSource },
+                                        valueUpdate: 'afterkeydown',
+                                        event: { keypress: searchByKeyCmd }"
+                                       class="k-textbox" />
+                            </div>
+                        </td>
+                        <th>Label #:</th>
+                        <td>
+                            <input type="text" style="width: 60px" data-bind="value: labelNumber,
+                            valueUpdate: 'afterkeydown',
+                            event: { keypress: searchByKeyCmd }" class="k-textbox" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Market:</th>
+                        <td>
+                            <input style="width: 180px"
+                                   data-bind="kendoDropDownList: {data: marketList, value: marketValue, dataTextField: 'Text', dataValueField: 'Value' }" />
+                        </td>
+                        <th>Style ID:</th>
+                        <td>
+                            <input type="text"
+                                   style="width: 200px"
+                                   data-bind="kendoAutoComplete: {
+                                        value: styleId,
+                                        data: {},
+                                        minLenght: 3,
+                                        dataSource: styleIdSource },
+                                        valueUpdate: 'afterkeydown',
+                                        event: { keypress: searchByKeyCmd }"
+                                   class="k-textbox" />
+                        </td>
+                        <th>Size:</th>
+                        <td>
+                            <input id="StyleItemId"
+                                   name="StyleItemId"
+                                   style="width: 100px"
+                                   data-bind="kendoDropDownList: {data: sizeList, value: styleItemId, dataTextField: 'Text', dataValueField: 'Value' }" />
+                        </td>
+                    </tr>
+                </table>
+                <button class="k-button"
+                        style="margin: 5px 10px 0 0px; padding: 3px 20px 3px 20px"
+                        data-bind="click: searchByButton">
+                    <span class='glyphicon glyphicon-search am-icon'></span>Search
+                </button>
+                <button class="k-button"
+                        style="margin: 5px 10px 0 0; padding: 3px 20px 3px 20px"
+                        data-bind="click: clearAndSearch">
+                    <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+                </button>
+            </div>
+        </div>
+        <div class="panel panel-default" style="width: 41%; float:right; padding-top: 35px">
+            <table class="filters" style="margin: 0px 0px 5px auto">
+                <tr>
+                    <td class="right-content">
+                        @if (AccessManager.CanUpgradeOrder())
+                        {
+                            @*<button class="k-button"
+                                    data-bind="click: onSetShippingService"
+                                    style="width: 170px; margin: 0 10px 0 0; padding: 3px 10px 3px 10px">
+                                <span class='glyphicon glyphicon-calc am-icon'></span>Change Service...
+                            </button>*@
+                        }
+                    </td>
+
+                    <td style="padding-bottom: 0px;">
+                        @if (AccessManager.CanUpgradeOrder())
+                        {
+                            <button class="k-button"
+                                    data-bind="click: onReCalcShippingService"
+                                    style="width: 170px; margin: 0 10px 0 0; padding: 3px 20px 3px 20px">
+                                <span class='glyphicon glyphicon-calc am-icon'></span>Recalculate
+                            </button>
+                        }
+
+                    </td>
+                    <td>
+                        @if (AccessManager.CanUpgradeOrder())
+                        {
+                            <button class="k-button"
+                                    data-bind="click: onUpgradeShippingService"
+                                    style="width: 170px; margin: 0 10px 0 0; padding: 3px 20px 3px 20px">
+                                <span class='glyphicon glyphicon-arrow-up am-icon'></span>Upgrade
+                            </button>
+                        }
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="3" style="padding-top: 8px">
+                        @if (AccessManager.CanEditBatch())
+                        {
+                            <span>Move selected to:</span>
+                            <input style="width: 190px" data-bind="kendoDropDownList: { data: activeBatchList, value: activeBatch, dataTextField: 'Text', dataValueField: 'Value' }" />
+                            <button class="k-button"
+                                    data-bind="click: onRemoveFromBatch"
+                                    style="margin: 0 10px 0 0; padding: 3px 20px 3px 20px">
+                                <span class='glyphicon glyphicon-ok am-icon'></span>
+                            </button>
+                        }
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="clear"></div>
+    </div>
+
+    <div class="k-toolbar k-grid-toolbar">
+        <span class="toolbar-label">
+            <a href="javascript:;" data-bind="click: setDefaultMarket">Total</a> - <span data-bind="text: allOrdersCount">0</span>
+            (intl: <span data-bind="textFormatted: allOrdersWeightLb, pattern: '0.00'">0</span> Lb)
+
+            <span data-bind="foreach: countByMarket">
+                <a href='javascript:;' style="padding-left: 4px;" data-bind="click: setMarket"><span data-bind="text: DotName"></span></a> - <span data-bind="text: count"></span><span data-bind="if: ($index() != ($parent.countByMarket().length - 1))">,</span>
+            </span>
+        </span>
+    </div>
+
+    <div class="k-toolbar k-grid-toolbar">
+        <div>
+            <table>
+                <tr>
+                    <td>
+                        <div>
+                            <span class="toolbar-label">
+                                <span>Checked:</span>
+                                <span class="number" data-bind="text: checkedCount">0</span> / <span class="number count" data-bind="text: grid.itemCount">0</span>
+                                <span>Total postage cost:</span>
+                                <span class="count" data-bind="foreach: totalByProviderType">
+                                    $<span class="number" data-bind="text: formattedTotalPrice">0</span><span>(<span data-bind="text: name"></span>)</span>
+                                    <span data-bind="if: ($index() != ($parent.totalByProviderType().length - 1))"> / </span>
+                                </span>
+                            </span>
+                        </div>
+                        <div style="padding-top: 4px">
+                            <span class="toolbar-label">
+                                <span>
+                                    <a href="javascript:;" data-bind="click: checkAllOnAllPages">check all</a>
+                                    <span class='gray'> (on all pages)</span>
+                                </span>
+                                <span> / </span>
+                                <span>
+                                    <a href="javascript:;" data-bind="click: unCheckAllOnAllPages">uncheck all</a>
+                                    <span class='gray'> (on all pages)</span>
+                                </span>
+                            </span>
+                        </div>
+                    </td>
+                    <td style="padding-left: 50px">
+                        <table class="toolbar-label">
+                            <tr>
+                                <td style="text-align:right">
+                                    <span class="gray">Issues:</span>
+                                </td>
+                                <td>
+                                    <a class="toolbar-link"
+                                       data-bind="click: function() { setFilter('WithAddressIssues') }, css: { 'label' : invalidAddressOrdersCount() > 0 || isWithAddressIssuesFilter(), 'label-danger' : invalidAddressOrdersCount() > 0, 'label-info' : isWithAddressIssuesFilter }">
+                                        <span>Address issue:</span>
+                                        <span data-bind="text: invalidAddressOrdersCount" class="number"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a class="toolbar-link"
+                                       data-bind="click: function() { setFilter('OnHold') }, css: { 'label' : onHoldOrdersCount() > 0 || isOnHoldFilter(), 'label-info' : isOnHoldFilter, 'label-danger' : onHoldOrdersCount() > 0 }">
+                                        <span>On Hold:</span>
+                                        <span data-bind="text: onHoldOrdersCount" class="number"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a class="toolbar-link"
+                                       data-bind="click: function() { setFilter('Duplicate') }, css: { 'label' : duplicateOrdersCount() > 0 || isDuplicateFilter(), 'label-danger' : duplicateOrdersCount() > 0, 'label-info' : isDuplicateFilter }">
+                                        <span>Duplicate:</span>
+                                        <span data-bind="text: duplicateOrdersCount" class="number"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a class="toolbar-link"
+                                       data-bind="click: function() { setFilter('WoPackage') }, css: { 'label' : withoutPackageOrdersCount() > 0 || isWoPackageFilter(), 'label-danger' : withoutPackageOrdersCount() > 0, 'label-info' : isWoPackageFilter }">
+                                        <span>W/o package:</span>
+                                        <span data-bind="text: withoutPackageOrdersCount" class="number"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a class="toolbar-link"
+                                       data-bind="click: function() { setFilter('WoStampsPrice') }, css: { 'label' : withoutStampsPriceOrdersCount() > 0 || isWoStampsPriceFilter(), 'label-danger' : withoutStampsPriceOrdersCount() > 0, 'label-info' : isWoStampsPriceFilter }">
+                                        <span>W/o Stamps price:</span>
+                                        <span data-bind="text: withoutStampsPriceOrdersCount" class="number"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a class="toolbar-link"
+                                       data-bind="click: function() { setFilter('OverdueShipDate') }, css: { 'label' : overdueShipDateOrdersCount() > 0 || isOverdueShipDateFilter(), 'label-danger' : overdueShipDateOrdersCount() > 0, 'label-info' : isOverdueShipDateFilter }">
+                                        <span>Overdue:</span>
+                                        <span data-bind="text: overdueShipDateOrdersCount" class="number"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a class="toolbar-link"
+                                       data-bind="click: function() { setFilter('Oversold') }, css: { 'label' : oversoldOrdersCount() > 0 || isOversoldFilter(), 'label-danger' : oversoldOrdersCount() > 0, 'label-info' : isOversoldFilter }">
+                                        <span>Oversold:</span>
+                                        <span data-bind="text: oversoldOrdersCount" class="number"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a class="toolbar-link"
+                                       data-bind="click: function() { setFilter('WithNewStyles') }, css: { 'count-selected' : isWithNewStylesFilter }">
+                                        <span>New Styles:</span>
+                                        <span data-bind="text: withNewStylesOrdersCount" class="number"></span>
+                                    </a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="gray">Statistics:</span>
+                                </td>
+                                <td>
+                                    <a class="toolbar-link"
+                                       data-bind="click: function() { setFilter('TodayShipDate') }, css: { 'label label-info' : isTodayShipDateFilter }">
+                                        <span>Today:</span>
+                                        <span data-bind="text: todayShipDateOrdersCount" class="number"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a class="toolbar-link"
+                                       data-bind="click: function() { setFilter('SameDay') }, css: { 'label' : sameDayOrdersCount() > 0 || isSameDayFilter(), 'label-danger' : sameDayOrdersCount() > 0, 'label-info' : isSameDayFilter }">
+                                        <span>Same Day:</span>
+                                        <span data-bind="text: sameDayOrdersCount" class="number"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a class="toolbar-link"
+                                       data-bind="click: function() { setFilter('DHL') }, css: { 'label label-info' : isDhlFilter }">
+                                        <span>DHL:</span>
+                                        <span data-bind="text: dhlOrdersCount" class="number"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a class="toolbar-link"
+                                       data-bind="click: function() { setFilter('IBC') }, css: { 'label label-info' : isIBCFilter }">
+                                        <span>IBC:</span>
+                                        <span data-bind="text: ibcOrdersCount" class="number"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a class="toolbar-link"
+                                       data-bind="click: function() { setFilter('SKYPOSTAL') }, css: { 'label label-info' : isSkyPostalFilter }">
+                                        <span>SkyPostal:</span>
+                                        <span data-bind="text: skyPostalOrdersCount" class="number"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a class="toolbar-link"
+                                       data-bind="click: function() { setFilter('FedexOneRate') }, css: { 'label label-info' : isFedexOneRateFilter }">
+                                        <span>Fedex:</span>
+                                        <span data-bind="text: fedexOneRateOrdersCount" class="number"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a class="toolbar-link"
+                                       data-bind="click: function() { setFilter('PrimeOrSecondDay') }, css: { 'label label-info' : isPrimeOrSecondDayFilter }">
+                                        <span>Prime/Second Day:</span>
+                                        <span data-bind="text: primeOrSecondDayOrdersCount" class="number"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a class="toolbar-link"
+                                       data-bind="click: function() { setFilter('MiamiArea') }, css: { 'count-selected' : isMiamiAreaFilter }">
+                                        <span>Miami Area:</span>
+                                        <span data-bind="text: miamiAreaOrdersCount" class="number"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a class="toolbar-link"
+                                       data-bind="click: function() { setFilter('Upgraded') }, css: { 'count-selected' : isUpgradedFilter }">
+                                        <span>Upgraded:</span>
+                                        <span data-bind="text: upgradedOrdersCount" class="number"></span>
+                                    </a>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="orders-grid">
+        <div data-bind='component: {
+            name: "grid-pager",
+            params: { itemCount: grid.itemCount, pageIndex: grid.pageIndex, itemsPerPage: grid.itemsPerPage, refreshCallback: grid.reload }
+        }'></div>
+
+        <div data-bind='component: {
+             name: "fast-grid",
+             params: fastGridSettings }'></div>
+
+        <div data-bind='component: {
+            name: "grid-pager",
+            params: { itemCount: grid.itemCount, pageIndex: grid.pageIndex, itemsPerPage: grid.itemsPerPage, refreshCallback: grid.reload }
+        }'></div>
+    </div>
+</div>
+
+
+<script type="text/kendo-tmpl" id="order-row-template@(Model.Id)">
+    <tr class="k-master-row #=data._isAlt ? 'k-alt': ''#" row-uid="#=data.Id#">
+        <td><input class='check_row' type='checkbox' onclick='javascript: batch@(Model.Id).checkOne(this, "#=data.EntityId#")' /></td>
+        <td><span class='row-number'></span></td>
+        <td>#= tmpl.t('status-column-template', data)# #= tmpl.t('order-info-column-template', data)#</td>
+        <td>#= tmpl.t('orderid-column-template', data)# #= tmpl.t('tracking-column-template', data)# #= tmpl.t('buyer-column-template', data)#</td>
+        <td><span>#=data.TotalItemQuantity#</span></td>
+        <td>#= tmpl.t('servicetype-column-template', data)#</td>
+        <td>#=data.ShippingCountry#</td>
+        <td>#= tmpl.t('price-column-template', data)#</td>
+        <td>#= tmpl.t('weight-column-template', data)#</td>
+        <td>#= tmpl.t('stampscost-column-template', data) #</td>
+        <td>
+            #=tmpl.isNullFormat(data.AlignedExpectedShipDate, 'MM.dd.yyyy HH:mm', '-')#
+            @*<div>#=tmpl.isNullFormat(data.ExpDeliveryDate, 'MM.dd.yyyy HH:mm', '-')#</div>
+            <div>/ #=tmpl.isNullFormat(data.EstDeliveryDate, 'MM.dd.yyyy HH:mm', '-')#</div>*@
+        </td>
+        <td>#=tmpl.f(data.OrderDate, 'MM.dd.yyyy HH:mm')#</td>
+        @if (AccessManager.CanEditOrder())
+        {
+            <td rowspan="#=data.Items.length + 1#">
+                #= tmpl.t('view-label-column-template', data) #
+                #= tmpl.t('get-label-column-template', data) #
+                
+                <a target='_blank' class='k-button k-button-icontext' style='margin-top:8px; width:85px' href='@(Url.Action(MVC.Mailing.Index()))?orderId=#=data.OrderId#'>Buy Shipng</a>
+                <a target='_blank' class='k-button k-button-icontext' style='margin-top:4px; width:85px' href='@(Url.Action(MVC.Print.GetPackingSlip()))?orderId=#=data.EntityId#'>Packg Slip</a>
+                <div style='padding-top:8px;' id='row-action'>
+                    <button class='k-button k-button-icontext' id='holdButton' style='display:block;margin-top:4px' onclick='batch@(Model.Id).toggleHold("#=data.EntityId#", "#=data.OnHold#")'>#if(data.OnHold) {# UnHold #} else {# <span class='glyphicon glyphicon-ban-circle am-icon'></span>Hold #}#</button>
+                    <button class='k-button k-button-icontext'
+                            id='editOrderButton'
+                            style='margin-top:4px; min-width: 55px'
+                            onclick='batch@(Model.Id).onEditOrder("#=data.EntityId#")'>
+                        <span class='glyphicon glyphicon-pencil am-icon'></span>Edit
+                    </button>
+                    <a class='k-button k-button-icontext'
+                       id='historyOrderButton'
+                       style='margin: 4px 0px 0px 0px; min-width: 20px'
+                       target="_blank"
+                       href="@Url.Action("OrderHistory", "Order")?orderId=#=data.OrderId#">
+                        <span class='glyphicon glyphicon-new-window am-icon'></span>
+                    </a>
+                </div>
+                #= tmpl.t('batchname-column-template', data) #
+                <div style='padding-bottom: 8px; padding-top: 8px'>
+                    <button class='k-button k-button-icontext' id='removeButton' style='margin:0px' onclick='batch@(Model.Id).removeFromBatch("#=data.EntityId#")'><span class='glyphicon glyphicon-minus am-icon'></span>From batch</button>
+                </div>
+            </td>
+        }
+        else
+        {
+            <td rowspan="#=data.Items.length + 1#">
+                #= tmpl.t('view-label-column-template', data) #
+                <a target='_blank' class='k-button k-button-icontext' style='margin-top:4px; width:85px' href='" + @Url.Action(MVC.Print.GetPackingSlip()) + "?orderId=#=data.EntityId#'>Packg Slip</a>
+            </td>
+        }
+        <td rowspan="#=data.Items.length + 1#">#= tmpl.t('comment-column-template', data) #</td>
+    </tr>
+    #for (var i = 0; i < data.Items.length; i++) {#
+    <tr class="k-detail-row #=data._isAlt ? 'k-alt': ''#" row-uid="#=data.Id#">
+        <td></td>
+        <td></td>
+        <td>#= tmpl.t('order-item-image-column-template', data.Items[i])#</td>
+        <td>#= tmpl.t('order-item-buyer-column-template', data.Items[i])#</td>
+        <td>#= data.Items[i].Quantity#</td>
+        <td></td>
+        <td></td>
+        <td>#= tmpl.t('order-item-price-column-template', data.Items[i])#</td>
+        <td><div>#=data.Items[i].WeightString#</div></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    #}#
+</script>
+
+
+
+
+@Html.Partial(MVC.Shared.Views._TemplatesOrder)
+@Html.Partial("_TemplateGridPager")
+@Html.Partial("_TemplateFastGrid")
+@Html.Partial("_SetBulkShipping")
+
+<script type="text/javascript">
+    var batch@(Model.Id) = null;
+
+    $(document).ready(function() {
+        var batches = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.ActiveBatches));
+        var marketList = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.MarketList));
+
+
+        var settings = {
+            isAdmin: @(AccessManager.IsAdmin ? 1 : 0),
+            isDemo: @(AppSettings.IsDemo ? 1 : 0),
+
+            markets: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(MarketHelper.GetOrderPageMarketplaces())),
+
+            comMarket: @((int) MarketType.Amazon),
+            ukMarket: @((int) MarketType.AmazonEU),
+            auMarket: @((int) MarketType.AmazonAU),
+            eBayMarket: @((int) MarketType.eBay),
+            magentoMarket: @((int) MarketType.Magento),
+            walmartMarket: @((int) MarketType.Walmart),
+            walmartCAMarket: @((int) MarketType.WalmartCA),
+            jetMarket: @((int) MarketType.Jet),
+            marketNames: {
+                groupon: @((int)MarketType.Groupon)
+            },
+
+            caMarketplaceId: '@MarketplaceKeeper.AmazonCaMarketplaceId',
+            mxMarketplaceId: '@MarketplaceKeeper.AmazonMxMarketplaceId',
+            ukMarketplaceId: '@MarketplaceKeeper.AmazonUkMarketplaceId',
+            comMarketplaceId: '@MarketplaceKeeper.AmazonComMarketplaceId',
+
+            providerTypeList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(ShipmentProviderHelper.GetAllProviderList())),
+
+            shippedOrderStatus: '@(OrderStatusEnumEx.Shipped)',
+            canceledOrderStatus: '@(OrderStatusEnumEx.Canceled)',
+
+            shippingNames: {
+                sameDay: '@(ShippingUtils.SameDayServiceName)',
+                secondDay: '@(ShippingUtils.SecondDayServiceName)',
+                nextDay: '@(ShippingUtils.NextDayServiceName)'
+            },
+
+            defaultMarket: @((int)MarketType.None),
+            defaultMarketplaceId: '',
+            batchList: batches,
+
+            marketList: marketList,
+            bayList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OrderSearchFilterViewModel.BayList)),
+            shippingStatusList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OrderSearchFilterViewModel.StatusList)),
+
+            getOrdersUrl: '@Url.Action("GetOrders", "Order")',
+            searchHistoryUrl: '@Url.Action("GetSearchHistory", "Order")',
+            editOrderUrl: '@Url.Action(MVC.Order.OnEditOrder())',
+            setShippingOptionsUrl: '@Url.Action(MVC.Order.SetShippingOptions())',
+            upgradeShippingServiceUrl: '@Url.Action(MVC.Batch.UpgradeShippingService())',
+            downgradeShippingServiceUrl: '@Url.Action(MVC.Batch.DowngradeShippingService())',
+            recalcShippingServiceUrl: '@Url.Action(MVC.Batch.ReCalcShippingService())',
+            setOnHoldUrl:  '@Url.Action(MVC.Order.SetOnHold())',
+            getOrderIdListUrl:  '@Url.Action("GetOrderIdList", "AutoComplete")',
+            getStyleIdListUrl: '@Url.Action("GetStyleIdList", "AutoComplete")',
+            getStyleSizeListUrl: '@Url.Action("GetStyleSizes", "AutoComplete")',
+
+            getPrintResultUrl: '@Url.Action("GetPrintResult", "AmazonSync")',
+            checkPurchaseProgressUrl: '@Url.Action(MVC.AmazonSync.CheckPurchaseProgress())',
+            printLabelsForBatchUrl: '@Url.Action(MVC.AmazonSync.PrintLabelsForBatch())',
+            getPackingSlipUrl: '@Url.Action(MVC.Print.GetPackingSlipsForBatch())',
+
+            setDismissAddressValidationUrl: '@Url.Action(MVC.Order.SetDismissAddressValidationError())',
+            activeBatchUrl: '@Url.Action(MVC.Batch.ActiveBatches())',
+            createBatchUrl: '@Url.Action("CreateBatch", "Batch")',
+            addOrdersToBatchUrl: '@Url.Action("AddOrdersToBatch", "Batch")',
+            removeFromBatchMultiUrl: '@Url.Action(MVC.Batch.RemoveMultipleFromBatch())',
+            removeFromBatchUrl: '@Url.Action("RemoveFromBatch", "Batch")',
+            lockBatchUrl: '@Url.Action("LockBatch", "Batch")',
+
+            viewPrintPackUrl: '@Url.Action("GetFile", "Print")',
+
+            duplicateNotifyType: '@((int) OrderNotifyType.Duplicate)',
+            addressCheckStampsNotifyType: '@((int)OrderNotifyType.AddressCheckStamps)',
+            addressCheckGoogleNotifyType: '@((int)OrderNotifyType.AddressCheckGoogleGeocode)',
+
+            unshippedOrderStatus: '@OrderStatusEnumEx.Unshipped',
+
+            addressValidationStatus: {
+                valid: '@((int) AddressValidationStatus.Valid)',
+                invalid: '@((int)AddressValidationStatus.Invalid)',
+                invalidRecipientName: '@((int)AddressValidationStatus.InvalidRecipientName)',
+                exception: '@((int) AddressValidationStatus.Exception)',
+                exceptionCommunication: '@((int) AddressValidationStatus.ExceptionCommunication)',
+                dhlAddressLengthExceeded: '@((int) AddressValidationStatus.DhlAddressLengthExceeded)',
+                missingPhoneNumber: '@((int) AddressValidationStatus.MissingPhoneNumber)'
+            },
+
+            shipmentProviderTypes: {
+                dhl: '@((int) ShipmentProviderType.Dhl)',
+                dhlECom: '@((int) ShipmentProviderType.DhlECom)',
+                ibc: '@((int) ShipmentProviderType.IBC)',
+                stamps: '@((int) ShipmentProviderType.Stamps)',
+                amazon: '@((int) ShipmentProviderType.Amazon)',
+                fedexOneRate: '@((int) ShipmentProviderType.FedexOneRate)',
+                fedexStandardRate: '@((int) ShipmentProviderType.FedexGeneral)',
+                fedexSmartPostRate: '@((int) ShipmentProviderType.FedexSmartPost)',
+                skyPostal: '@((int)ShipmentProviderType.SkyPostal)',
+            },
+
+            shippingMethodIds: {
+                sameDay: '@((int)ShippingUtils.DynamexPTPSameShippingMethodId)',
+                dhl: '@((int)ShippingUtils.DhlExpressWorldWideShippingMethodId)',
+                dhlMx: '@((int)ShippingUtils.AmazonDhlExpressMXShippingMethodId)',
+                amzExpressFlat: '@((int)ShippingUtils.AmazonExpressFlatShippingMethodId)',
+                amzExpressRegular: '@((int)ShippingUtils.AmazonExpressRegularShippingMethodId)',
+                stampsExpressFlat: '@((int)ShippingUtils.ExpressFlatShippingMethodId)',
+                stampsExpressRegular: '@((int)ShippingUtils.ExpressReqularShippingMethodId)',
+            }
+        };
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        model.batchId = @(Model.Id);
+        model.batchNumber = @(Model.Number);
+        model.batchCreateDate = new Date('@(Model.CreateDate)');
+
+        batch@(Model.Id) = new BatchModel('OrderListGrid', model, settings);
+
+        batchList.push(batch@(Model.Id));
+
+        ko.applyBindings(batch@(Model.Id), document.getElementById("page-content_" + @(Model.Id)));
+    });
+</script>

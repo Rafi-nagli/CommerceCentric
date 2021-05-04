@@ -1,0 +1,213 @@
+﻿<script>
+    var SetBulkShippingPopupModel = function (model,
+        settings,
+        submitCallback)
+    {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+
+        self.popupNode = null;
+        self.popup = null;
+
+        self.isLoaded = ko.observable(false);
+
+        self.submitCallback = submitCallback;
+
+        self.shippingMethodId = ko.observable(null);
+        self.shippingProviderId = ko.observable(null);
+
+        self.shippingProviderList = ko.observableArray(@Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Amazon.Web.ViewModels.MailViewModel.ShippingProviderList)));
+        self.shippingMethodList = ko.observableArray(@Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Amazon.Web.ViewModels.MailViewModel.ShippingServiceList)));
+        self.filteredShippingMethodList = ko.computed(function () {
+            return $.grep(self.shippingMethodList(), function (m) {
+                return m.ParentValue == self.shippingProviderId();
+            });
+        });
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function () {
+            return self.errors().length === 0;
+        });
+
+        self.validate = function () { // function(data, e) {
+            if (self.isValid()) { //validator.validate() &&
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                return false;
+            }
+        };
+
+        self.init = function () {
+            self.isLoaded(true);
+        }
+
+        self.show = function () {
+            console.log($("#setBulkShippingPopup").length);
+            $("#setBulkShippingPopup").each(function (i) {
+                var popup = $(this).data("kendoWindow");
+                if (popup != null) {
+                    console.log("close previous setBulkShipping popup");
+
+                    ko.cleanNode($(this)[0]);
+                    popup.close();
+                    popup.destroy();
+                }
+                else {
+                    $(this).remove();
+                }
+            });
+
+            console.log("SetBulkShippingPopupModel.create");
+
+            $('body').prepend("<div id='setBulkShippingPopup'></div>");
+            self.popupNode = $('#setBulkShippingPopup');
+
+            self.popupNode.kendoWindow({
+                modal: true,
+                width: "350px",
+                title: "Set Orders Shipping Service",
+                visible: false,
+                close: self.closeEvent,
+                actions: [
+                    "Close"
+                ],
+            });
+
+            self.popup = self.popupNode.data("kendoWindow");
+            self.popup.content($("#setBulkShippingPopupContent").html());
+            self.popup.center().open();
+
+            ko.applyBindings(self, self.popupNode[0]);
+
+            self.init();
+        };
+
+        self.submit = function () {
+            var defer = $.Deferred();
+            var dataModel = {
+                shippingProviderId: self.shippingProviderId(),
+                shippingMethodId: self.shippingMethodId()
+            };
+
+            console.log("shipping provider: " + self.shippingProviderId());
+            console.log("shipping method: " + self.shippingMethodId());
+
+            defer.resolve(dataModel);
+            
+            return defer;
+        }
+
+        self.onSave = function(data, e) {
+            console.log('SetBulkShippingPopupModel.onSave');
+            console.log(self.shippings);
+
+            if (self.validate()) {
+                $(e.target).showLoading("updating...");
+                self.submit().done(function (result) {
+                    console.log("done");
+                    console.log(result);
+                    self.submitCallback(result);
+                    self.onClose();
+                }).fail(function (result) {
+                    console.log("fail");
+                    console.log(result);
+                    Message.popup(result, null, null, null);
+                    $(e.target).hideLoading();
+                });
+            }
+        }
+
+        self.onClose = function() {
+            console.log('SetBulkShippingPopupModel.onClose');
+            self.closeEvent();
+            self.popup.close();
+        }
+
+        self.closeEvent = function () {
+            console.log('disable validation');
+            //self.trackingNumber.rules.remove(function (item) {
+            //    console.log(item.rule);
+            //    return item.rule == "required";
+            //});
+            //self.trackingNumber.extend({ validatable: false });
+            console.log('after disable validation');
+        }
+    }
+
+    //$.ready(function () {
+    //    var popupModel = new SetBulkShippingPopupModel(null,
+    //        {},
+    //        null);
+    //    popupModel.show();
+    //});
+</script>
+
+<!-- ko stopBinding: true -->
+<div style="display: none">
+    <div id="setBulkShippingPopupContent" class="setBulkShippingPopupContent">
+        <div class="k-edit-form-container" style="width: auto; font-size: 13px">
+            <div class="inventory-popup">
+                <div data-bind="visible: !isLoaded()">
+                    Loading...
+                </div>
+                <div data-bind="visible: isLoaded">
+                    <table style="padding-bottom: 8px">
+                    <tr>
+                        <td>Provider:</td>
+                        <td>
+                            <input style="width: 150px; margin-top: 3px"
+                               data-bind="kendoDropDownList:
+                                        {data: shippingProviderList,
+                                        value: shippingProviderId,
+                                        optionLabel: 'Select...',
+                                        dataTextField: 'Text',
+                                        dataValueField: 'Value' }" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Service:</td>
+                            <td><input style="width: 150px; margin-top: 3px"
+                               data-bind="kendoDropDownList:
+                                        {data: filteredShippingMethodList,
+                                        value: shippingMethodId,           
+                                        optionLabel: 'Select...',
+                                        dataTextField: 'Text',
+                                        dataValueField: 'Value' }" />
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="k-edit-buttons k-state-default popup-button-panel" style="position: static">
+            <table style="margin-left: auto">
+                <tr>
+                    <td style="margin-right: 5px">
+                        <button tabindex="-1"
+                                data-bind="click: onSave"
+                                class="k-button">
+                            <span class="k-icon k-update"></span>
+                            <span>Save</span>
+                        </button>
+                    </td>
+                    <td style="vertical-align: bottom">
+                        <button class="k-button k-button-icontext k-grid-cancel"
+                                data-bind="click: onClose">
+                            <span class="k-icon k-cancel"></span>Cancel
+                        </button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<!-- /ko -->

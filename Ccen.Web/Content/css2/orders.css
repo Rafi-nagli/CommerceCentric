@@ -1,0 +1,237 @@
+﻿.orders {
+    
+} 
+
+/*Hide expand/collapse arrows*/
+.orders .k-master-row .k-hierarchy-cell .k-icon {
+    visibility: hidden;
+}
+
+.orders .k-grid tbody a.k-button {
+    min-width: 78px;
+}
+
+.orders .k-grid .k-button {
+    margin: 0px;
+}
+
+/* Toolbar */  
+.orders .k-toolbar .count {
+    margin-right: 20px;
+}
+
+.orders .k-toolbar .link-selected {
+    text-decoration: underline;
+    /*border-bottom: 2px solid #fff;*/
+}
+
+.orders .history-button .btn {
+    padding-top: 3px;
+    padding-bottom: 4px;
+}
+
+
+/* Grid */
+.orders-grid {
+    font-size: 13px !important;
+}
+
+.orders-grid .k-hierarchy-cell {
+    padding: 0px;
+}
+
+.orders-grid .k-detail-cell {
+    padding: 0px;
+}
+
+/* Status Column */
+
+.order-sales-channel {
+    font-size: 11px;
+    color: white;
+}
+
+.order-us-channel {
+    color: black !important;
+}
+
+.order-canada-channel {
+    background: #C0143C;
+    padding: 2px;
+    color: white;
+}
+
+.order-mexico-channel {
+    background: green;
+    padding: 2px;
+    color: white;
+}
+
+.order-europe-channel {
+    background: #003399;
+    padding: 2px;
+    color: white;
+}
+
+.order-ebay-market {
+    background: orange;
+    padding: 2px;
+    color: white;
+}
+
+.order-magento-market {
+    background: green;
+    padding: 2px;
+    color: white;
+}
+
+.order-walmart-market {
+    background: #1a75cf;
+    padding: 2px;
+    color: white;
+}
+
+.order-mbg {
+    background-color: lightpink;
+}
+
+.order-jet-market {
+    background: #7c43f3;
+    padding: 2px;
+    color: white;
+}
+
+.order-ds-market {
+    background: orchid;
+    padding: 2px;
+    color: white;
+}
+
+.order-overstock-market {
+    background: #C0143C;
+    padding: 2px;
+    color: white;
+}
+
+.warn-rect {
+    margin-top: 2px;
+    padding: 2px 4px 2px 4px;
+    background: #e51400;
+    font-size: 11px;
+    color: white;
+}
+
+.info-rect {
+    padding: 2px 4px 2px 4px;
+    background: gray;
+    font-size: 11px;
+    color: white;
+}
+
+.red-rect {
+    padding: 2px 4px 2px 4px;
+    background: #d9534f;
+    font-size: 11px;
+    color: white;
+}
+
+.blue-rect {
+    padding: 2px 4px 2px 4px;
+    background: #337ab7;
+    font-size: 10px;
+    color: white;
+}
+
+.lightblue-rect {
+    padding: 2px 4px 2px 4px;
+    background: lightblue;
+    font-size: 11px;
+    color: black;
+}
+
+.dismiss-warn {
+    background: gray;
+}
+
+.not-one-quantity {
+    background: yellowgreen;
+    color: white;
+}
+
+.not-standard {
+    background: mediumpurple;
+    color: white;
+}
+
+.not-standard-i {
+    background: #9950db;
+    color: white;
+}
+
+.priority-express {
+    background: #d9534f;
+    color: white;
+}
+
+.next-day {
+    background: orange;
+    color: white;
+}
+
+.same-day {
+    background: darkred;
+    color: white;
+}
+
+.am-row-disabled td.not-one-quantity,
+.am-row-disabled td.not-standard,
+.am-row-disabled td.not-standard-i,
+.am-row-disabled td.priority-express,
+.am-row-disabled td.same-day,
+.am-row-disabled td.next-day {
+    color: #cdcdcd
+}
+
+
+.not-in-time {
+    background: red;
+}
+
+.not-in-time a {
+    color: white;
+}
+
+.in-blacklist {
+    background: rosybrown;
+}
+
+.promo {
+    color: #ee4400;
+}
+
+.refund {
+    color: #ee4400;
+}
+
+.stamps-note {
+    font-size: 8px;
+}
+
+
+.quick-summary {
+    
+}
+
+.quick-summary .line {
+    margin-bottom: 3px;
+}
+
+.quick-summary .refund-items td {
+    padding: 2px 6px;
+}
+
+.quick-summary .refund-items th {
+    padding: 2px 6px;
+    font-weight: normal;
+    border-bottom: 1px solid #ccc
+}

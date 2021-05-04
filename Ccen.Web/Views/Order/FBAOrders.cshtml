@@ -1,0 +1,279 @@
+﻿@using Amazon.Core.Models
+@using Amazon.Web.ViewModels
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@{    
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@model Amazon.Web.ViewModels.Pages.FBAOrderPageViewModel
+
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/orders.ico" />
+}
+<style>
+    .k-master-row .k-hierarchy-cell .k-icon {
+        visibility: hidden;
+    }
+</style>
+
+<script>
+    var FBAOrderViewModel = function(gridId, model) {
+        var self = this;
+
+        ko.BaseViewModel.call(self);
+
+        self.minDate = new Date(2000, 1, 1);
+        self.maxDate = new Date();
+        self.maxDate.setHours(23);
+        self.maxDate.setMinutes(59);
+
+        self.dateFrom = ko.observable('');
+        self.dateTo = ko.observable('');
+
+        self.prevDayCount = ko.observable('@Model.PreviousDayOrdersCount');
+        
+        self.setDefault = function() {
+            self.today = new Date();
+            if (self.today.getHours() < 10)
+                self.today.setHours(-24 - self.today.getHours() + 10);
+            self.dateFrom(self.today);
+            console.log(self.today);
+            self.dateTo('');
+        };
+
+        self.goToPrevDay = function () {
+            console.log("hours: " + self.today.getHours());
+            
+            var fromDate = new Date(self.today);
+            fromDate.setHours(-24);
+            var toDate = new Date(self.today);
+            
+            self.dateFrom(fromDate);
+            self.dateTo(toDate);
+
+            self.search();
+        };
+
+        self.getGridParams = function() {
+            return {
+                dateFrom: kendo.toString(self.dateFrom(), 'MM/dd/yyyy'),
+                dateTo: kendo.toString(self.dateTo(), 'MM/dd/yyyy'),
+                market: self.market
+            };
+        };
+
+        self.search = function() {
+            self.resetRowNumber();
+            $('#grid').data('kendoGrid').dataSource.read(self.getGridParams());
+        };
+
+        self.clear = function() {
+            self.setDefault();
+            self.search();
+        };
+
+        self.market = model.Market;
+
+        //Grid
+        self.dataBound = function (e) {
+            self.resetRowNumber();
+
+            var data = self.grid.dataSource.data();
+            console.log("dataBound");
+
+            //Expand all rows
+            this.expandRow(this.tbody.find("tr.k-master-row"));
+
+            $.each(data, function (i, row) {
+                paintOrderRow(row, 5, 10, 4, self.grid.columns.length);
+            });
+
+            self.rowTotal(self.grid.dataSource.total());
+        };
+        
+        self.grid = $(gridId).data("kendoGrid");
+        self.grid.bind("dataBound", self.dataBound);
+        self.grid.dataSource.transport.read.data = self.getGridParams();
+
+
+        //Init
+        helper.ui.addTopPager(self.grid);
+        self.clear();
+    };
+</script>
+
+<div class="orders" id="page-content">
+
+
+        <h1>@ViewBag.Title</h1>
+
+        <div class="panel panel-default">
+            <div class="filters">
+                <div class="messages-block">
+                    <div><span id="infoMessage" class="text-info"></span></div>
+                    <div><span id="errorMessage" class="label label-danger"></span></div>
+                    <div><span id="successMessage" class="label label-success"></span></div>
+                </div>
+
+                <table>
+                    <colgroup>
+                        <col style="width: 100px"/>
+                        <col style="width: 210px"/>
+                        <col style="width: 200px"/>
+                        <col style="width: 250px"/>
+                    </colgroup>
+                    <tr>
+                        <th>Order Date:</th>
+                        <td>
+                            <table>
+                                <tr>
+                                    <th>From</th>
+                                    <td style="padding-top: 10px">
+                                        <input data-bind="kendoDatePicker: { value: dateFrom, format: 'MM/dd/yyyy', min: minDate, max: maxDate }"/>
+                                        <span class="gray">10:00AM</span>
+                                    </td>
+                                    <th>To</th>
+                                    <td style="padding-top: 10px">
+                                        <input data-bind="kendoDatePicker: { value: dateTo, format: 'MM/dd/yyyy', min: minDate, max: maxDate }"/>
+                                        <span class="gray">10:00AM</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <th class="right-content">
+                            <span style="font-weight: normal">Previous Day Orders:</span>
+                            <a data-bind="click: goToPrevDay, text: prevDayCount"
+                               href="javascript:;"></a>
+                        </th>
+                    </tr>
+                </table>
+                <button class="k-button"
+                        style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                        data-bind="click: search">
+                    <span class='glyphicon glyphicon-search am-icon'></span>Search
+                </button>
+                <button class="k-button"
+                        style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                        data-bind="click: clear">
+                    <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+                </button>
+            </div>
+        </div>
+
+        <div class="orders-grid">
+            @(Html.Kendo().Grid<OrderViewModel>()
+              .Name("grid")
+              .Columns(columns =>
+              {
+                  columns.Bound(c => c.OrderId).ClientTemplate("#= fbaOrderVm.renderNumber(data) #")
+                      .Title("#")
+                      .Width(20)
+                      .Sortable(false);
+                  columns.Bound(c => c.OrderId)
+                      .Sortable(false)
+                      .Width(100)
+                      .ClientTemplate("#= tmpl.t('status-column-template', data)# #= tmpl.t('order-info-column-template', data)#")
+                      .Title("Status");
+                  columns.Bound(c => c.PersonName)
+                      .Sortable(true)
+                      .ClientTemplate("#= tmpl.t('orderid-column-template', data)# #= tmpl.t('tracking-column-template', data)# #= tmpl.t('buyer-column-template', data)#")
+                      .Title("Person name / Order details");
+                  columns.Bound(c => c.Quantity)
+                      .Sortable(false)
+                      .Title("Qty")
+                      .Width(80);
+                  columns.Bound(c => c.ShippingMethodId)
+                      .Sortable(false)
+                      .ClientTemplate("#= tmpl.t('servicetype-column-template', data)#")
+                      .Title("Ship. Service")
+                      .Width(60);
+                  columns.Bound(c => c.ShippingCountry)
+                      .Sortable(false)
+                      .Title("Cntry")
+                      .Width(40);
+                  columns.Bound(c => c.ItemPrice)
+                      .Width(120)
+                      .ClientTemplate("#= tmpl.t('price-column-template', data)#")
+                      .Sortable(false)
+                      .Title("Price");
+                  columns.Bound(c => c.Weight)
+                      .Sortable(false)
+                      .Width(80)
+                      .Title("Weight")
+                      .ClientTemplate("#= tmpl.t('weight-column-template', data)#");
+                  columns.Bound(c => c.OrderDate)
+                      .Sortable(true)
+                      .Format("{0:MM.dd.yyyy HH:mm}")
+                      .Width(95);
+              })
+              .ClientDetailTemplateId("itemsTemplate")
+              .Sortable(conf => conf.Enabled(true).SortMode(GridSortMode.SingleColumn))
+              .Navigatable(conf => conf.Enabled(false))
+              .Scrollable(conf => conf.Enabled(false))
+              .Selectable(conf => conf.Enabled(false))
+              .Pageable(conf => conf.Enabled(true).Refresh(true))
+              .AutoBind(false)
+              .DataSource(dataSource => dataSource
+                  .Ajax()
+                  .ServerOperation(false)
+                  .PageSize(50)
+                  .Model(conf => conf.Id(m => m.OrderDate))
+                  .Sort(conf => conf.Add(o => o.OrderDate).Descending())
+                  .Read(read => read.Action(MVC.Order.ActionNames.GetFBAOrders, MVC.Order.Name)))
+            )
+
+        </div>
+    </div>
+
+<script id="itemsTemplate" type="text/kendo-tmpl">
+    #if (1) {#
+    </td></tr>
+    #}#
+    #if (Items != null) {
+    for (var i=0; i < Items.length; i++) {#
+    <tr class="k-detail-row">
+        <td colspan="2"></td>
+        <td><a href='#=Items[i].ProductUrl#' target='_blank'><img height='75' src='#=Items[i].Thumbnail#' style='border:0' /></a></td>
+        <td><div><a class='asin' target='_blank' href='http://www.amazon.com/dp/#=Items[i].ASIN#'>#=Items[i].ASIN#</a> #=Items[i].Title#</div><div>Style ID: <a class='asin' target='_blank' href='#=Items[i].StyleUrl#'>#=Items[i].StyleID#</a></div> <div>Size: <span class='size-num'>#=Items[i].Size#</span></div></td>
+        <td>
+            #= Items[i].Quantity#
+            <div style="padding-top: 6px"><span class='remark gray'>remains: </span> #=tmpl.isNull(Items[i].FBAAvailableQuantity, '-')#</div>
+        </td>
+        <td></td>
+        <td></td>
+        <td>
+            $#=Items[i].ItemPrice# #if (Items[i].HasShippingPrice) {# +$#=Items[i].ShippingPrice# #}#
+            <div><span class='remark'>FBA Fee: </span> #if (Items[i].FBAFee != null) {# <div class='promo'>-#=kendo.toString(Items[i].FBAFee, "c")#</div> #} else {# <div>-</div> #}#</div>
+            <div><span class='remark'>Non FBA Price:</span> #if (Items[i].SimilarNonFBAPrice != null) {# <div>#=kendo.toString(Items[i].SimilarNonFBAPrice, "c")#</div> #} else {# <div>-</div> #}#</div>
+        </td>
+        <td><div>#=data.Items[i].WeightString#</div></td>
+        <td>
+            #if (Items.Length != i - 1) {#
+        </td>
+    </tr>
+    #}#
+    #}
+    }#
+</script>
+
+@Html.Partial(MVC.Shared.Views._TemplatesOrder)
+
+<script>
+    var fbaOrderVm = null;
+
+    $(document).ready(function () {
+        console.log("onReady");
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        fbaOrderVm = new FBAOrderViewModel('#grid', model);
+        ko.applyBindings(fbaOrderVm, document.getElementById('page-content'));
+    });
+</script>

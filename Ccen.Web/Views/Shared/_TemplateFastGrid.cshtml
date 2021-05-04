@@ -1,0 +1,33 @@
+﻿<template id="fast-grid-template">
+    <div class="k-widget k-grid k-secondary" style="min-height: 100px">
+        <div class="k-loading-mask"
+             data-bind="visible: isLoading"
+             style="width: 100%; height: 100%; top: 0px; left: 0px; display: none">
+            <span class="k-loading-text">Loading...</span>
+            <div class="k-loading-image"></div>
+            <div class="k-loading-color"></div>
+        </div>
+        <table cellspacing="0">
+            <colgroup data-bind="foreach: columns">
+                <col data-bind="attr: {'width': width }, css: { 'k-hierarchy-col': isHierarchy }" />
+            </colgroup>
+            <thead class="k-grid-header">
+                <tr data-bind="foreach: columns">
+                    <th data-bind="css: { 'k-hierarchy-cell' : isHierarchy }" class="k-header">
+                        <div data-bind="visible: !sortable">
+                            <span data-bind="html: title"></span>
+                        </div>
+                        <div data-bind="visible: sortable">
+                            <a class="k-link" href="#" data-bind="click: sort">
+                                <span data-bind="html: title"></span>
+                                <span data-bind="visible: isAsc" class="k-icon k-i-arrow-n"></span>
+                                <span data-bind="visible: isDesc" class="k-icon k-i-arrow-s"></span>
+                            </a>
+                        </div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody data-bind="attr: { id: itemsTagId }"></tbody>
+        </table>
+    </div>
+</template>

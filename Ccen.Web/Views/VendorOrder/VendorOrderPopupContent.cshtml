@@ -1,0 +1,76 @@
+﻿@using Amazon.Web.HtmlExtend
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Inventory
+@using Amazon.Web.ViewModels.Vendors
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Vendors.VendorOrderViewModel
+@{
+    Layout = null;
+    bool isNew = ViewBag.IsAdd ?? true;
+}
+
+<script type="text/javascript">
+    var VendorOrderModel = function(model) {
+        var self = this;
+        self.isLoaded = ko.observable(false);
+
+        self.id = model.Id;
+        
+        self.isNew = ko.observable(model.IsNew);
+
+        self.vendorName = ko.observable(model.VendorName);
+
+        self.statusList = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(VendorOrderViewModel.VendorOrderStatusList));
+        self.statusCode = ko.observable(model.StatusCode);
+        self.description = ko.observable(model.Description);
+
+
+        self.isLoaded(true);
+    };
+    
+
+    $(document).ready(function() {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var vendorOrderModel = new VendorOrderModel(model);
+
+        ko.applyBindings(vendorOrderModel, document.getElementById('edit-container'));
+    });
+</script>
+
+
+<div id="edit-container" class="inventory-popup">
+    @Html.ValidationSummary(true)
+
+    @Html.HiddenFor(m => m.Id)
+
+    <div class="k-edit-form-container">
+        <div class="editor-label">Vendor Name</div>
+        <div class="editor-field">
+            <input name="VendorName"
+                   type="text"
+                   class="k-textbox"
+                   data-bind="value: vendorName" />
+        </div>
+        
+        <div class="editor-label">Status</div>
+        <div class="editor-field">
+            <input name="StatusCode"
+                   data-bind="kendoDropDownList: {data: statusList,
+                                                value: statusCode,
+                                                dataTextField: 'Text',
+                                                dataValueField: 'Value' }"></div>
+        
+        <div class="editor-label">Description</div>
+        <div class="editor-field">
+            <textarea name="Description"
+                      class="k-textbox"
+                      maxlength="512"
+                      style="width: 200px"
+                      rows="4"
+                      data-bind="value: description"></textarea>
+        </div>
+
+        <div class="clear"></div>
+    </div>
+</div>

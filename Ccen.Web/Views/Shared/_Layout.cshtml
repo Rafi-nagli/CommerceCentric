@@ -1,0 +1,173 @@
+﻿@using System.Security.AccessControl
+@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@{
+    bool isDebugMode = false;
+    #if (DEBUG)
+        isDebugMode = false;
+    #endif
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>@ViewBag.Title</title>
+
+    @RenderSection("Icon", required: false)
+    @Styles.Render("~/Content/css-bootstrap")
+    @Styles.Render("~/Content/kendo/2013.3.1119/kendo-new")
+    @Styles.Render("~/Content/tooltip/tip-twitter/tip-twitter.css")
+    @Styles.Render("~/Content/bootstrap")
+    <link rel="stylesheet" href="/Content/font-awesome.min.css">
+
+    @Scripts.Render("~/bundles/modernizr")
+
+    @*@Scripts.Render("~/bundles/jquery")*@
+
+    <script src="https://code.jquery.com/jquery-1.9.1.min.js" integrity="sha256-wS9gmOZBqsqWxgIVgA8Y9WcQOa7PgSIX+rPA0VL2rbQ=" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/ui/1.10.3/jquery-ui.js" ></script>
+
+    @Scripts.Render("~/bundles/jqueryval")
+
+    @if (!Ccen.Web.AppSettings.IsDebug && false)
+    {
+        <script src="https://cdn.ravenjs.com/3.6.1/raven.min.js"></script>
+        <script>Raven.config('https://4c139c9e07294402b4c606185a37ad72@sentry.io/96870').install();</script>
+    }
+
+    @Scripts.Render("~/bundles/kendo")
+    @Scripts.Render("~/bundles/ko3")
+    @Scripts.Render("~/bundles/utils")
+    @Scripts.Render("~/bundles/helpers")
+    @Scripts.Render("~/bundles/common")
+    @Scripts.Render("~/bundles/app")
+    @Scripts.Render("~/bundles/components")
+    @Scripts.Render("~/bundles/models")
+    @Scripts.Render("~/bundles/bootstrap")
+
+    <script src="~/Scripts/highcharts/4.2.3/js/highcharts.js"></script>
+    @*<script src="https://code.highcharts.com/highcharts.js"></script>*@
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.13.0/moment.min.js" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.5/moment-timezone-with-data.min.js" type="text/javascript"></script>
+
+    @RenderSection("Head", required: false)
+
+</head>
+
+<body class="k-content amz-content amz" style="background-color: white">
+    <div class="console"></div>    
+
+    @*@Html.Partial("_TermsAndConditionsPopup")*@
+
+    <div class="page @(MobileHelper.IsMobileDeviceCustom() ? "mobile" : "")">
+        <header id="page-header">
+            <div class="content">
+
+                <div id="windowContainer"></div>
+                <div id="windowContainer2"></div>
+                <div id="windowContainer3"></div>
+
+                <div id="MessagePopupWindow0" style="display: none;"></div>
+                <div id="MessagePopupWindow1" style="display: none;"></div>
+
+                <table class="noborder" style="width: 100%">
+                    @if (Ccen.Web.AppSettings.IsDebug || isDebugMode)
+                    {
+                        <tr class="debug-status">
+                            <td colspan="6">Database: @AppInfoHelper.GetDatebaseName() @(isDebugMode ? "- Debug" : "- Release")</td>
+                        </tr>
+                    }
+                    @if (Ccen.Web.AppSettings.IsDemo)
+                    {
+                        <tr class="demo-status">
+                            <td colspan="6" style="font-weight: bold; padding-left: 30px">Demo Version</td>
+                        </tr>
+                    }
+                        <tr>
+                            <td>
+                                <div class="title">
+                                    <h1>@(AccessManager.Company.FullName)</h1>
+                                    <div style="font-size: 12px; color: #888; padding-left: 2px; padding-bottom: 4px">by commercentric.com</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="vertical-align: bottom">
+                                    @if (AccessManager.IsAuthenticated && AccessManager.CanViewOrders())
+                                    {
+                                        @Html.Partial("_HeaderSearchPartial")
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <div style="vertical-align: bottom; padding: 3px">
+                                    @if (AccessManager.IsAuthenticated && AccessManager.CanViewSyncStatusPanel())
+                                    {
+                                        @Html.Partial("_SyncStatusPartial")
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <div style="vertical-align: bottom; padding: 3px">
+                                    <div>
+                                        @if (!Ccen.Web.AppSettings.IsDemo)
+                                        {
+                                            @*@if (AccessManager.IsAuthenticated && AccessManager.CanViewSyncStatusPanel())
+                                            {
+                                                @Html.Partial("_DhlCloseoutPartial")
+                                            }*@
+                                            if (AccessManager.IsAuthenticated 
+                                                && AccessManager.CanViewSyncStatusPanel()
+                                                && AccessManager.Company.ShortName == PortalEnum.PA.ToString())
+                                            {
+                                                @Html.Partial("_IbcCloseoutPartial")
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="vertical-align: bottom; padding: 3px">
+                                    <div>
+                                        @if (AccessManager.IsAuthenticated
+                                            && AccessManager.CanViewSyncStatusPanel()
+                                            && AccessManager.Company.ShortName == PortalEnum.PA.ToString())
+                                        {
+                                            @Html.Partial("_FedexCloseoutPartial")
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="width: 350px">
+                                <div>
+                                    @Html.Partial("_LogOnPartial")
+                                </div>
+                                <div>
+                                    @if (AccessManager.IsAuthenticated && AccessManager.CanViewNotifyInfo())
+                                    {
+                                        @Html.Partial("_NotificationPartial")
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                </table>
+            </div>
+            <div class="menu">
+                @Html.Partial("_Menu")
+            </div>
+            <div id="top-bar" class="top-bar"></div>
+        </header>
+        <section class="main">
+            @RenderBody()
+        </section>
+        <footer></footer>
+    </div>
+    
+    @RenderSection("scripts", false)
+</body>
+</html>

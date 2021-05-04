@@ -1,0 +1,840 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\EntityFramework.6.4.4\build\EntityFramework.props" Condition="Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.props')" />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{B852AB63-645F-4F09-B314-29C3D46BE832}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ccen.Core</RootNamespace>
+    <AssemblyName>Ccen.Core</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
+    <TargetFrameworkProfile />
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+    <AssemblyVersion>2016.5.1553.17</AssemblyVersion>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.4.4\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.4.4\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Drawing.Common, Version=4.0.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Drawing.Common.4.5.1\lib\net461\System.Drawing.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Contracts\Audits\IAuditRepository.cs" />
+    <Compile Include="Contracts\BulkEdit\IBulkEditService.cs" />
+    <Compile Include="Contracts\Cache\IDbCacheableEntry.cs" />
+    <Compile Include="Contracts\DbBase\IRepository.cs" />
+    <Compile Include="Contracts\DbBase\IUnitOfWork.cs" />
+    <Compile Include="Contracts\DbInventory\IInventoryRepository.cs" />
+    <Compile Include="Contracts\DbInventory\IInventoryUnitOfWork.cs" />
+    <Compile Include="Contracts\DbInventory\IItemInventoryMappingRepository.cs" />
+    <Compile Include="Contracts\DbInventory\IItemOrderMappingRepository.cs" />
+    <Compile Include="Contracts\DbInventory\IItemRepository.cs" />
+    <Compile Include="Contracts\DbInventory\IOrderRepository.cs" />
+    <Compile Include="Contracts\Db\BulkEdit\IBulkEditHistoryRepository.cs" />
+    <Compile Include="Contracts\Db\BulkEdit\IBulkEditOperationRepository.cs" />
+    <Compile Include="Contracts\Db\Cache\IBaseCacheRepository.cs" />
+    <Compile Include="Contracts\Db\Cache\IItemCacheRepository.cs" />
+    <Compile Include="Contracts\Db\Cache\IListingCacheRepository.cs" />
+    <Compile Include="Contracts\Db\Cache\IStyleItemCacheRepository.cs" />
+    <Compile Include="Contracts\Db\Cache\IStyleCacheRepository.cs" />
+    <Compile Include="Contracts\Db\Categories\IAmazonCategoryMappingRepository.cs" />
+    <Compile Include="Contracts\Db\Categories\ICustomCategoryToStyleRepository.cs" />
+    <Compile Include="Contracts\Db\Categories\ICustomCategoryFilterRepository.cs" />
+    <Compile Include="Contracts\Db\Categories\ICustomCategoryRepository.cs" />
+    <Compile Include="Contracts\Db\Charts\IChartRepository.cs" />
+    <Compile Include="Contracts\Db\CustomFeeds\ICustomFeedFieldRepository.cs" />
+    <Compile Include="Contracts\Db\CustomFeeds\ICustomFeedRepository.cs" />
+    <Compile Include="Contracts\Db\CustomFeeds\ICustomFeedScheduleRepository.cs" />
+    <Compile Include="Contracts\Db\CustomReports\ICustomReportPredefinedFieldRepository.cs" />
+    <Compile Include="Contracts\Db\CustomReports\ICustomReportFieldRepository.cs" />
+    <Compile Include="Contracts\Db\CustomReports\ICustomReportFilterRepository.cs" />
+    <Compile Include="Contracts\Db\CustomReports\ICustomReportRepository.cs" />
+    <Compile Include="Contracts\Db\DropShippers\IStyleDSHistory.cs" />
+    <Compile Include="Contracts\Db\DropShippers\IDSItemRepository.cs" />
+    <Compile Include="Contracts\Db\DropShippers\IDSFileLineRepository.cs" />
+    <Compile Include="Contracts\Db\DropShippers\IDSFileLineMessageRepository.cs" />
+    <Compile Include="Contracts\Db\DropShippers\IDSFileMessageRepository.cs" />
+    <Compile Include="Contracts\Db\DropShippers\IDSFileRepository.cs" />
+    <Compile Include="Contracts\Db\DropShippers\IDropShipperRepository.cs" />
+    <Compile Include="Contracts\Db\Emails\IEmailAttachmentRepository.cs" />
+    <Compile Include="Contracts\Db\Emails\IEmailToOrderRepository.cs" />
+    <Compile Include="Contracts\Db\Emails\IEmailRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IStyleItemAttributeRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IWalmartBrandInfoRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IStyleAdditionRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IStyleToGroupRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IStyleGroupRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\Photoshoots\IPhotoshootPickListEntryRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\Photoshoots\IPhotoshootPickListRepository.cs" />
+    <Compile Include="Contracts\Db\Charts\IChartPointRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\Trackings\IOpenBoxTrackingRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\Trackings\ISealedBoxTrackingRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IItemAdditionRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IItemChangeHistoryRepository.cs" />
+    <Compile Include="Contracts\Db\Messages\ISystemMessageRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\ICustomerRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IShipmentReportRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IReturnRequestItemRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IShippingChargeRepository.cs" />
+    <Compile Include="Contracts\Db\Rates\ISkyPostalZoneRepository.cs" />
+    <Compile Include="Contracts\Db\Rates\ISkyPostalRateRepository.cs" />
+    <Compile Include="Contracts\Db\Rates\IIBCRateRepository.cs" />
+    <Compile Include="Contracts\Db\Rates\ISkyPostalCityCodeRepository.cs" />
+    <Compile Include="Contracts\Db\SaleEvents\ISaleEventFeedRepository.cs" />
+    <Compile Include="Contracts\Db\SaleEvents\ISaleEventSizeHoldInfoRepository.cs" />
+    <Compile Include="Contracts\Db\SaleEvents\ISaleEventEntryRepository.cs" />
+    <Compile Include="Contracts\Db\SaleEvents\ISaleEventRepository.cs" />
+    <Compile Include="Contracts\Db\Features\IStyleFeatureTextValueRepository.cs" />
+    <Compile Include="Contracts\Db\Features\IStyleFeatureValueRepository.cs" />
+    <Compile Include="Contracts\Db\Features\IFeatureValueRepository.cs" />
+    <Compile Include="Contracts\DbBase\ISql.cs" />
+    <Compile Include="Contracts\Db\Feeds\IFeedItemRepository.cs" />
+    <Compile Include="Contracts\Db\Feeds\IFeedMessageRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IStyleChangeHistoryRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IVendorInvoiceRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IListingSizeIssueRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\ISkuMappingRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IOrderReportRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IQuickBookRepository.cs" />
+    <Compile Include="Contracts\Db\Rates\IDhlGBZipCodeZoneRepository.cs" />
+    <Compile Include="Contracts\Db\Rates\IDhlCAZipCodeZoneRepository.cs" />
+    <Compile Include="Contracts\Db\Rates\IDhlGroundZipCodeRepository.cs" />
+    <Compile Include="Contracts\Db\Rates\IZipCodeZoneRepository.cs" />
+    <Compile Include="Contracts\Db\Rates\IDhlECommerceRateRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IScanFormRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IRateByCountryRepository.cs" />
+    <Compile Include="Contracts\Db\Sizes\IPackingSlipSizeMappingRepository.cs" />
+    <Compile Include="Contracts\Db\Trackings\ICustomBarcodeRepository.cs" />
+    <Compile Include="Contracts\Db\Trackings\ICustomTrackingNumberRepository.cs" />
+    <Compile Include="Contracts\Db\Users\ICompanyAddressRepository.cs" />
+    <Compile Include="Contracts\IAuditable.cs" />
+    <Compile Include="Contracts\IAutoCreateListingService.cs" />
+    <Compile Include="Contracts\IBarcodeService.cs" />
+    <Compile Include="Contracts\ICallResult.cs" />
+    <Compile Include="Contracts\ICompanyAddressService.cs" />
+    <Compile Include="Contracts\ICustomReportService.cs" />
+    <Compile Include="Contracts\ICustomFeedService.cs" />
+    <Compile Include="Contracts\IDbChangeTracker.cs" />
+    <Compile Include="Contracts\Db\Inventory\FBA\IFBAPickListEntryRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\FBA\IFBAPickListRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IStyleItemSaleToListingRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IStyleItemSaleToMarketRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IStyleItemSaleRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IStyleImageRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IStyleItemReferenceRepository.cs" />
+    <Compile Include="Contracts\Db\IZipCodeRepository.cs" />
+    <Compile Include="Contracts\Db\IProxyInfoRepository.cs" />
+    <Compile Include="Contracts\Db\ILabelRepository.cs" />
+    <Compile Include="Contracts\Db\ICustomBarcodeRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\Counting\IOpenBoxCountingItemRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\Counting\IOpenBoxCountingRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\Counting\ISealedBoxCountingItemRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\Counting\ISealedBoxCountingRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IStyleItemActionHistoryRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IStyleReferenceRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IBuyBoxQuantityRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IOfferInfoRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IOfferChangeEventRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IListingDefectRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IParentItemImageRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IItemImageRepository.cs" />
+    <Compile Include="Contracts\Db\ISystemActionRepository.cs" />
+    <Compile Include="Contracts\Db\IBuyerRepository.cs" />
+    <Compile Include="Contracts\Db\IFeedbackBlackListRepository.cs" />
+    <Compile Include="Contracts\Db\IMarketplaceRepository.cs" />
+    <Compile Include="Contracts\Db\ICountryRepository.cs" />
+    <Compile Include="Contracts\Db\Features\IFeatureRepository.cs" />
+    <Compile Include="Contracts\Db\IDateRepository.cs" />
+    <Compile Include="Contracts\Db\Cache\IParentItemCacheRepository.cs" />
+    <Compile Include="Contracts\Db\IBuyerBlackListRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IStyleItemQuantityHistoryRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IScannedRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IItemTypeRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IQuantityChangeRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IQuantityOperationRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IQuantityHistoryRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IListingFBAInvRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IListingFBAEstFeeRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IStyleLocationRepository.cs" />
+    <Compile Include="Contracts\Db\Messages\INotificationRepository.cs" />
+    <Compile Include="Contracts\Db\Rates\IDhlRateCodePriceRepository.cs" />
+    <Compile Include="Contracts\Db\Rates\IDhlRateCodeRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IDhlInvoiceRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IMailLabelItemRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IOrderChangeHistoryRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IOrderToBatchRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IOrderItemSourceRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IScheduledPickupRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IOrderItemRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IReturnRequestRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IOrderSearchRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IOrderCommentRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IOrderEmailNotifyRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\ITrackingOrderRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IOrderNotifyRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IPriceHistoryRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IProductCommentRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IBuyBoxStatusRepository.cs" />
+    <Compile Include="Contracts\Db\Features\IFeatureToItemTypeRepository.cs" />
+    <Compile Include="Contracts\Db\Sizes\ISizeGroupToItemTypeRepository.cs" />
+    <Compile Include="Contracts\Db\Sizes\ISizeGroupRepository.cs" />
+    <Compile Include="Contracts\Db\Sizes\ISizeRepository.cs" />
+    <Compile Include="Contracts\Db\Sizes\ISizeMappingRepository.cs" />
+    <Compile Include="Contracts\Db\Messages\ISyncMessageRepository.cs" />
+    <Compile Include="Contracts\Db\Messages\ISyncHistoryRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IListingRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IMailLabelInfoRepository.cs" />
+    <Compile Include="Contracts\Db\INodePositionRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IStyleItemBarcodeRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IOrderBatchRepository.cs" />
+    <Compile Include="Contracts\Db\IPushRepository.cs" />
+    <Compile Include="Contracts\Db\Feeds\IFeedRepository.cs" />
+    <Compile Include="Contracts\Db\ILabelPrintPackRepository.cs" />
+    <Compile Include="Contracts\Db\IInventoryReportRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IItemRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IOpenBoxRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IStyleItemRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IOpenBoxItemRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\ISealedBoxItemRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\ISealedBoxRepository.cs" />
+    <Compile Include="Contracts\Db\Inventory\IStyleRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IOrderRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IOrderShippingInfoRepository.cs" />
+    <Compile Include="Contracts\Db\Listings\IParentItemRepository.cs" />
+    <Compile Include="Contracts\Db\IReportRepository.cs" />
+    <Compile Include="Contracts\Db\ISettingRepository.cs" />
+    <Compile Include="Contracts\Db\Users\ISQSAccountRepository.cs" />
+    <Compile Include="Contracts\Db\Users\IEmailAccountRepository.cs" />
+    <Compile Include="Contracts\Db\Users\IAddressProviderRepository.cs" />
+    <Compile Include="Contracts\Db\Users\IShipmentProviderRepository.cs" />
+    <Compile Include="Contracts\Db\Users\ICompanyRepository.cs" />
+    <Compile Include="Contracts\Db\Users\IRoleRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IItemOrderMappingRepository.cs" />
+    <Compile Include="Contracts\Db\Orders\IShippingMethodRepository.cs" />
+    <Compile Include="Contracts\Db\IStateRepository.cs" />
+    <Compile Include="Contracts\Db\Users\IUserRepository.cs" />
+    <Compile Include="Contracts\Db\Vendors\IVendorOrderItemSizeRepository.cs" />
+    <Compile Include="Contracts\Db\Vendors\IVendorOrderAttachmentRepository.cs" />
+    <Compile Include="Contracts\Db\Vendors\IVendorOrderItemRepository.cs" />
+    <Compile Include="Contracts\Db\Vendors\IVendorOrderRepository.cs" />
+    <Compile Include="Contracts\Email\IEmailSmtpSettings.cs" />
+    <Compile Include="Contracts\Email\IEmailImapSettings.cs" />
+    <Compile Include="Contracts\Factories\IDbFactory.cs" />
+    <Compile Include="Contracts\Cache\ICacheService.cs" />
+    <Compile Include="Contracts\ICompanyService.cs" />
+    <Compile Include="Contracts\Cache\IDbCacheService.cs" />
+    <Compile Include="Contracts\IDropShipperService.cs" />
+    <Compile Include="Contracts\IDSService.cs" />
+    <Compile Include="Contracts\IFileService.cs" />
+    <Compile Include="Contracts\IFTPInfo.cs" />
+    <Compile Include="Contracts\IGiftService.cs" />
+    <Compile Include="Contracts\IHtmlScraperService.cs" />
+    <Compile Include="Contracts\IImageProcessingService.cs" />
+    <Compile Include="Contracts\ILanguageService.cs" />
+    <Compile Include="Contracts\IMarketCategoryService.cs" />
+    <Compile Include="Contracts\IMarketOrderCancellationApi.cs" />
+    <Compile Include="Contracts\IMarketOrderUpdaterApi.cs" />
+    <Compile Include="Contracts\IMarketplaceService.cs" />
+    <Compile Include="Contracts\IMonitoringHub.cs" />
+    <Compile Include="Contracts\Inventory\IStyleItemHistoryService.cs" />
+    <Compile Include="Contracts\IPaymentService.cs" />
+    <Compile Include="Contracts\IPaymentStatusApi.cs" />
+    <Compile Include="Contracts\IPriceService.cs" />
+    <Compile Include="Contracts\IRefundApi.cs" />
+    <Compile Include="Contracts\IShippingService.cs" />
+    <Compile Include="Contracts\ITrackingNumberService.cs" />
+    <Compile Include="Contracts\IWalmartApi.cs" />
+    <Compile Include="Contracts\IMarketFactory.cs" />
+    <Compile Include="Contracts\ISizeMappingService.cs" />
+    <Compile Include="Contracts\IWeightService.cs" />
+    <Compile Include="Contracts\Listings\IItemHistoryService.cs" />
+    <Compile Include="Contracts\Markets\IWalmartOpenApi.cs" />
+    <Compile Include="Contracts\Notifications\ISupportNotification.cs" />
+    <Compile Include="Contracts\Orders\ILabelBatchService.cs" />
+    <Compile Include="Contracts\Orders\IOrderHistoryService.cs" />
+    <Compile Include="Contracts\IWebPageParser.cs" />
+    <Compile Include="Contracts\IWebPageParserFactory.cs" />
+    <Compile Include="Contracts\Notifications\INotificationService.cs" />
+    <Compile Include="Contracts\IPriceManager.cs" />
+    <Compile Include="Contracts\IShipmentApi.cs" />
+    <Compile Include="Contracts\Notifications\INotificationParams.cs" />
+    <Compile Include="Contracts\Notifications\NotificationParams\ImageChangeParams.cs" />
+    <Compile Include="Contracts\Notifications\NotificationParams\LabelGetStuckParams.cs" />
+    <Compile Include="Contracts\Notifications\NotificationParams\LabelNeverShippedParams.cs" />
+    <Compile Include="Contracts\Orders\IBatchManager.cs" />
+    <Compile Include="Contracts\Quantities\IQuantityDistributionRule.cs" />
+    <Compile Include="Contracts\Stamps\ITrackingProvider.cs" />
+    <Compile Include="Contracts\Inventory\IStyleHistoryService.cs" />
+    <Compile Include="Contracts\SystemActions\ISystemActionInput.cs" />
+    <Compile Include="Contracts\SystemActions\ISystemActionOutput.cs" />
+    <Compile Include="Contracts\SystemActions\ISystemActionParams.cs" />
+    <Compile Include="Contracts\SystemActions\ISystemActionService.cs" />
+    <Compile Include="Contracts\SystemMessages\ISystemMessageData.cs" />
+    <Compile Include="Contracts\SystemMessages\ISystemMessageService.cs" />
+    <Compile Include="Contracts\Validation\IAddressCheckService.cs" />
+    <Compile Include="Contracts\IMarketApi.cs" />
+    <Compile Include="Contracts\Orders\IOrderSynchronizer.cs" />
+    <Compile Include="Contracts\Parser\ILineParser.cs" />
+    <Compile Include="Contracts\Parser\IReportParser.cs" />
+    <Compile Include="Contracts\Parser\ParseContext.cs" />
+    <Compile Include="Contracts\IAddressService.cs" />
+    <Compile Include="Contracts\IAmazonReportService.cs" />
+    <Compile Include="Contracts\Email\IEmailInfo.cs" />
+    <Compile Include="Contracts\Email\IEmailService.cs" />
+    <Compile Include="Contracts\Orders\ILabelService.cs" />
+    <Compile Include="Contracts\ILogEntry.cs" />
+    <Compile Include="Contracts\ILogService.cs" />
+    <Compile Include="Contracts\IAppConfigWrapper.cs" />
+    <Compile Include="Contracts\Quantities\IQuantityManager.cs" />
+    <Compile Include="Contracts\ISettingsService.cs" />
+    <Compile Include="Contracts\IStyleManager.cs" />
+    <Compile Include="Contracts\ISyncInformer.cs" />
+    <Compile Include="Contracts\IFileMaker.cs" />
+    <Compile Include="Contracts\ITime.cs" />
+    <Compile Include="Contracts\ReportSource.cs" />
+    <Compile Include="Contracts\IServiceFactory.cs" />
+    <Compile Include="Contracts\Validation\IOrderValidatorService.cs" />
+    <Compile Include="EntitiesInventory\Inventory.cs" />
+    <Compile Include="EntitiesInventory\Item.cs" />
+    <Compile Include="EntitiesInventory\ItemInventoryMapping.cs" />
+    <Compile Include="EntitiesInventory\ItemOrderMapping.cs" />
+    <Compile Include="EntitiesInventory\Order.cs" />
+    <Compile Include="EntitiesInventory\ViewBarcode.cs" />
+    <Compile Include="Entities\BaseDateAndByEntity.cs" />
+    <Compile Include="Entities\BaseDateEntity.cs" />
+    <Compile Include="Entities\BulkEdits\BulkEditOperation.cs" />
+    <Compile Include="Entities\BulkEdits\BulkEditHistory.cs" />
+    <Compile Include="Entities\Caches\MarketplaceCacheInfo.cs" />
+    <Compile Include="Entities\Categories\AmazonCategoryMapping.cs" />
+    <Compile Include="Entities\Categories\CustomCategory.cs" />
+    <Compile Include="Entities\Categories\CustomCategoryToStyles.cs" />
+    <Compile Include="Entities\Categories\CustomCategoryFilter.cs" />
+    <Compile Include="Entities\CustomFeeds\CustomFeed.cs" />
+    <Compile Include="Entities\CustomFeeds\CustomFeedField.cs" />
+    <Compile Include="Entities\CustomFeeds\CustomFeedSchedule.cs" />
+    <Compile Include="Entities\CustomReports\CustomReport.cs" />
+    <Compile Include="Entities\CustomReports\CustomReportPredefinedField.cs" />
+    <Compile Include="Entities\CustomReports\CustomReportField.cs" />
+    <Compile Include="Entities\CustomReports\CustomReportFilter.cs" />
+    <Compile Include="Entities\DropShippers\DSFile.cs" />
+    <Compile Include="Entities\DropShippers\StyleDSHistory.cs" />
+    <Compile Include="Entities\DropShippers\DSItem.cs" />
+    <Compile Include="Entities\DropShippers\DSFileLine.cs" />
+    <Compile Include="Entities\DropShippers\DSFileLineMessage.cs" />
+    <Compile Include="Entities\DropShippers\DSFileMessage.cs" />
+    <Compile Include="Entities\Events\SaleEvent.cs" />
+    <Compile Include="Entities\Events\SaleEventEntry.cs" />
+    <Compile Include="Entities\Events\SaleEventFeed.cs" />
+    <Compile Include="Entities\Events\SaleEventSizeHoldInfo.cs" />
+    <Compile Include="Entities\Feeds\FeedItem.cs" />
+    <Compile Include="Entities\Feeds\FeedMessage.cs" />
+    <Compile Include="Entities\General\Chart.cs" />
+    <Compile Include="Entities\General\ChartPoint.cs" />
+    <Compile Include="Entities\General\ZipCodeZone.cs" />
+    <Compile Include="Entities\General\ZipCode.cs" />
+    <Compile Include="Entities\Inventory\SealedBoxTracking.cs" />
+    <Compile Include="Entities\Inventory\OpenBoxTracking.cs" />
+    <Compile Include="Entities\Inventory\PhotoshootPickList.cs" />
+    <Compile Include="Entities\Inventory\FBAPickList.cs" />
+    <Compile Include="Entities\Inventory\PhotoshootPickListEntry.cs" />
+    <Compile Include="Entities\Inventory\FBAPickListEntry.cs" />
+    <Compile Include="Entities\Inventory\StyleAddition.cs" />
+    <Compile Include="Entities\Inventory\StyleItemAttribute.cs" />
+    <Compile Include="Entities\Inventory\StyleToGroup.cs" />
+    <Compile Include="Entities\Inventory\StyleGroup.cs" />
+    <Compile Include="Entities\Inventory\WalmartBrandInfo.cs" />
+    <Compile Include="Entities\Listings\ItemAddition.cs" />
+    <Compile Include="Entities\Listings\SkuMapping.cs" />
+    <Compile Include="Entities\Listings\ItemChangeHistory.cs" />
+    <Compile Include="Entities\Listings\ViewFirstItemByParentAsin.cs" />
+    <Compile Include="Entities\Orders\Customer.cs" />
+    <Compile Include="Entities\Orders\MissingOrder.cs" />
+    <Compile Include="Entities\Orders\ReturnRequestItem.cs" />
+    <Compile Include="Entities\Orders\ShippingCharge.cs" />
+    <Compile Include="Entities\Orders\ShippingPackageSize.cs" />
+    <Compile Include="Entities\Quickbooks\ProductList.cs" />
+    <Compile Include="Entities\Quickbooks\QuickbooksInventory.cs" />
+    <Compile Include="Entities\Inventory\StyleChangeHistory.cs" />
+    <Compile Include="Entities\Inventory\StyleImage.cs" />
+    <Compile Include="Entities\Inventory\StyleItemReference.cs" />
+    <Compile Include="Entities\Inventory\VendorInvoice.cs" />
+    <Compile Include="Entities\Listings\ListingSizeIssue.cs" />
+    <Compile Include="Entities\Rates\DhlCAZipCodeZone.cs" />
+    <Compile Include="Entities\Rates\SkyPostalZone.cs" />
+    <Compile Include="Entities\Rates\SkyPostalRate.cs" />
+    <Compile Include="Entities\Rates\SkyPostalCityCode.cs" />
+    <Compile Include="Entities\Rates\IBCRate.cs" />
+    <Compile Include="Entities\Rates\DhlECommerceRate.cs" />
+    <Compile Include="Entities\Orders\OrderChangeHistory.cs" />
+    <Compile Include="Entities\Orders\RateByCountry.cs" />
+    <Compile Include="Entities\Orders\ScanForm.cs" />
+    <Compile Include="Entities\Rates\DhlGBZipCodeZone.cs" />
+    <Compile Include="Entities\Rates\DhlGroundZipCode.cs" />
+    <Compile Include="Entities\DropShippers\DropShipper.cs" />
+    <Compile Include="Entities\Sizes\PackingSlipSizeMapping.cs" />
+    <Compile Include="Entities\TrackingNumbers\CustomTrackingNumber.cs" />
+    <Compile Include="Entities\TrackingNumbers\TrackingNumberStatus.cs" />
+    <Compile Include="Entities\Users\CompanyAddress.cs" />
+    <Compile Include="Helpers\PackageHelper.cs" />
+    <Compile Include="Helpers\UrlUtils.cs" />
+    <Compile Include="Models\ApproveStatuses.cs" />
+    <Compile Include="Models\Bargains\BargainItem.cs" />
+    <Compile Include="Models\Bargains\BargainSearchFilter.cs" />
+    <Compile Include="Models\Bargains\BargainSearchResult.cs" />
+    <Compile Include="Models\BatchInfoToPrint.cs" />
+    <Compile Include="Models\BatchPrintStatuses.cs" />
+    <Compile Include="Models\BoxOriginTypes.cs" />
+    <Compile Include="Models\BoxStatuses.cs" />
+    <Compile Include="Models\BoxTypes.cs" />
+    <Compile Include="Models\Caches\MarketplaceCacheInfo.cs" />
+    <Compile Include="Models\Calls\CallReqResResult.cs" />
+    <Compile Include="Models\Calls\CallSearchResult.cs" />
+    <Compile Include="Models\Addresses\CompanyAddressTypes.cs" />
+    <Compile Include="Models\Calls\WithStatus.cs" />
+    <Compile Include="Models\Categories\CategoryInfo.cs" />
+    <Compile Include="Models\CustomCategoryModes.cs" />
+    <Compile Include="Models\DisplayModes.cs" />
+    <Compile Include="Models\DropShippers\DSProductType.cs" />
+    <Compile Include="Models\DropShippers\PriceModes.cs" />
+    <Compile Include="Models\DropShippers\CostModes.cs" />
+    <Compile Include="Models\DropShippers\DSItemIdMode.cs" />
+    <Compile Include="Models\DropShippers\DSItemPublishStatuses.cs" />
+    <Compile Include="Models\DropShippers\DSItemStatuses.cs" />
+    <Compile Include="Models\DropShippers\DSProcessedStatuses.cs" />
+    <Compile Include="Models\DropShippers\DSFileTypes.cs" />
+    <Compile Include="Models\DSHelper.cs" />
+    <Compile Include="Models\EmailResponseStatusFilterEnum.cs" />
+    <Compile Include="Models\Enums\AmazonFeedType.cs" />
+    <Compile Include="Models\Enums\CountingStatuses.cs" />
+    <Compile Include="Models\Enums\Division.cs" />
+    <Compile Include="Models\Enums\FeedStatus.cs" />
+    <Compile Include="Models\Enums\ShipmentsTypeEnum.cs" />
+    <Compile Include="Models\Exports\Attributes\ExcelSerializableAttribute.cs" />
+    <Compile Include="Models\GridResponse.cs" />
+    <Compile Include="Models\Groupons\GrouponGoodLine.cs" />
+    <Compile Include="Models\Groupons\GrouponProductLine.cs" />
+    <Compile Include="Models\Histories\HistoryDatas\HistorySaleData.cs" />
+    <Compile Include="Models\Histories\HistoryDatas\IHistoryData.cs" />
+    <Compile Include="Models\Histories\StyleItemHistoryTypes.cs" />
+    <Compile Include="Models\Inventory\FeatureExAttributes.cs" />
+    <Compile Include="Models\ItemAdditionFields.cs" />
+    <Compile Include="Models\Items\ItemBarcodeSearchFilter.cs" />
+    <Compile Include="Models\Items\MarketItemFilters.cs" />
+    <Compile Include="Models\LabelFormat.cs" />
+    <Compile Include="Models\MarketplaceKeeper.cs" />
+    <Compile Include="Models\ObjHelper.cs" />
+    <Compile Include="Models\Orders\OrderSyncModes.cs" />
+    <Compile Include="Models\PaymentValidationStatuses.cs" />
+    <Compile Include="Models\PhotoshootEntryStatuses.cs" />
+    <Compile Include="Models\PortalEnum.cs" />
+    <Compile Include="Models\PublishFeedModes.cs" />
+    <Compile Include="Models\RateInfo.cs" />
+    <Compile Include="Models\RefundMoneyTypes.cs" />
+    <Compile Include="Models\RefundProcessMode.cs" />
+    <Compile Include="Models\RefundTypes.cs" />
+    <Compile Include="Models\SaleEventStatus.cs" />
+    <Compile Include="Models\FillingStyleStatuses.cs" />
+    <Compile Include="Models\SizeMode.cs" />
+    <Compile Include="Models\SizeTypes.cs" />
+    <Compile Include="Models\StyleChangeInfo.cs" />
+    <Compile Include="Models\StyleImageCategories.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\BulkEditInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\ChangeValueInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\SetOnHoldInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\TextMessageOutput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\DeleteProductInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\UpdateProductBarcodeInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\UpdateProductTagsInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\UpdateQtyInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\PublishFeedInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\PublishFeedOutput.cs" />
+    <Compile Include="Models\SystemMessages\ExceptionMessageData.cs" />
+    <Compile Include="Models\SystemMessages\MissingOrderMessageData.cs" />
+    <Compile Include="Models\SystemMessages\SystemMessageServiceHelper.cs" />
+    <Compile Include="Models\UploadSalesFeedTypes.cs" />
+    <Compile Include="Models\StyleChangeTypes.cs" />
+    <Compile Include="Models\OrderChangeTypes.cs" />
+    <Compile Include="Models\Search\EmailSearchFilter.cs" />
+    <Compile Include="Models\StylePictureStatuses.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\QuantityDistributeInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\UploadSaleInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\UploadSaleOutput.cs" />
+    <Compile Include="Models\Templates\eBayDescription.cs" />
+    <Compile Include="Models\TokenInfo.cs" />
+    <Compile Include="Models\TrackingStatusSources.cs" />
+    <Compile Include="Models\Validation\CheckResultData.cs" />
+    <Compile Include="Views\ViewDSFileRecent.cs" />
+    <Compile Include="Views\ViewInventoryOnHandQuantity.cs" />
+    <Compile Include="Views\ViewInventoryThisYearQuantity.cs" />
+    <Compile Include="Views\ViewListingSale.cs" />
+    <Compile Include="Entities\Inventory\StyleItemSaleToMarket.cs" />
+    <Compile Include="Entities\Inventory\StyleItemSaleToListing.cs" />
+    <Compile Include="Entities\Inventory\StyleItemSale.cs" />
+    <Compile Include="Entities\Listings\BuyBoxQuantity.cs" />
+    <Compile Include="Entities\Listings\OfferChangeEvent.cs" />
+    <Compile Include="Entities\Listings\OfferInfo.cs" />
+    <Compile Include="Entities\Orders\MailLabelItem.cs" />
+    <Compile Include="Entities\Orders\OrderItemSource.cs" />
+    <Compile Include="Entities\Orders\OrderToBatch.cs" />
+    <Compile Include="Entities\ProxyInfo.cs" />
+    <Compile Include="Entities\CustomBarcode.cs" />
+    <Compile Include="Entities\InventoryCounting\OpenBoxCounting.cs" />
+    <Compile Include="Entities\InventoryCounting\OpenBoxCountingItem.cs" />
+    <Compile Include="Entities\InventoryCounting\SealedBoxCounting.cs" />
+    <Compile Include="Entities\InventoryCounting\SealedBoxCountingItem.cs" />
+    <Compile Include="Entities\Inventory\StyleItemActionHistory.cs" />
+    <Compile Include="Entities\Inventory\StyleReference.cs" />
+    <Compile Include="Entities\Listings\ListingDefect.cs" />
+    <Compile Include="Entities\Listings\ParentItemImage.cs" />
+    <Compile Include="Entities\Listings\ItemImage.cs" />
+    <Compile Include="Entities\Messages\Notification.cs" />
+    <Compile Include="Entities\Rates\DhlRateCodePrice.cs" />
+    <Compile Include="Entities\Rates\DhlRateCode.cs" />
+    <Compile Include="Entities\Orders\DhlInvoice.cs" />
+    <Compile Include="Entities\Orders\OrderItem.cs" />
+    <Compile Include="Entities\Orders\OrderSearch.cs" />
+    <Compile Include="Entities\Orders\ReturnRequest.cs" />
+    <Compile Include="Entities\Orders\ScheduledPickup.cs" />
+    <Compile Include="Entities\SystemAction.cs" />
+    <Compile Include="Entities\Listings\BuyBoxStatus.cs" />
+    <Compile Include="Entities\Buyer.cs" />
+    <Compile Include="Entities\FeedbackBlackList.cs" />
+    <Compile Include="Entities\BuyerBlackList.cs" />
+    <Compile Include="Entities\Caches\BaseCacheEntity.cs" />
+    <Compile Include="Entities\Caches\ItemCache.cs" />
+    <Compile Include="Entities\Caches\ParentItemCache.cs" />
+    <Compile Include="Entities\Caches\ListingCache.cs" />
+    <Compile Include="Entities\Caches\StyleItemCache.cs" />
+    <Compile Include="Entities\Caches\StyleCache.cs" />
+    <Compile Include="Entities\Emails\Email.cs" />
+    <Compile Include="Entities\Emails\EmailAttachment.cs" />
+    <Compile Include="Entities\Emails\EmailToOrder.cs" />
+    <Compile Include="Helpers\LocationHelper.cs" />
+    <Compile Include="Models\CancelReasonType.cs" />
+    <Compile Include="Models\EmailResponseStatusEnum.cs" />
+    <Compile Include="Models\EmailFolders.cs" />
+    <Compile Include="Models\EntityUpdateStatus.cs" />
+    <Compile Include="Models\Enums\ListingsModeType.cs" />
+    <Compile Include="Models\Enums\PriceChangeSourceType.cs" />
+    <Compile Include="Models\Enums\QuantityChangeSourceType.cs" />
+    <Compile Include="Entities\General\Country.cs" />
+    <Compile Include="Models\Enums\FulfillmentChannelType.cs" />
+    <Compile Include="Entities\Users\SQSAccount.cs" />
+    <Compile Include="Exceptions\RateException.cs" />
+    <Compile Include="Exceptions\StampsException.cs" />
+    <Compile Include="Models\AmazonReportInfo.cs" />
+    <Compile Include="Models\BatchTimeStatus.cs" />
+    <Compile Include="Models\BuyBoxWinModes.cs" />
+    <Compile Include="Models\Caches\ChildItemInfo.cs" />
+    <Compile Include="Models\Caches\StyleItemInfo.cs" />
+    <Compile Include="Models\Calls\CallMessagesResultVoid.cs" />
+    <Compile Include="Models\Calls\CallMessagesResult.cs" />
+    <Compile Include="Models\Calls\MessageStatus.cs" />
+    <Compile Include="Models\Calls\MessageString.cs" />
+    <Compile Include="Models\CommentType.cs" />
+    <Compile Include="Models\DhlInvoiceStatusEnum.cs" />
+    <Compile Include="Models\Enums\WalmartReportType.cs" />
+    <Compile Include="Models\ImageInfo.cs" />
+    <Compile Include="Models\ItemReplaceTypes.cs" />
+    <Compile Include="Models\Items\ExportToExcelMode.cs" />
+    <Compile Include="Models\Items\FBAItemInfo.cs" />
+    <Compile Include="Models\Items\QuantityPrice.cs" />
+    <Compile Include="Models\Items\SaleApplyMode.cs" />
+    <Compile Include="Models\LabelPrintStatus.cs" />
+    <Compile Include="Models\MaxPiecesOnSaleMode.cs" />
+    <Compile Include="Models\PublishedStatuses.cs" />
+    <Compile Include="Models\ItemStyleType.cs" />
+    <Compile Include="Models\MailLabelReasonCodes.cs" />
+    <Compile Include="Models\MarketplaceName.cs" />
+    <Compile Include="Models\OnHoldModes.cs" />
+    <Compile Include="Models\ProductAvailability.cs" />
+    <Compile Include="Models\ProxyUseTypes.cs" />
+    <Compile Include="Models\RefundReasonCodes.cs" />
+    <Compile Include="Models\RetryModeType.cs" />
+    <Compile Include="Models\Settings\SQSAccountType.cs" />
+    <Compile Include="Models\Settings\CarrierType.cs" />
+    <Compile Include="Models\Stamps\LabelSpecialType.cs" />
+    <Compile Include="Models\Stamps\PackageInfo.cs" />
+    <Compile Include="Models\Stamps\ShippingTypeCode.cs" />
+    <Compile Include="Models\Enums\OrderStatusEnum.cs" />
+    <Compile Include="Models\Enums\ReportProcessingResultType.cs" />
+    <Compile Include="Models\Enums\ShippingSize.cs" />
+    <Compile Include="Entities\Features\FeatureToItemType.cs" />
+    <Compile Include="Entities\Features\Feature.cs" />
+    <Compile Include="Entities\Features\FeatureValuesType.cs" />
+    <Compile Include="Entities\Features\FeatureValue.cs" />
+    <Compile Include="Models\Enums\ItemType.cs" />
+    <Compile Include="Entities\Features\StyleFeatureTextValue.cs" />
+    <Compile Include="Entities\Features\StyleFeatureValue.cs" />
+    <Compile Include="Entities\Inventory\QuantityChange.cs" />
+    <Compile Include="Entities\Inventory\QuantityOperation.cs" />
+    <Compile Include="Entities\Inventory\StyleItemQuantityHistory.cs" />
+    <Compile Include="Entities\Inventory\StyleLocation.cs" />
+    <Compile Include="Entities\Inventory\StyleItemBarcode.cs" />
+    <Compile Include="Entities\Listings\ListingFBAInv.cs" />
+    <Compile Include="Entities\Listings\ListingFBAEstFee.cs" />
+    <Compile Include="Entities\Users\EmailAccount.cs" />
+    <Compile Include="Entities\Users\Marketplace.cs" />
+    <Compile Include="Entities\Orders\OrderComment.cs" />
+    <Compile Include="Entities\Orders\OrderEmailNotify.cs" />
+    <Compile Include="Entities\Orders\OrderNotify.cs" />
+    <Compile Include="Entities\Orders\TrackingOrder.cs" />
+    <Compile Include="Entities\Listings\PriceHistory.cs" />
+    <Compile Include="Entities\Listings\ProductComment.cs" />
+    <Compile Include="Entities\Listings\QuantityHistory.cs" />
+    <Compile Include="Entities\Sizes\SizeGroupToItemType.cs" />
+    <Compile Include="Entities\Sizes\Size.cs" />
+    <Compile Include="Entities\Sizes\SizeGroup.cs" />
+    <Compile Include="Entities\Sizes\SizeMapping.cs" />
+    <Compile Include="Entities\Sizes\SoldSizeInfo.cs" />
+    <Compile Include="Entities\Messages\SyncHistory.cs" />
+    <Compile Include="Entities\Messages\SyncMessage.cs" />
+    <Compile Include="Entities\Listings\Listing.cs" />
+    <Compile Include="Entities\Orders\MailLabelInfo.cs" />
+    <Compile Include="Entities\NodePosition.cs" />
+    <Compile Include="Entities\Orders\OrderBatch.cs" />
+    <Compile Include="Entities\Push.cs" />
+    <Compile Include="Entities\General\Setting.cs" />
+    <Compile Include="Entities\General\Date.cs" />
+    <Compile Include="Entities\Feeds\Feed.cs" />
+    <Compile Include="Entities\Inventory\OpenBox.cs" />
+    <Compile Include="Entities\Inventory\SealedBoxItem.cs" />
+    <Compile Include="Entities\Inventory\OpenBoxItem.cs" />
+    <Compile Include="Entities\Inventory\SealedBox.cs" />
+    <Compile Include="Entities\Inventory\StyleItem.cs" />
+    <Compile Include="Entities\LabelPrintPack.cs" />
+    <Compile Include="Entities\InventoryReport.cs" />
+    <Compile Include="Entities\Listings\Item.cs" />
+    <Compile Include="Entities\Orders\ItemOrderMapping.cs" />
+    <Compile Include="Entities\Orders\Order.cs" />
+    <Compile Include="Entities\Orders\OrderShippingInfo.cs" />
+    <Compile Include="Entities\Listings\ParentItem.cs" />
+    <Compile Include="Models\Enums\AmazonReportType.cs" />
+    <Compile Include="Entities\Users\Company.cs" />
+    <Compile Include="Entities\Users\Role.cs" />
+    <Compile Include="Entities\Orders\ShippingMethod.cs" />
+    <Compile Include="Entities\General\State.cs" />
+    <Compile Include="Entities\Inventory\Style.cs" />
+    <Compile Include="Entities\Users\AddressProvider.cs" />
+    <Compile Include="Entities\Users\ShipmentProvider.cs" />
+    <Compile Include="Entities\Users\User.cs" />
+    <Compile Include="Entities\General\USPSHoliday.cs" />
+    <Compile Include="Entities\VendorOrders\VendorOrder.cs" />
+    <Compile Include="Entities\VendorOrders\VendorOrderItemSize.cs" />
+    <Compile Include="Entities\VendorOrders\VendorOrderAttachment.cs" />
+    <Compile Include="Entities\VendorOrders\VendorOrderItem.cs" />
+    <Compile Include="Exceptions\CleanseAddressException.cs" />
+    <Compile Include="Exceptions\Reports\ReportException.cs" />
+    <Compile Include="Functions\MonthlySale.cs" />
+    <Compile Include="Entities\General\ZipToTimezone.cs" />
+    <Compile Include="Helpers\ArgumentHelper.cs" />
+    <Compile Include="Helpers\ToStringHelper.cs" />
+    <Compile Include="Helpers\ToStringIgnoreAttribute.cs" />
+    <Compile Include="Models\BatchType.cs" />
+    <Compile Include="Models\CallSource.cs" />
+    <Compile Include="Models\Calls\CallHelper.cs" />
+    <Compile Include="Models\Calls\CallResultVoid.cs" />
+    <Compile Include="Models\Calls\CallResult.cs" />
+    <Compile Include="Models\Calls\CallStatus.cs" />
+    <Compile Include="Models\Dhl\BookPickupInfo.cs" />
+    <Compile Include="Models\DirtyStatusEnum.cs" />
+    <Compile Include="Models\EmailTypes.cs" />
+    <Compile Include="Models\EntityActionType.cs" />
+    <Compile Include="Models\EntityType.cs" />
+    <Compile Include="Models\Extensions\OrderExtensions.cs" />
+    <Compile Include="Models\NotificationType.cs" />
+    <Compile Include="Models\OrderTypeEnum.cs" />
+    <Compile Include="Models\ProductImageType.cs" />
+    <Compile Include="Models\IncomeEmailTypes.cs" />
+    <Compile Include="Models\ItemFillMode.cs" />
+    <Compile Include="Models\MarketplaceInfo.cs" />
+    <Compile Include="Models\IdType.cs" />
+    <Compile Include="Models\MarketSettingValue.cs" />
+    <Compile Include="Models\MarketType.cs" />
+    <Compile Include="Models\Message.cs" />
+    <Compile Include="Models\MessageTypes.cs" />
+    <Compile Include="Models\EmailNotifyHelper.cs" />
+    <Compile Include="Models\OrderEmailNotifyType.cs" />
+    <Compile Include="Models\OrderNotifyType.cs" />
+    <Compile Include="Models\Stamps\PackageType.cs" />
+    <Compile Include="Models\QuantityOperationType.cs" />
+    <Compile Include="Models\SaleAttachModes.cs" />
+    <Compile Include="Models\Search\OrderSearchFilter.cs" />
+    <Compile Include="Models\Settings\EmailAccountType.cs" />
+    <Compile Include="Models\Settings\AddressProviderType.cs" />
+    <Compile Include="Models\Settings\ShipmentProviderType.cs" />
+    <Compile Include="Models\ShippingCalculationStatusEnum.cs" />
+    <Compile Include="Models\ShippingInfoTypes.cs" />
+    <Compile Include="Models\Stamps\AccountInfo.cs" />
+    <Compile Include="Models\Stamps\CancelLabelResult.cs" />
+    <Compile Include="Models\Stamps\DeliveredStatusEnum.cs" />
+    <Compile Include="Models\Stamps\GetRateResult.cs" />
+    <Compile Include="Models\Stamps\GetRateResultType.cs" />
+    <Compile Include="Models\Stamps\ImageLayout.cs" />
+    <Compile Include="Models\Stamps\LabelFromType.cs" />
+    <Compile Include="Models\Stamps\LabelPrintResult.cs" />
+    <Compile Include="Models\Stamps\LabelPurchaseResultType.cs" />
+    <Compile Include="Models\LogMessageType.cs" />
+    <Compile Include="Models\Stamps\OrderItemRateInfo.cs" />
+    <Compile Include="Models\Stamps\OrderRateInfo.cs" />
+    <Compile Include="Models\Stamps\PrintLabelInfo.cs" />
+    <Compile Include="Models\Stamps\PrintLabelResult.cs" />
+    <Compile Include="Models\Stamps\PrintLabelSizeType.cs" />
+    <Compile Include="Models\SalesPeriod.cs" />
+    <Compile Include="Models\Stamps\ScanFormInfo.cs" />
+    <Compile Include="Models\SortMode.cs" />
+    <Compile Include="Helpers\StepSleeper.cs" />
+    <Compile Include="Models\Stamps\TrackingNumberStatusEnum.cs" />
+    <Compile Include="Models\StyleImageType.cs" />
+    <Compile Include="Models\StyleSourceType.cs" />
+    <Compile Include="Models\StyleTypes.cs" />
+    <Compile Include="Models\SyncMessageStatus.cs" />
+    <Compile Include="Models\SyncResultOrderInfo.cs" />
+    <Compile Include="Models\SyncResult.cs" />
+    <Compile Include="Models\SyncStatus.cs" />
+    <Compile Include="Models\SyncType.cs" />
+    <Compile Include="Models\Stamps\AddressValidationStatus.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\AddCommentInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\CancelOrderInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\CancelOrderOutput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\PrintBatchInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\PrintBatchOutput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\ReturnOrderInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\ReturnOrderItemInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\ReturnOrderOutput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\SendEmailInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\SendEmailOutput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\UpdateCacheInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionDatas\UpdateRatesInput.cs" />
+    <Compile Include="Models\SystemActions\SystemActionStatus.cs" />
+    <Compile Include="Models\SystemActions\SystemActionType.cs" />
+    <Compile Include="Models\SystemActions\UpdateCacheMode.cs" />
+    <Compile Include="Models\TrackingRecord.cs" />
+    <Compile Include="Models\TrackingState.cs" />
+    <Compile Include="Models\UpdateType.cs" />
+    <Compile Include="Models\Validation\CheckResult.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Views\ViewActualOrderComment.cs" />
+    <Compile Include="Views\ViewActualProductComment.cs" />
+    <Compile Include="Views\ViewBatch.cs" />
+    <Compile Include="Views\ViewEmails.cs" />
+    <Compile Include="Views\ViewFeedbackBlackList.cs" />
+    <Compile Include="Views\ViewBuyerBlackList.cs" />
+    <Compile Include="Views\ViewItem.cs" />
+    <Compile Include="Views\ViewLastLabel.cs" />
+    <Compile Include="Views\ViewLabel.cs" />
+    <Compile Include="Views\ViewLastEmailByOrder.cs" />
+    <Compile Include="Views\ViewMarketsSoldByDateAndBrand.cs" />
+    <Compile Include="Views\ViewMarketsSoldByDateAndItemStyle.cs" />
+    <Compile Include="Views\ViewMarketsSoldThisYearQuantityIncludePreOrderByStyleItem.cs" />
+    <Compile Include="Views\ViewOrdersSoldByDateAndMarkets.cs" />
+    <Compile Include="Views\ViewMarketsSoldByDateAndSKU.cs" />
+    <Compile Include="Views\ViewMarketsSoldByDateAndMarket.cs" />
+    <Compile Include="Views\ViewMarketsSoldQuantityIncludePreOrderByStyleItem.cs" />
+    <Compile Include="Views\ViewShipmentReport.cs" />
+    <Compile Include="Views\ViewPhotoshootHoldedByStyleItem.cs" />
+    <Compile Include="Views\ViewSaleEventHoldByStyleItem.cs" />
+    <Compile Include="Views\ViewStyleDSHistoryRecent.cs" />
+    <Compile Include="Views\ViewSaleEventSoldByStyleItem.cs" />
+    <Compile Include="Views\ViewMarketsSoldQuantityByStyleItem.cs" />
+    <Compile Include="Views\ViewOrderItem.cs" />
+    <Compile Include="Views\ViewOrderReport.cs" />
+    <Compile Include="Views\ViewScanItemOrderMapping.cs" />
+    <Compile Include="Views\ViewScanItem.cs" />
+    <Compile Include="Views\ViewScanOrder.cs" />
+    <Compile Include="Views\ViewSentToFBAQuantity.cs" />
+    <Compile Include="Views\ViewListing.cs" />
+    <Compile Include="Views\ViewListParent.cs" />
+    <Compile Include="Views\ViewParent.cs" />
+    <Compile Include="Views\ViewInventoryQuantity.cs" />
+    <Compile Include="Views\ViewSpecialCaseQuantity.cs" />
+    <Compile Include="Views\ViewScannedSoldQuantity.cs" />
+    <Compile Include="Views\ViewMarketsSoldQuantity.cs" />
+    <Compile Include="Views\ViewSalesPerformance.cs" />
+    <Compile Include="Views\ViewStyleFeatureValue.cs" />
+    <Compile Include="Views\ViewStyle.cs" />
+    <Compile Include="Views\ViewStylesWithoutImage.cs" />
+    <Compile Include="Views\ViewUnmaskedListing.cs" />
+    <Compile Include="Views\ViewVisibleShippings.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ccen.DTO.Inventory\Ccen.DTO.Inventory.csproj">
+      <Project>{98cc47f5-2fe8-4db8-8cd4-e59003af03e0}</Project>
+      <Name>Ccen.DTO.Inventory</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.DTO\Ccen.DTO.csproj">
+      <Project>{8342451d-92ab-4b34-80dc-ed20fbbe6a32}</Project>
+      <Name>Ccen.DTO</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Utils\Ccen.Utils.csproj">
+      <Project>{05434995-742d-4164-9852-3bd23e7c47dd}</Project>
+      <Name>Ccen.Utils</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
+    <Error Condition="!Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\EntityFramework.6.4.4\build\EntityFramework.props'))" />
+    <Error Condition="!Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\EntityFramework.6.4.4\build\EntityFramework.targets'))" />
+  </Target>
+  <Import Project="..\packages\EntityFramework.6.4.4\build\EntityFramework.targets" Condition="Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.targets')" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

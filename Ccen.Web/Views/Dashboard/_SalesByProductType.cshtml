@@ -1,0 +1,229 @@
+﻿<div id="sales-by-producttype-graph">
+    <div class="graph-button-top-panel row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"
+             data-bind="foreach: types">
+            <button type="button"
+                    class="btn btn-default"
+                    data-bind="css: { 'btn-success': isSelected, 'btn-default': !isSelected() }, click: select">
+                <span data-bind="text: label"></span>
+            </button>
+        </div>
+    </div>
+
+    <div id="salesByProductType" style="min-width: 350px; height: 300px; max-width: 650px; margin: 0 auto"></div>
+
+    <div class="graph-button-bottom-panel row">
+        <div class="col-lg-2" style="text-align: right">
+
+        </div>
+        <div class="col-lg-8"
+             data-bind="foreach: periods">
+            <button type="button"
+                    class="btn btn-default"
+                    data-bind="css: { 'btn-success': isSelected, 'btn-default': !isSelected() }, click: select">
+                <span data-bind="text: label"></span>
+            </button>
+        </div>
+        <div class="col-lg-2" style="text-align: left">
+
+        </div>
+        <div class="clearfix"></div>
+    </div>
+</div>
+
+
+
+
+<script>
+    var SaleByProductTypeGraphViewModel = function () {
+        var self = this;
+
+        self.chart = null;
+        self.chartData = null;
+
+        self.selectedPeriod = ko.observable(0);
+        self.selectedType = ko.observable(0);
+
+        self.periods = [
+            {
+                label: 'today',
+                value: 0,
+            },
+            {
+                label: 'week',
+                value: 1,
+            },
+            {
+                label: 'month',
+                value: 2,
+            }
+        ];
+
+        self.types = [
+            {
+                label: '#',
+                value: 0,
+            },
+            {
+                label: '$',
+                value: 1,
+            }
+        ];
+
+        $.each(self.periods, function (i, n) {
+            n.isSelected = ko.computed(function () {
+                return self.selectedPeriod() == n.value;
+            });
+            n.select = function () {
+                self.selectedPeriod(n.value);
+                self.requestData();
+            }
+        });
+
+        $.each(self.types, function (i, n) {
+            n.isSelected = ko.computed(function () {
+                return self.selectedType() == n.value;
+            });
+            n.select = function () {
+                self.selectedType(n.value);
+                self.showChartData();
+            }
+        });
+
+        self.requestData = function () {
+            while (self.chart.series.length > 0)
+                self.chart.series[0].remove(true);
+
+            self.chart.showLoading();
+
+            $.ajax({
+                cache: false,
+                url: '@Url.Action("GetSalesByProductType", "Dashboard")',
+                data: {
+                    periodType: self.selectedPeriod(),
+                    valueType: self.selectedType(),
+                },
+                success: function (result) {
+                    self.chart.hideLoading();
+
+                    if (result.IsSuccess) {
+                        console.log('setCategories');
+                        self.chart.xAxis[0].setCategories(result.Data.Labels[0], true);
+                        for (var i = 0; i < result.Data.Labels[0].length; i++) {
+                            result.Data.UnitSeries[0][i] = {
+                                y: result.Data.UnitSeries[0][i],
+                                name: result.Data.Labels[0][i]
+                            },
+                            result.Data.PriceSeries[0][i] = {
+                                y: result.Data.PriceSeries[0][i],
+                                name: result.Data.Labels[0][i]
+                            }
+                        }
+                        self.chartData = result.Data;
+                        self.showChartData();
+                    }
+                }
+            });
+        };
+
+        self.showChartData = function () {
+            while (self.chart.series.length > 0)
+                self.chart.series[0].remove(true);
+            self.chart.yAxis[0].setExtremes(null, null);
+
+            if (self.chartData == null)
+                return;
+
+            if (self.selectedType() == 0) {
+                self.chart.yAxis[0].setTitle({
+                    text: 'units'
+                });
+                self.chart.addSeries({
+                    name: 'Product Type',
+                    innerSize: '50%',
+                    data: self.chartData.UnitSeries[0],
+                    tooltip: {
+                        pointFormat: '<b>{point.y}</b> ({point.percentage:.1f}%)'
+                    },
+                    dataLabels: {
+                        format: '<span style="font-weight: normal">{point.name}</span><br/>{point.y} ({point.percentage:.1f}%)'
+                    }
+                });
+            }
+            if (self.selectedType() == 1) {
+                self.chart.yAxis[0].setTitle({
+                    text: '$'
+                });
+                self.chart.addSeries({
+                    name: 'Product Type',
+                    innerSize: '50%',
+                    data: self.chartData.PriceSeries[0],
+                    tooltip: {
+                        pointFormat: '<b>${point.y:.2f}</b>({point.percentage:.1f}%)'
+                    },
+                    dataLabels: {
+                        format: '<span style="font-weight: normal">{point.name}</span><br/>${point.y:.2f} ({point.percentage:.1f}%)'
+                    },
+                });
+            }
+        }
+
+        self.init = function () {
+            self.chart = new Highcharts.Chart({
+                chart: {
+                    renderTo: 'salesByProductType',
+                    plotBackgroundColor: null,
+                    plotBorderWidth: null,
+                    plotShadow: false,
+                    type: 'pie',
+                    events: {
+                        load: function () {
+                            self.chart = this;
+                            self.requestData();
+                        }
+                    },
+                    //spacing: [0,0,0,0]
+                },
+                credits: {
+                    enabled: false
+                },
+                title: {
+                    text: ""
+                },
+                tooltip: {
+                    pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+                },
+                //legend: {
+                //    layout: 'horizontal',
+                //    align: 'center',
+                //    verticalAlign: 'bottom',
+                //    borderWidth: 0
+                //},
+                plotOptions: {
+                    pie: {
+                        size: '55%',
+                        allowPointSelect: true,
+                        cursor: 'pointer',
+                        dataLabels: {
+                            enabled: true,
+                            format: '<b>{point.name}</b>: {point.percentage:.1f} %',
+                            style: {
+                                color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+                            }
+                        },
+                    }
+                },
+            });
+        }
+
+        self.init();
+    }
+
+    var salesByProductTypeGraphViewModel = null;
+
+    $(document).ready(function () {
+        salesByProductTypeGraphViewModel = new SaleByProductTypeGraphViewModel();
+        ko.applyBindings(salesByProductTypeGraphViewModel, document.getElementById("sales-by-producttype-graph"));
+    });
+</script>

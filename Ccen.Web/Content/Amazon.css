@@ -1,0 +1,437 @@
+﻿.loader-wrapper {
+    padding-top: 50px;
+    content: 'loading...'
+}
+
+
+
+.am-row-disabled {
+    color: gray;
+}
+
+.am-row-disabled td {
+    color: gray;
+}
+
+.am-row-disabled td a {
+    color: gray;
+}
+
+.am-row-highlight td {
+    background-color: #8a8a8a;
+}
+
+.am-mail {
+    
+    color: black;
+}
+
+.am-mail .input-validation-error {
+    background-color: rgb(235, 182, 182)
+}
+
+.am-mail table {
+    padding: 0px;
+    margin: 0px;
+    border: none;
+}
+
+.am-mail .market {
+    padding: 10px;
+    font-size: 16px;
+    color: black;
+    font-weight: bold;
+}
+
+.am-mail .market table {
+    width: 400px;
+}
+
+.am-mail .market td {
+    
+}
+
+.am-mail .mailing-info {
+    border: 1px solid #bfbfbf;
+    padding: 20px;
+    margin-top: 10px;
+}
+
+.am-mail .order-block {
+    font-size: 12px;
+    
+    padding: 20px;
+    border: 1px solid #bfbfbf;
+}
+
+.am-mail .order-grid {
+    padding-top: 15px;
+}
+
+.am-mail .order-block input[type='text'] {
+    font-size: 14px;
+    width: 250px;
+    padding: 3px;
+}
+
+.am-mail .lb {
+    padding: 10px 10px 10px 0px;
+}
+
+.am-mail .lb input[type='text'] {
+    width: 80px;
+}
+
+.am-mail .shipping div {
+    padding: 10px 10px 10px 5px;
+}
+
+.am-mail .address-block textarea {
+    width: 300px;
+}
+
+
+/*GENERAL*/
+.edit-panel {
+    
+}
+
+.edit-panel table .editor-label {
+    font-weight: normal;
+}
+
+.edit-panel .editor-label {
+    padding: 0px;
+    margin: 0px;
+    font-weight: bold;
+}
+
+.edit-panel .display-field,
+.edit-panel .editor-field,
+.edit-panel .editor-label {
+    margin-top: 0px;
+    vertical-align: middle;
+}
+
+.edit-panel .display-field,
+.edit-panel .editor-field,
+.edit-panel .editor-label {
+    margin-top: 0px;
+    vertical-align: middle;
+}
+
+.edit-panel .display-field {
+    float: right;
+    clear: right;
+    width: 60%;
+    margin-right: 2%;
+    padding: 5px 0 .6em;
+}
+
+/*PRODUCTS*/
+.k-grid .size-matrix table {
+    border: none;
+    padding: 0px;
+    margin: 0px;
+}
+
+.k-grid .size-matrix td {
+    border: none;
+    border-bottom: 1px gray solid;
+    padding: 2px;
+    margin: 0px;
+    min-width: 8px;
+}
+
+.k-grid .size-matrix th {
+    border: none;
+    border-bottom: 1px gray solid;
+    padding: 2px;
+    margin: 0px;
+    font-weight: normal;
+    color: lightgray;
+}
+
+.k-grid .size-matrix .alt {
+    background-color: #777;
+}
+
+.k-grid .size-matrix .alt-h {
+    background-color: #6a6a6a;
+}
+
+.k-grid .size-matrix .no-lst {
+    color: #ccc;
+}
+
+
+.k-grid .size-matrix tr {
+    border: none;
+    padding: 0px;
+    margin: 0px;
+}
+
+
+
+/*INVENTORY*/
+
+.inventory-popup table {
+    border: none;
+    padding: 0px;
+    margin: 0px;
+    margin-bottom: 15px;
+    margin-left: 0px;
+}
+
+.inventory-popup table input[type='text'] {
+    width: 160px;
+}
+
+.inventory-popup td, .inventory-popup th {
+    border: none;
+    padding: 2px;
+    margin: 0px;
+}
+
+.inventory-popup table .editor-label {
+    font-weight: normal;
+}
+
+.inventory-popup .editor-label {
+    padding: 0px;
+    margin: 0px;
+    font-weight: bold;
+}
+
+.inventory-popup .right {
+    float: right;
+}
+
+.inventory-popup .style-features-panel .editor-label {
+    width: 40%;
+}
+
+.inventory-popup .style-features-panel .editor-field {
+    width: 50%;
+}
+
+.style-panel {
+    padding-bottom: 12px;
+}
+
+.style-panel .title {
+    padding: .4em 0 1em;
+    margin-left: 2%;
+    text-align: left;
+    padding-top: 2px;
+    padding-bottom: 7px;
+    font-weight: bold;
+}
+
+.btn-red-line {
+    border-bottom: 2px red solid;
+}
+
+.inventory-popup .style-main-info .editor-field {
+    width: 66%;
+}
+
+.inventory-popup .style-main-info .editor-label {
+    width: 24%;
+}
+
+.inventory-popup .style-main-info input[type='text'] {
+     width: 235px;
+     margin: 2px 0px;
+     line-height: 20px;
+ }
+
+.inventory-popup .use-qty-cell {
+    background: #7AAD12;
+    border-bottom: 1px solid black;
+}
+
+.inventory-popup .onhold-row {
+    background: lightgray;
+}
+
+
+
+.am-style-popup .k-edit-form-container {
+    width: auto;
+}
+
+.am-style-popup .am-left {
+    width: 350px;
+    vertical-align: top;
+}
+
+.am-style-popup .am-right {
+    width: 380px;
+    vertical-align: top;
+}
+
+.am-style-popup .display-field,
+.am-style-popup .editor-field,
+.am-style-popup .editor-label {
+    margin-top: 0px;
+    vertical-align: middle;
+}
+
+.inventory-popup .display-field,
+.inventory-popup .editor-field,
+.inventory-popup .editor-label {
+    margin-top: 0px;
+    vertical-align: middle;
+}
+
+.inventory-popup input[type='text'],
+.inventory-popup input[type='number'] {
+    /*width: auto;*/
+    line-height: 18px;
+}
+
+.inventory-popup .k-edit-form-container .editor-as-text {
+    padding: .4em 0em;
+}
+
+.button-bar {
+    text-align: center;
+}
+
+.button-bar .k-button {
+    padding-left: 20px;
+    padding-right: 20px;
+    margin-left: 5px;
+    margin-right: 5px;
+    min-width: 100px;
+}
+
+.button-bar table {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.button-bar td {
+    vertical-align: top;
+}
+
+.size-table th {
+    padding-bottom: 6px;
+}
+
+.size-table td {
+    vertical-align: top;
+    padding-top: 2px;
+}
+
+.size-table td table {
+    padding: 0px;
+    margin: 0px;
+}
+
+.size-table td table td {
+    padding: 0 0 5px 0;
+    margin: 0px;
+}
+
+
+
+.size-table .barcode-list tr:last-child {
+    display: none;
+}
+
+.size-table .barcode-button {
+    color: white;
+    text-align: right;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.size-name {
+    font-size: 10px;
+}
+
+.size-remain {
+    font-weight: bold;
+}
+
+/*END STYLE*/
+
+
+
+
+.is-need-to-buy {
+    background: rosybrown;
+}
+
+.number-of-order {
+    padding: 10px;
+}
+
+.lastest-order {
+    padding: 0 10px 10px 10px;
+}
+
+.number-of-order span,
+.lastest-order span {
+    font-weight: bold;
+}
+
+.orders-number-list {
+    
+}
+
+.small {
+    font-size: 9px;
+}
+
+.noborder { border: none; }
+.noborder td { border: none;}
+
+.button-table td {
+    vertical-align: top;
+}
+
+/*MESSAGE BLOCK, POPUP*/
+.message .buttons {
+    padding: 10px;
+    text-align: right;
+}
+
+.message .buttons a {
+    margin-left: 10px;
+}
+
+.message {
+    padding: 5px;
+}
+
+.message .red-warning {
+    color: red;
+}
+
+.message .orange-warning {
+    color: orange;
+}
+
+.message .list {
+    padding: 5px;
+}
+
+.message div {
+    padding: 5px;
+}
+
+.top-bar {
+    display: none; 
+    position: fixed;
+    top: 0px; 
+    left: 0px; 
+    width:100%; 
+    text-align: center; 
+    background-color: gray; 
+    color: white; 
+    padding: 8px;
+    z-index: 10000;
+}

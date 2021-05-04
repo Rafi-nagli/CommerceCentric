@@ -1,0 +1,342 @@
+﻿<script>
+    var ListingSelectPopupModel = function (model, settings)
+    {
+        var self = this;
+
+        self.settings = settings;
+        self.model = model;
+
+        self.isLoaded = ko.observable(false);
+
+        self.submitCallback = settings.submitCallback;
+        self.styleItemId = model.styleItemId;
+        self.initSalePrice = model.initSalePrice;
+        self.initSFPSalePrice = model.initSFPSalePrice;
+        self.styleString = model.styleString;
+        self.styleSize = model.styleSize;
+
+        self.markets = ko.observable([]);
+
+        self.popupNode = null;
+        self.popup = null;
+
+        
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function () {
+            return self.errors().length === 0;
+        });
+        self.validate = function () { // function(data, e) {
+            if (self.isValid()) { //validator.validate() &&
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                return false;
+            }
+        };
+
+        self.customValidate = function () {
+            self.markets().forEach(function (n) {
+                n.errorMessages.removeAll();
+                if (n.hasSelectedListings() || n.ApplyToNewListings) {
+                    if (!(n.SalePrice > 0 || n.SalePercent > 0))
+                        n.errorMessages.push('Please set sale price/percent');
+                } else {
+                    if (n.SalePrice > 0 || n.SalePercent > 0) {
+                        n.errorMessages.push('Please select any exist/new listings');
+                    }
+                }
+            });
+            var isValid = $.grep(self.markets(), function (n) { return n.errorMessages().length > 0 }).length == 0;
+            console.log("custom validate: " + isValid);
+            return isValid;
+        }
+
+        self.init = function () {
+            console.log("load, styleItemId=" + self.styleItemId);
+            $.ajax({
+                url: self.settings.urls.getListingsByStyleSize,
+                data: {
+                    styleItemId: self.styleItemId,
+                    initSalePrice: self.initSalePrice,
+                    initSFPSalePrice: self.initSFPSalePrice,
+                },
+                success: function (result) {
+                    console.log("init success");
+                    if (result.IsSuccess) {
+                        result.Data.forEach(function(n) {
+                            n.Listings.forEach(function (l) {
+                                l.isChecked = ko.observable(l.IsChecked);
+                                l.hasLowestPrice = l.LowestPrice != null;
+                            });
+
+                            n.hasListings = ko.computed(function () {
+                                return n.Listings.length > 0;
+                            });
+                            n.hasSelectedListings = ko.computed(function() {
+                                return $.grep(n.Listings, function(n) { return n.isChecked(); }).length > 0;
+                            });
+                            
+                            n.errorMessages = ko.observableArray([]);
+
+                            n.applyToAllExistListings = ko.observable(false);
+                            n.applyToAllExistListings.subscribe(function () {
+                                n.Listings.forEach(function(l) {
+                                    l.isChecked(n.applyToAllExistListings());
+                                });
+                            });
+
+                            n.IsAmazon = ko.computed(function() {
+                                return n.Market == self.settings.markets.amazonCom
+                                    || n.Market == self.settings.markets.amazonUk;
+                            });
+                        });
+
+                        self.markets(result.Data);
+                        self.isLoaded(true);
+                    }
+                }
+            });
+        }
+
+        self.show = function () {
+            console.log($("#listingSelectPopup").length);
+            $("#listingSelectPopup").each(function (i) {
+                var popup = $(this).data("kendoWindow");
+                if (popup != null) {
+                    console.log("close previous setTracking popup");
+
+                    ko.cleanNode($(this)[0]);
+                    popup.close();
+                    popup.destroy();
+                }
+                else {
+                    $(this).remove();
+                }
+            });
+
+            console.log("ListingSelectPopupModel.create");
+
+            $('body').prepend("<div id='listingSelectPopup'></div>");
+            self.popupNode = $('#listingSelectPopup');
+
+            self.popupNode.kendoWindow({
+                modal: true,
+                width: "900px",
+                title: "Choose Listings for: " + self.styleString + " - " + self.styleSize,
+                visible: false,
+                close: self.closeEvent,
+                actions: [
+                    "Close"
+                ],
+            });
+
+            self.popup = self.popupNode.data("kendoWindow");
+            self.popup.content($("#listingSelectPopupContent").html());
+            self.popup.center().open();
+            
+            ko.applyBindings(self, self.popupNode[0]);
+            self.init();
+        };
+
+        self.getDateModel = function () {
+            var markets = self.markets();
+            markets.forEach(function(n) {
+                n.Listings.forEach(function(l) {
+                    l.IsChecked = l.isChecked();
+                });
+            });
+
+            return {
+                styleItemId: self.styleItemId,
+                markets: markets
+            }
+        }
+
+        self.submit = function () {
+            console.log("submit, id=" + self.styleItemId);
+            var defer = $.Deferred();
+            var dataModel = self.getDateModel();
+
+            $.ajax({
+                url: self.settings.urls.setListingsToStyleSize,
+                data: JSON.stringify(dataModel),
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                type: 'POST',
+                success: function(result) {
+                    console.log("onSuccess");
+                    defer.resolve(result.Data);
+                },
+                error: function() {
+                    defer.reject();
+                }
+            });
+            return defer;
+        }
+
+        self.onSave = function(data, e) {
+            console.log('ListingSelectPopupModel.onSave');
+
+            if (self.validate()
+                && self.customValidate()) {
+                $(e.target).showLoading("updating...");
+                self.submit().done(function (result) {
+                    console.log("submit done");
+                    console.log(result);
+                    if (self.submitCallback != null)
+                        self.submitCallback(result);
+                    self.onClose();
+                });
+            }
+        }
+
+        self.onClose = function() {
+            console.log('ListingSelectPopupModel.onClose');
+            self.closeEvent();
+            self.popup.close();
+        }
+
+        self.closeEvent = function () {
+            console.log('disable validation');
+            //self.trackingNumber.rules.remove(function (item) {
+            //    console.log(item.rule);
+            //    return item.rule == "required";
+            //});
+            //self.trackingNumber.extend({ validatable: false });
+            console.log('after disable validation');
+        }
+    }
+</script>
+
+<!-- ko stopBinding: true -->
+
+<div style="display: none">
+    <div id="listingSelectPopupContent" class="listingSelectPopupContent">
+        <div class="k-edit-form-container" style="width: auto; font-size: 12px">
+            <div class="inventory-popup" style="height: 500px">
+                <div data-bind="visible: !isLoaded()">Loading...</div>
+                <div data-bind="visible: isLoaded">
+                    <div class="k-widget k-grid k-secondary grid-small"
+                         style="overflow-y: scroll; height: 500px">
+                        <table>
+                            <colgroup>
+                                <col style="width: 115px"/>
+                            </colgroup>
+                            <thead class="k-grid-header">
+                            <tr>
+                                <th colspan="2">Choose Markets/Listings</th>
+                            </tr>
+                            </thead>
+                            <tbody data-bind="foreach: markets" class="price-listings">
+                            <tr class="k-master-row" data-bind="css: { 'k-alt': $index() % 2 == 1 }">
+                                <td style="vertical-align: top"><span data-bind="text: MarketName"></span></td>
+                                <td style="padding-bottom: 4px">
+                                    <div>
+                                        <div data-bind="foreach: errorMessages">
+                                            <span data-bind="text: $data" class="red"></span>
+                                        </div>
+                                    </div>
+
+                                    <div><span class="gray">Sale price,</span> fixed: <span data-bind="text: MarketCurrency"></span>
+                                        <input data-bind="value: SalePrice"
+                                               style="width: 60px"
+                                               autocomplete="off"
+                                               class="k-textbox"/>
+                                        / discount %: <input data-bind="value: SalePercent"
+                                                                                                                          style="width: 60px"
+                                                                                                                          autocomplete="off"
+                                                                                                                          class="k-textbox"/>
+                                    </div>
+                                    <div><span class="gray">Apply to</span> new listings: <input type="checkbox" data-bind="checked: ApplyToNewListings"/>
+                                    </div>
+                                    <div><span class="gray">Apply to</span> exist listings:
+                                    </div>
+                                    <div style="padding: 2px 0px 5px 10px">
+                                        <div class="k-widget k-grid k-secondary grid-small">
+                                            <div data-bind="visible: !hasListings()" style="padding: 4px">No listings</div>
+                                            <div data-bind="visible: hasListings">
+                                                <table style="width: 100%">
+                                                    <colgroup>
+                                                        <col style="width: 15px"/>
+                                                        <col style="width: 110px"/>
+                                                        <col style="width: 120px"/>
+                                                        <col style="width: auto"/>
+                                                        <col style="width: 90px"/>
+                                                        <col style="width: 90px" />
+                                                        <col style="width: 150px"/>
+                                                    </colgroup>
+                                                    <thead class="k-grid-header">
+                                                    <tr>
+                                                        <th class="k-header"><input type="checkbox" data-bind="checked: applyToAllExistListings"/></th>
+                                                        <th class="k-header">
+                                                            <span data-bind="visible: IsAmazon">Parent ASIN</span>
+                                                            <span data-bind="visible: !IsAmazon()">Group Id</span>
+                                                        </th>
+                                                        <th class="k-header">
+                                                            <span data-bind="visible: IsAmazon">ASIN</span>
+                                                            <span data-bind="visible: !IsAmazon()">Item Id</span>
+                                                        </th>
+                                                        <th class="k-header">Size/Color</th>
+                                                        <th class="k-header">Price</th>                                                        
+                                                        <th class="k-header">BuyBox Price</th>
+                                                        <th class="k-header">SKU</th>
+                                                        <th class="k-header">Type</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody data-bind="foreach: Listings">
+                                                    <tr class="k-master-row" data-bind="css: { 'k-alt': $index() % 2 == 1 }">
+                                                        <td><input type="checkbox" data-bind="checked: isChecked"/></td>
+                                                        <td><a target="_blank" data-bind="attr: { 'href': ProductUrl }"><span data-bind="textFormatted: ParentASIN, ifEmpty: '-'"></span></a></td>
+                                                        <td><a target="_blank" data-bind="attr: { 'href': MarketUrl }"><span data-bind="text: ASIN"></span></a></td>
+                                                        <td><span data-bind="textFormatted: ListingSize, ifEmpty: '-'"></span> / <span data-bind="textFormatted: ListingColor, ifEmpty: '-'"></span> </td>
+                                                        <td><span data-bind="text: Currency"></span><span data-bind="textFormatted: Price, format: '0.00'"></span></td>
+                                                        <td>
+                                                            <span data-bind="text: Currency"></span><span data-bind="textFormatted: LowestPrice, format: '0.00', ifEmpty: '-'"></span>
+                                                            <span data-bind="visible: hasLowestPrice" class="note">
+                                                                (<span data-bind="text: FormattedLowestPriceUpdateDate"></span> ago)
+                                                            </span>
+                                                        </td>
+                                                        <td><span data-bind="text: SKU"></span></td>
+                                                        <td><span data-bind="textFormatted: ListingType, ifEmpty: '-'"></span></td>
+                                                    </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="k-edit-buttons k-state-default popup-button-panel" style="position: static">
+                <table style="margin-left: auto">
+                    <tr>
+                        <td style="margin-right: 5px">
+                            <button tabindex="-1"
+                                    data-bind="click: onSave"
+                                    class="k-button">
+                                <span class="k-icon k-update"></span>
+                                <span>Save</span>
+                            </button>
+                        </td>
+                        <td style="vertical-align: bottom">
+                            <button class="k-button k-button-icontext k-grid-cancel"
+                                    data-bind="click: onClose">
+                                <span class="k-icon k-cancel"></span>Cancel
+                            </button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- /ko -->

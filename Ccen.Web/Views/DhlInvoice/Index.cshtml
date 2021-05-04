@@ -1,0 +1,405 @@
+﻿@using Amazon.Common.Helpers
+@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Inventory
+@using Amazon.Web.ViewModels.Messages
+@using Amazon.Web.ViewModels.Orders
+@using Amazon.Web.ViewModels.ScanOrders
+@using Amazon.Web.ViewModels.Vendors
+@using Kendo.Mvc.UI
+@model Amazon.Web.Models.SearchFilters.DhlInvoiceFilterViewModel
+@{
+    ViewBag.Title = "Dhl Invoices";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section Icon
+{
+
+}
+
+<style>
+    .k-grid .form-control {
+        height: 28px;
+        padding: 0px;
+    }
+</style>
+
+<script>
+    var DhlInvoiceListModel = function (model, settings) {
+        var self = this;
+
+        //Init
+        self.model = model;
+        self.settings = settings;
+
+        self.gridId = self.settings.gridId;
+        self.gridNode = $("#" + self.gridId);
+        self.grid = self.gridNode.data("kendoGrid");
+
+        self.messages = ko.observableArray([]);
+
+        ko.BaseViewModel.call(self);
+
+        //Params
+        self.orderNumber = ko.observable(model.OrderNumber);
+
+        self.minDate = new Date(2000, 1, 1);
+        self.maxDate = new Date();
+        self.maxDate.setHours(23);
+        self.maxDate.setMinutes(59);
+
+        self.dateFrom = ko.observable('');
+        self.dateTo = ko.observable('');
+
+        self.statusList = ko.observable(model.StatusList);
+        self.statusValue = ko.observable(model.Status);
+        self.statusValue.subscribe(function () { self.search(); });
+
+        //Search
+        self.search = function () {
+            var params = self.getGridParams();
+
+            self.resetRowNumber(0);
+
+            if (self.grid.dataSource.page() != 1) {
+                self.grid.dataSource.page(1); //May call read
+            }
+            self.grid.dataSource.read(params);
+        };
+
+        self.orderIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetOrderIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if (action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.uploadInvoice = function() {
+            var formData = new FormData();
+            var node = $('#invoiceFile');
+            if (node.length == 0
+                && node.files.length == 0) {
+                self.messages.push(new MessageString("No file to upload", MessageStatus.ERROR));
+                return;
+            }
+
+            formData.append('invoiceFile', node[0].files[0]);
+
+            $.ajax({
+                url : '@Url.Action("UploadInvoice", "DhlInvoice")',
+                type : 'POST',
+                data : formData,
+                processData: false,  // tell jQuery not to process the data
+                contentType: false,  // tell jQuery not to set contentType
+                success : function(data) {
+                    console.log(data);
+                    self.messages.removeAll();
+                    self.messages.push(new MessageString(data.Message, data.IsSuccess ? MessageStatus.SUCCESS : MessageStatus.ERROR));
+                    if (data.IsSuccess) {
+                        self.grid.dataSource.read();
+                    }
+                }
+            });
+        }
+
+        self.searchByKeyCmd = function (data, event) {
+            if (event.keyCode == 13)
+                self.search(true);
+            return true;
+        };
+
+        self.getGridParams = function () {
+            console.log("getGridParams");
+
+            var from = kendo.toString(self.dateFrom(), 'MM/dd/yyyy');
+            var to = kendo.toString(self.dateTo(), 'MM/dd/yyyy');
+            var orderNumber = self.orderNumber() || "";
+            var status = self.statusValue();
+
+            return {
+                DateFrom: from,
+                DateTo: to,
+                OrderNumber: orderNumber,
+                Status: status
+            };
+        };
+
+        self.clear = function () {
+            self.dateFrom('');
+            self.dateTo('');
+            self.orderNumber('');
+            self.statusValue(null);
+        };
+
+        self.clearAndSearch = function () {
+            self.clear();
+            self.search(false);
+        };
+
+        self.searchByButton = function () {
+            self.search(true);
+        };
+
+        self.exportToExcelUrl = ko.computed(function() {
+            var params = self.getGridParams();
+            return self.settings.urls.exportToExcelUrl + "?Status=" + params.Status + "&OrderNumber=" + params.OrderNumber + "&DateFrom=" + params.DateFrom + "&DateTo=" + params.DateTo;
+        });
+
+        self.setStatus = function(sender, id) {
+            helper.ui.showLoading(sender);
+            var newValue = sender.options[sender.selectedIndex].value;
+            $.ajax({
+                url: self.settings.urls.setStatus,
+                data: {
+                    id: id,
+                    newStatus: newValue
+                },
+                success: function(result) {
+                    if (result.IsSuccess) {
+                        helper.ui.hideLoading(sender);
+                    }
+                },
+            });
+        };
+
+        //Grid
+
+        self.grid.bind("dataBound", function (e) {
+            self.resetRowNumber();
+            self.rowTotal(self.grid.dataSource.total());
+        });
+
+        
+        helper.ui.addTopPager(self.grid);
+
+        self.search(false);
+    };
+</script>
+
+<div id="page-content">
+
+    <ol class="breadcrumb">
+        <li><a href="#">Reports</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <messages params="{ messages: messages }"></messages>
+
+        <div class="filters">
+            <table>
+                <colgroup>
+                    <col style="width: 120px"/>
+                    <col style="width: 210px"/>
+                    <col style="width: 70px"/>
+                    <col style="width: 500px"/>
+                </colgroup>
+                <tr>
+                    <th>Order #:</th>
+                    <td>
+                        <input type="text"
+                               style="width: 200px"
+                               data-bind="kendoAutoComplete: {
+                                   value: orderNumber,
+                                   data: {},
+                                   minLenght: 3,
+                                   dataSource: orderIdSource },
+                                valueUpdate: 'afterkeydown',
+                                event: { keypress: searchByKeyCmd }"
+                               class="k-textbox"/>
+                    </td>
+                    <th>Date: </th>
+                    <td colspan="2">
+                        <table>
+                            <tr>
+                                <td>from</td>
+                                <td>
+                                    <input class="data-picker" data-bind="kendoDatePicker: { value: dateFrom, format: 'MM/dd/yyyy', min: minDate, max: maxDate }"/>
+                                </td>
+                                <td>to</td>
+                                <td>
+                                    <input class="data-picker" data-bind="kendoDatePicker: { value: dateTo, format: 'MM/dd/yyyy', min: minDate, max: maxDate }"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Status:</th>
+                    <td>
+                        <input style="width: 180px"
+                               data-bind="kendoDropDownList: {data: statusList, value: statusValue, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'All' }"/>
+                    </td>
+                    <td colspan="3">
+
+                    </td>
+                </tr>
+            </table>
+            <button class="k-button filter-button"
+                    data-bind="click: searchByButton">
+                <span class='glyphicon glyphicon-search am-icon'></span>Search
+            </button>
+            <button class="k-button filter-button"
+                    data-bind="click: clearAndSearch">
+                <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+            </button>
+        </div>
+    </div>
+
+    <div class="k-toolbar k-grid-toolbar">
+        <a data-bind="attr: { 'href': exportToExcelUrl }"
+           target="_blank"
+           class="btn btn-default">
+            <span class='glyphicon glyphicon-save-file am-icon'></span>To Excel..
+        </a>
+
+        <div style="float: right">
+            <label class="btn btn-default btn-file">
+                <span>Choose Invoice File...</span><input type="file" id="invoiceFile" style="display: none" onchange="$('#upload-file-info').html($(this).val());" />
+            </label>
+            <span class='label label-info' id="upload-file-info"></span>
+            <button class="btn btn-default" data-bind="click: uploadInvoice">Upload</button>
+        </div>
+    </div>
+
+    <div class="grid-small">
+        @(Html.Kendo().Grid<DhlInvoiceViewModel>()
+          .Name("DhlInvoiceList")
+          .Editable(e => e.Mode(GridEditMode.PopUp))
+          .Columns(columns =>
+          {
+              columns.Bound(c => c.Id)
+                  .ClientTemplate("<span class='row-number'></span>")
+                  .Title("#")
+                  .Width(20)
+                  .Sortable(false);
+              columns.Bound(c => c.OrderNumber)
+                .Width(180)
+                .ClientTemplate("<a target='_blank' href='#=OrderUrl#'>#=OrderNumber#</a>")
+                .Title("Order Number");
+              columns.Bound(c => c.OrderDate)
+                .ClientTemplate("#=tmpl.isNullFormat(OrderDate, 'MM/dd/yyyy', '-')#")
+                .Width(120)
+                .Title("Order Date");
+              columns.Bound(c => c.WeightUsed)
+                .ClientTemplate("#=tmpl.isNull(FormattedAdjustedWeightUsed, '-')#")
+                .Width(180)
+                .Title("Total Weight");
+
+              columns.Bound(c => c.Country)
+                  .Width(100)
+                  .Title("Country");
+              columns.Bound(c => c.RateCode)
+                  .Width(120)
+                  .Title("Rate Group");
+              columns.Bound(c => c.RatePrice)
+                  .ClientTemplate("$#=tmpl.isNullFormat(RatePrice, '0.00', '-')#")
+                  .Width(120)
+                  .Title("Rate Price");
+              columns.Bound(c => c.Dimensions)
+                  .Width(120)
+                  .Title("Dimensions");
+              
+              columns.Bound(c => c.InvoiceDate)
+                  .Format("{0:" + DateHelper.DateFormat + "}")
+                  .Width(120)
+                  .Title("Invoice Date");
+              columns.Bound(c => c.InvoiceNumber)
+                  .Title("Invoice #");
+              
+              columns.Bound(c => c.Charged)
+                  .ClientTemplate("$#=tmpl.f(Charged, '0.00')#")
+                  .Title("Charged, $")
+                  .Width(100);
+              columns.Bound(c => c.Estimated)
+                .ClientTemplate("$#=tmpl.f(Estimated, '0.00')#")
+                .Title("Estimated, $")
+                .Width(160);
+              
+              columns.Bound(c => c.Status)
+                  .ClientTemplate("#= tmpl.t('status-column-template', data)#")
+                  .Title("Status")
+                  .Width(150);
+          })
+          .Sortable(conf => conf.Enabled(true).SortMode(GridSortMode.SingleColumn))
+          .Pageable(conf => conf.Enabled(true).Refresh(true))
+          .Filterable(conf => conf.Enabled(true))
+          .AutoBind(false)
+          .DataSource(dataSource => dataSource
+              .Ajax()
+              .ServerOperation(false)
+              .PageSize(50)
+              .Model(conf => conf.Id(m => m.Id))
+              .Sort(conf =>
+              {
+                  conf.Add(n => n.InvoiceDate).Descending();
+                  conf.Add(n => n.OrderNumber).Ascending();
+              })
+                      .Read(read => read.Action(MVC.DhlInvoice.ActionNames.GetAll, MVC.DhlInvoice.Name)
+                  .Data("GetGridParams"))))
+    </div>
+</div>
+
+<script type="text/kendo-tmpl" id="status-column-template">
+    <div>
+        <select class="form-control" onchange="dhlInvoiceListVm.setStatus(this, '#=Id#')">
+            <option value="0" #=Status ==0 ? 'selected' : ''#>None</option>
+            <option value="1" #=Status ==1 ? 'selected' : '' #>Matched</option>
+            <option value="5" #=Status ==5 ? 'selected' : '' #>Incorrect</option>
+            <option value="10" #=Status ==10 ? 'selected' : '' #>Dhl Notified</option>
+            <option value="15" #=Status ==15 ? 'selected' : '' #>Refund Approved</option>
+            <option value="20" #=Status ==20 ? 'selected' : '' #>Rejected</option>
+        </select>
+    </div>
+</script>
+
+<script>
+    var dhlInvoiceListVm = null;
+
+    function GetGridParams() {
+        console.log("GetGridParams");
+        if (dhlInvoiceListVm != null)
+            return dhlInvoiceListVm.getGridParams();
+        return {};
+    }
+
+    $(document).ready(function() {
+        var settings = {
+            gridId: "DhlInvoiceList",
+            idFieldName: "Id",
+            urls: {
+                exportToExcelUrl: '@Url.Action("ExportToExcel", "DhlInvoice")',
+                setStatus: '@Url.Action("SetStatus", "DhlInvoice")'
+            }
+        };
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        dhlInvoiceListVm = new DhlInvoiceListModel(model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+        ko.applyBindings(dhlInvoiceListVm, document.getElementById('page-content'));
+    });
+
+</script>

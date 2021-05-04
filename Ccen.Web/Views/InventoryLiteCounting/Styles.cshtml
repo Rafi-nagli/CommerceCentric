@@ -1,0 +1,368 @@
+﻿@using Amazon.Common.Helpers
+@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.Models
+@{
+    ViewBag.Title = "Inventory Counting";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/inventory.ico" />
+}
+
+<div id="page-content">
+
+    <ol class="breadcrumb">
+        <li><a href="#">Inventory Counting</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <div class="messages-block">
+                <div><span id="infoMessage" class="text-info"></span></div>
+                <div><span id="errorMessage" class="label label-danger"></span></div>
+                <div><span id="successMessage" class="label label-success"></span></div>
+            </div>
+
+            <table style="width: 100%">
+                <colgroup>
+                    <col style="width: 80px"/>
+                    <col style="width: 230px"/>
+                    <col style="width: 80px"/>
+                    <col style="width: 250px"/>
+                    <col style="width: auto"/>
+                </colgroup>
+                <tr>
+                    <th>StyleId:</th>
+                    <td style="padding-right: 10px">
+                        <input type="text"
+                               class="k-textbox"
+                               style="border-color: #2d2d2d"
+                               data-bind="value: searchFilters.styleId, valueUpdate:'afterkeydown'"/>
+                    </td>
+                    <td class="right-block" colspan="2">
+                        <input type="checkbox" data-bind="checked: searchFilters.hideOldLocations" /> Hide Old Locations
+                        <input type="checkbox" style="margin-left: 10px" data-bind="checked: searchFilters.hideOutOfStock" /> Hide Out Of Stock Styles
+                    </td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="right-block">Status:</td>
+                    <td>
+                        <input style="width: 120px"
+                               data-bind="kendoDropDownList: { data: searchFilters.countingStatusList, value: searchFilters.countingStatus, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }"/>
+                    </td>
+                    <td class="right-block">Location:</td>
+                    <td style="padding-right: 10px;">
+                        from:
+                        <input type="number"
+                               style="width: 60px; border-color: #2d2d2d"
+                               class="k-textbox"
+                               data-bind="value: searchFilters.fromRawLocation, valueUpdate:'afterkeydown', event: { keypress: searchByKeyCmd }" />
+                        to:
+                        <input type="number"
+                               style="width: 60px; border-color: #2d2d2d"
+                               class="k-textbox"
+                               data-bind="value: searchFilters.toRawLocation, valueUpdate:'afterkeydown', event: { keypress: searchByKeyCmd }" />
+                    </td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="text-align: left; padding-top: 5px">
+                        <button class="k-button"
+                                style="width: 110px; margin: 0px 0px 0px 0px; padding: 3px 20px 3px 20px"
+                                data-bind="click: search">
+                            <span class='glyphicon glyphicon-search am-icon'></span>Search
+                        </button>
+                        <button class="k-button"
+                                style="width: 100px; margin: 0px 0px 0px 10px; padding: 3px 20px 3px 20px"
+                                data-bind="click: clear">
+                            <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+                        </button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    
+    <div class="grid-small">
+        <div data-bind='component: {
+        name: "grid-pager",
+        params: { itemCount: grid.itemCount, pageIndex: grid.pageIndex, itemsPerPage: grid.itemsPerPage, refreshCallback: grid.reload }
+        }'></div>
+
+        <div data-bind='component: {
+         name: "fast-grid",
+         params: fastGridSettings }'></div>
+
+        <div data-bind='component: {
+        name: "grid-pager",
+        params: { itemCount: grid.itemCount, pageIndex: grid.pageIndex, itemsPerPage: grid.itemsPerPage, refreshCallback: grid.reload }
+        }'></div>
+    </div>
+</div>
+
+@Html.Partial(MVC.Shared.Views._TemplatesStyle)
+
+@Html.Partial("_TemplateGridPager")
+@Html.Partial("_TemplateFastGrid")
+
+<script type="text/kendo-tmpl" id="counting-location-column-template">
+    <div>
+        #if (data.MainLocation != null) {#
+        <span>#=data.MainLocation.Isle# / #=data.MainLocation.Section# / #=data.MainLocation.Shelf#</span>
+        #} else {#
+        <span>-</span>
+        #}#
+        <a onclick='styleCountingListVm.editStyleLocation(this, "#=data.Id#")' style="margin-left: 5px; width: 54px; min-width: 54px" class="k-button"><span class='glyphicon glyphicon-pencil am-icon'></span></a>
+    </div>
+</script>
+
+<script type="text/x-kendo-template" id="style-buttons-column-template">
+    <div>
+        #if (data.IsEditMode) {#
+            <a href='javascript: void(0)'
+               class='k-button'
+               style='margin-top:0px; width:90px' onclick='styleCountingListVm.onSave(this, "#=data.Id#")'>
+                <span class="k-icon k-update"></span>Save
+            </a>
+            <a href='javascript: void(0)'
+               class='k-button'
+               style='margin-top:0px; width:90px' onclick='styleCountingListVm.onCancel(this, "#=data.Id#")'>
+                <span class="k-icon k-cancel"></span>Cancel
+            </a>
+        #} else {#
+            <a href='javascript: void(0)'
+               class='k-button'
+               style='margin-top:4px; width:90px' onclick='styleCountingListVm.onEdit(this, "#=data.Id#")'>
+                <span class='glyphicon glyphicon-pencil am-icon'></span>Edit
+            </a>
+        #}#
+    </div>
+    <div>
+        <a href='javascript: void(0)'
+           class='k-button'
+           style='margin-top:4px; width:140px' onclick='styleCountingListVm.createSealedBox(this, "#=data.Id#")'>
+            <span class='glyphicon glyphicon-plus am-icon'></span>Sealed Box
+        </a>
+        <a href='javascript: void(0)'
+           class='k-button'
+           style='margin-top:0px; width:140px' onclick='styleCountingListVm.createOpenBox(this, "#=data.Id#")'>
+            <span class='glyphicon glyphicon-plus am-icon'></span>Open Box
+        </a>
+    </div>
+</script>
+
+<script type="text/kendo-tmpl" id="counting-size-column-template">
+    #if (data.StyleItems != null) {#
+    #for (var i = 0; i < data.StyleItems.length; i++) {#
+    <div>
+        <div style="float: left">
+            #if (data.StyleItems[i].RemainingQuantity <= 0 && data.StyleItems[i].RemainingQuantity !== null) {#
+            <span class="red"><span class='gray'>#=data.StyleItems[i].Name#:</span> 0</span>
+            #}#
+            #if (data.StyleItems[i].RemainingQuantity == 1) {#
+            <span class="yellow"><span class='gray'>#=data.StyleItems[i].Name#:</span> #=data.StyleItems[i].RemainingQuantity#</span>
+            #}#
+            #if (data.StyleItems[i].RemainingQuantity > 1) {#
+            <span class=""><span class='gray'>#=data.StyleItems[i].Name#:</span> #=data.StyleItems[i].RemainingQuantity#</span>
+            #}#
+            #if (data.StyleItems[i].RemainingQuantity === null) {#
+            <span class="red"><span class='gray'>#=data.StyleItems[i].Name#:</span> -</span>
+            #}#
+            <span> - </span>
+            <span>#= data.StyleItems[i].BoxQuantity#</span>
+            #if (data.StyleItems[i].CountingStatus != 'None'
+                && !dataUtils.isNullOrEmpty(data.StyleItems[i].CountingStatus)) {#,
+                 <span>#= tmpl.isNull(data.StyleItems[i].CountingStatus, 'none') #</span> <span class="gray">by #= tmpl.isNull(data.StyleItems[i].CountingName, '-') #</span>
+            #}#
+
+        </div>
+    </div>
+    <div class="clear"></div>
+    #}#
+    #}#
+</script>
+
+
+<script type="text/kendo-tmpl" id="style-row-template">
+    <tr class="k-master-row #=data._isAlt ? 'k-alt': ''#" row-uid="#=data.Id#">
+        <td class="k-hierarchy-cell">
+            <a class="k-icon k-plus" href='javascript: void(0)' onclick='styleCountingListVm.toggleGridRow("#=data.Id#")' tabindex="-1"></a>
+        </td>
+        <td>#=data.Id#</td>
+        <td>
+            <div class="image-box-holder" style="float: left; margin-right: 5px">
+                <img src='#=data.Thumbnail#' style="max-width: 75px" />
+            </div>
+            <div>#=data.StyleId#</div>
+            <div style='padding-top:3px' class="gray">#=data.Name#</div>            
+        </td>
+        <td>#= tmpl.t('counting-location-column-template', data)#</td>
+        <td>#= tmpl.t('counting-size-column-template', data)#</td>
+        @*<td>
+            #if (data.IsEditMode) {#
+                <div class="edit-counting-status"></div>
+            #} else {#
+                #= tmpl.isNull(data.CountingStatus, '-') #
+            #}#
+        </td>
+        <td>
+            #if (data.IsEditMode) {#
+                <div class="edit-counting-name"></div>
+            #} else {#
+                #= tmpl.isNull(data.CountingName, '-') #
+            #}#
+        </td>*@
+        <td>#= tmpl.t('style-buttons-column-template', data)#</td>
+    </tr>    
+    <tr class="k-detail-row" id="Detail_#=data.Id#" style="display:none">
+        <td class="k-hierarchy-cell"></td>
+        <td class="k-detail-cell" colspan="11">
+            <div>
+                <div class="k-toolbar k-grid-toolbar k-toolbar-title"><span class="toolbar-label">Sealed Boxes:</span></div>
+                <div class="k-widget k-grid k-secondary">
+                    <div class="k-loading-mask" id="SealedBox_Loading_#=data.Id#" style="width: 100%; height: 100%; top: 0px; left: 0px; display: none">
+                        <span class="k-loading-text">Loading...</span>
+                        <div class="k-loading-image"></div>
+                        <div class="k-loading-color"></div>
+                    </div>
+
+                    <table cellspacing="0">
+                        <colgroup>
+                            <col width="60px" />
+                            <col />
+                            <col />
+                            <col />
+                            <col />
+                            <col width="75px" />
+                        </colgroup>
+                        <thead class="k-grid-header">
+                            <tr>
+                                <th class="k-header"><span class="k-link">Id</span></th>
+                                <th class="k-header"><span class="k-link">Breakdown</span></th>
+                                <th class="k-header"><span class="k-link">Boxes</span></th>
+                                <th class="k-header"><span class="k-link">Total Qty</span></th>
+                                <th class="k-header"><span class="k-link">Counting Date</span></th>
+                                <th class="k-header"><span class="k-link">&nbsp;</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="SealedBox_#=data.Id#"></tbody>
+                    </table>
+                </div>
+                <div class="k-toolbar k-grid-toolbar k-toolbar-title"><span class="toolbar-label">Open Boxes:</span></div>
+                <div class="k-widget k-grid k-secondary">
+                    <div class="k-loading-mask" id="OpenBox_Loading_#=data.Id#" style="width: 100%; height: 100%; top: 0px; left: 0px; display: none">
+                        <span class="k-loading-text">Loading...</span>
+                        <div class="k-loading-image"></div>
+                        <div class="k-loading-color"></div>
+                    </div>
+
+                    <table cellspacing="0">
+                        <colgroup>
+                            <col width="60px" />
+                            <col />
+                            <col />
+                            <col />
+                            <col width="75px" />
+                        </colgroup>
+                        <thead class="k-grid-header">
+                            <tr>
+                                <th class="k-header"><span class="k-link">Id</span></th>
+                                <th class="k-header"><span class="k-link">Boxes</span></th>
+                                <th class="k-header"><span class="k-link">Total Qty</span></th>
+                                <th class="k-header"><span class="k-link">Counting Date</span></th>
+                                <th class="k-header"><span class="k-link">&nbsp;</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="OpenBox_#=data.Id#"></tbody>
+                    </table>
+                </div>
+                <div class="k-pager-wrap k-grid-pager pagerTop k-widget" style="border-width: 0px 0px 1px;">
+                    <a href="javascript:;"
+                       class="k-pager-refresh k-link"
+                       title="Refresh"
+                       onclick='styleCountingListVm.refreshChildsFor("#=data.Id#")'>
+                        <span class="k-icon k-i-refresh">Refresh</span>
+                    </a>
+                </div>
+            </div>
+        </td>
+    </tr>
+</script>
+
+
+
+<script type="text/kendo-tmpl" id="style-sealedbox-row-template">
+    <tr class="k-master-row">
+        <td>#=data.Id#</td>
+        <td>#=data.Breakdown#</td>
+        <td>#=data.BoxQuantity#</td>
+        <td>#=data.TotalBoxesQuantity#</td>
+        <td>#=data.CountingDateFormatted#</td>
+        @if (AccessManager.CanEditStyle())
+        {
+            <td>
+                <a href='javascript: void(0)' class='k-button' onclick='styleCountingListVm.editSealedBox(this, "#=data.Id#", "#=data.StyleId#")'>Edit</a>
+                <a href='javascript: void(0)' class='k-button' style='margin-top:4px' onclick='styleCountingListVm.deleteSealedBox(this, "#=data.Id#", "#=data.StyleId#")'>Delete</a>
+            </td>
+        }
+    </tr>
+</script>
+
+<script type="text/kendo-tmpl" id="style-openbox-row-template">
+    <tr class="k-master-row">
+        <td>#=data.Id#</td>
+        <td>#=data.BoxQuantity#</td>
+        <td>#=data.TotalBoxesQuantity#</td>
+        <td>#=data.CountingDateFormatted#</td>
+        @if (AccessManager.CanEditStyle())
+        {
+            <td>
+                <a href='javascript: void(0)' class='k-button' onclick='styleCountingListVm.editOpenBox(this, "#=data.Id#", "#=data.StyleId#")'>Edit</a>
+                <a href='javascript: void(0)' class='k-button' style='margin-top:4px' onclick='styleCountingListVm.deleteOpenBox(this, "#=data.Id#", "#=data.StyleId#")'>Delete</a>
+            </td>
+        }
+    </tr>
+</script>
+
+
+<script type="text/javascript">
+    var styleCountingListVm = null;
+
+    $(document).ready(function() {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        var settings = {
+            liteCountingByNameList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.LiteCountingByNameList)),
+            liteCountingStatusList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.LiteCountingStatusList)),
+
+            urls: {
+                getAllUpdates: '@Url.Action("GetAllUpdates", "InventoryLiteCounting")',
+
+                getStyles: '@Url.Action("GetAll", "InventoryLiteCounting")',
+
+                editStyleCountingInfo: '@Url.Action("Edit", "InventoryLiteCounting")',
+
+                editStyleLocation: '@Url.Action("EditStyleLocation", "InventoryCounting")',
+
+                getSealedBoxes: '@Url.Action("GetSealedBox", "SealedBoxCounting")',
+                createSealedBox: '@Url.Action(MVC.SealedBoxCounting.OnCreateItem())',
+                editSealedBox: '@Url.Action(MVC.SealedBoxCounting.OnUpdateItem())',
+                deleteSealedBox: '@Url.Action(MVC.SealedBoxCounting.DeleteBox())',
+
+                getOpenBoxes: '@Url.Action("GetOpenBox", "OpenBoxCounting")',
+                createOpenBox: '@Url.Action(MVC.OpenBoxCounting.OnCreateItem())',
+                editOpenBox: '@Url.Action(MVC.OpenBoxCounting.OnUpdateItem())',
+                deleteOpenBox: '@Url.Action(MVC.OpenBoxCounting.DeleteBox())',
+            }
+        };
+
+        styleCountingListVm = new StyleLiteCountingListViewModel(model, settings);
+
+        ko.applyBindings(styleCountingListVm, document.getElementById('page-content'));
+    });
+</script>

@@ -1,0 +1,279 @@
+﻿<div id="sales-by-date-graph">
+    <div class="graph-button-top-panel row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"
+             data-bind="foreach: types">
+            <button type="button"
+                    class="btn btn-default"
+                    data-bind="css: { 'btn-success': isSelected, 'btn-default': !isSelected() }, click: select">
+                <span data-bind="text: label"></span>
+            </button>
+        </div>
+    </div>
+
+    <div id="salesByDate" style="min-width: 300px; height: 300px; max-width: 600px; margin: 0 auto"></div>
+
+    <div class="graph-button-bottom-panel row">
+        <div class="col-lg-2" style="text-align: right">
+
+        </div>
+        <div class="col-lg-8"
+             data-bind="foreach: periods">
+            <button type="button"
+                    class="btn btn-default"
+                    data-bind="css: { 'btn-success': isSelected, 'btn-default': !isSelected() }, click: select">
+                <span data-bind="text: label"></span>
+            </button>
+        </div>
+        <div class="col-lg-2" style="text-align: left">
+
+        </div>
+        <div class="clearfix"></div>
+    </div>
+</div>
+
+<script>
+    var SaleByDateGraphViewModel = function() {
+        var self = this;
+
+        self.chart = null;
+        self.chartData = null;
+
+        self.selectedPeriod = ko.observable(0);
+        self.selectedType = ko.observable(0);
+        
+        self.periods =[
+            {
+                label: 'week',
+                value: 0,
+            },
+            {
+                label: '3 months',
+                value: 1,
+            },
+            {
+                label: 'year',
+                value: 2,
+            }
+        ];
+
+        self.types = [
+            {
+                label: 'm',
+                value: 3,
+            },
+            {
+                label: 'o',
+                value: 2,
+            },
+            {
+                label: '#',
+                value: 0,
+            },
+            {
+                label: '$',
+                value: 1,
+            }
+        ];
+
+        $.each(self.periods, function(i, n) {
+            n.isSelected = ko.computed(function() {
+                return self.selectedPeriod() == n.value;
+            });
+            n.select = function() {
+                self.selectedPeriod(n.value);
+                self.requestData();
+            }
+        });
+
+        $.each(self.types, function (i, n) {
+            n.isSelected = ko.computed(function () {
+                return self.selectedType() == n.value;
+            });
+            n.select = function () {
+                self.selectedType(n.value);
+                self.requestData();
+                //self.showChartData();
+            }
+        });
+
+        self.getPeriodLabel = function(period, year) {
+            if (period == 0) {
+                if (year == 0)
+                    return "Last 7 days";
+                return "Same Week Last Year";
+            }
+            if (period == 1) {
+                if (year == 0)
+                    return "Last 3 month";
+                return "Same 3 Month Last Year";
+            }
+            if (period == 2) {
+                if (year == 0)
+                    return (new Date().getFullYear()) + "/" + (new Date().getFullYear() - 1);
+                return (new Date().getFullYear() - 1) + "/" + (new Date().getFullYear() - 2);
+            }
+            return "-";
+        }
+
+        self.requestData = function () {
+            console.log('requestData');
+            while (self.chart.series.length > 0)
+                self.chart.series[0].remove(true);
+
+            self.chart.showLoading();
+
+            $.ajax({
+                cache: false,
+                url: '@Url.Action("GetSalesByPeriod", "Dashboard")',
+                data: {
+                    periodType: self.selectedPeriod(),
+                    valueType: self.selectedType(),
+                },
+                success: function(result) {
+                    self.chart.hideLoading();
+
+                    if (result.IsSuccess) {
+                        console.log('setCategories');
+                        self.chart.xAxis[0].setCategories(result.Data.Labels[2], true);
+
+                        var isWeekType = self.selectedPeriod() == 0;
+
+                        for (var i = 0; i < result.Data.Labels[0].length; i++) {
+                            var isPrediction = isWeekType && i >= 7;
+                            result.Data.UnitSeries[0][i] = {
+                                y: result.Data.UnitSeries[0][i],
+                                name: result.Data.Labels[0][i],
+                                color: isPrediction ? 'gray' : null,
+                                marker: {
+                                    fillColor: isPrediction ? 'gray' : null
+                                }
+                            },
+                            result.Data.PriceSeries[0][i] = {
+                                y: result.Data.PriceSeries[0][i],
+                                name: result.Data.Labels[0][i],
+                                color: isPrediction ? 'gray' : null,
+                                marker: {
+                                    fillColor: isPrediction ? 'gray' : null
+                                }
+                            },
+                            result.Data.UnitSeries[1][i] = {
+                                y: result.Data.UnitSeries[1][i],
+                                name: result.Data.Labels[1][i],
+                            },
+                            result.Data.PriceSeries[1][i] = {
+                                y: result.Data.PriceSeries[1][i],
+                                name: result.Data.Labels[1][i]
+                            }
+                        }
+
+                        self.chartData = result.Data;
+                        self.showChartData();
+                    }
+                }
+            });
+        };
+
+        self.showChartData = function () {
+            while (self.chart.series.length > 0)
+                self.chart.series[0].remove(true);
+            self.chart.yAxis[0].setExtremes(null, null);
+
+            if (self.chartData == null)
+                return;
+
+            if (self.selectedType() == 0 || self.selectedType() == 2 || self.selectedType() == 3) {
+                self.chart.yAxis[0].setTitle({
+                    text: 'units'
+                });
+                self.chart.addSeries({
+                    name: self.getPeriodLabel(self.selectedPeriod(), 0),
+                    data: self.chartData.UnitSeries[0],
+                });
+                self.chart.addSeries({
+                    name: self.getPeriodLabel(self.selectedPeriod(), -1),
+                    data: self.chartData.UnitSeries[1],
+                    tooltip: {
+                        //headerFormat: '<span style="font-size: 10px">{point.name}</span><br/>',
+                        //pointFormat: '{series.name}: <b>{point.y}</b>'
+                    },
+                });
+            }
+            if (self.selectedType() == 1) {
+                self.chart.yAxis[0].setTitle({
+                    text: '$'
+                });
+                self.chart.addSeries({
+                    name: self.getPeriodLabel(self.selectedPeriod(), 0) +', $',
+                    data: self.chartData.PriceSeries[0],
+                });
+                self.chart.addSeries({
+                    name: self.getPeriodLabel(self.selectedPeriod(), -1) + ', $',
+                    data: self.chartData.PriceSeries[1],
+                    //tooltip: {
+                    //    pointFormat: '{point.y}<br/>{series.name}: <b>{point.x}</b>'
+                    //},
+                });
+            }
+        }
+
+        self.init = function() {
+            self.chart = new Highcharts.Chart({
+                chart: {
+                    renderTo: 'salesByDate',
+                    events: {
+                        load: function () {
+                            self.chart = this;
+                            self.requestData();
+                        }
+                    },
+                    //spacing: [0,0,0,0]
+                },
+                credits: {
+                    enabled: false
+                },
+                title: {
+                    text: ""
+                },
+                //title: {
+                //    text: 'Sales by period',
+                //    x: -20 //center
+                //},
+                //subtitle: {
+                //    text: 'Source: WorldClimate.com',
+                //    x: -20
+                //},
+                xAxis: {
+                    categories: []// ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                    //'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                },
+                yAxis: {
+                    title: {
+                        text: 'Qty',
+                    },
+                    plotLines: [{
+                        value: 0,
+                        width: 1,
+                        color: '#808080'
+                    }]
+                },
+                tooltip: {
+                    valueSuffix: '' //$
+                },
+                legend: {
+                    layout: 'horizontal',
+                    align: 'center',
+                    verticalAlign: 'bottom',
+                    borderWidth: 0
+                },
+            });
+        }
+
+        self.init();
+    }
+
+    $(document).ready(function () {
+        salesByDateGraphViewModel = new SaleByDateGraphViewModel();
+        ko.applyBindings(salesByDateGraphViewModel, document.getElementById("sales-by-date-graph"));
+    });
+</script>

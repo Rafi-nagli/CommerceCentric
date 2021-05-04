@@ -1,0 +1,16 @@
+﻿@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@model List<int>
+           
+@{
+    var itemTypes = OptionsHelper.ItemTypesAsArray;
+}
+
+@for (int i = 0; i < itemTypes.Count; i++)
+{
+    <div>
+        @Html.CheckBox(ViewData.TemplateInfo.GetFullHtmlFieldName(i.ToString()), Model.Any(t => t == itemTypes[i].Id))
+        <span> </span>
+        @itemTypes[i].Name
+    </div>
+}

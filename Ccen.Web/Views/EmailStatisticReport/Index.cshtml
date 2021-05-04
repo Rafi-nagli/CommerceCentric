@@ -1,0 +1,206 @@
+﻿@using Amazon.Web.ViewModels
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@{
+    ViewBag.Title = "Emails Statistic Report";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+
+}
+
+<script>
+    var EmailStatisicReportViewModel = function (settings) {
+        var self = this;
+
+        self.settings = settings;
+
+        self.grid = $(settings.gridId).data("kendoGrid");
+
+        ko.BaseViewModel.call(self);
+
+        var baseDate = new Date();
+        baseDate.setHours(0, 0, 0, 0);
+        self.defaultDateFrom = baseDate.addDays(-1);
+        self.dateFrom = ko.observable(self.defaultDateFrom);
+
+        self.defaultDateTo = baseDate;
+        self.dateTo = ko.observable(self.defaultDateTo);
+
+        self.search = function () {
+            var params = self.getGridParams();
+
+            if (self.grid.dataSource.page() != 1) {
+                self.grid.dataSource.page(1);
+            }
+            self.grid.dataSource.read(params);
+        };
+
+        self.searchByButton = function () {
+            self.search(true);
+        };
+
+        self.clearAndSearch = function () {
+            self.clear();
+            self.search(false);
+        };
+
+
+        self.getGridParams = function () {
+            return {
+                dateFrom: self.dateFrom(),
+                dateTo: self.dateTo()
+            };
+        }
+
+        self.clear = function () {
+            self.dateFrom(self.defaultDateFrom);
+            self.dateTo(self.defaultDateTo);
+            self.search();
+        };
+
+        helper.ui.addTopPager(self.grid);
+
+        self.search(false);
+    };
+</script>
+
+<div id="page-content">
+    <ol class="breadcrumb">
+        <li><a href="#">Reports</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <table>
+                <tr>
+                    <th>From</th>
+                    <td>
+                        <input data-bind="kendoDateTimePicker: { value: dateFrom, format: 'MM/dd/yyyy HH:mm' }" />
+                    </td>
+                    <th>To</th>
+                    <td>
+                        <input data-bind="kendoDateTimePicker: { value: dateTo, format: 'MM/dd/yyyy HH:mm' }" />
+                    </td>
+                </tr>
+            </table>
+            <button class="k-button filter-button"
+                    data-bind="click: searchByButton">
+                <span class='glyphicon glyphicon-search am-icon'></span>Search
+            </button>
+            <button class="k-button filter-button"
+                    data-bind="click: clearAndSearch">
+                <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+            </button>
+        </div>
+    </div>
+
+    <div>
+        @(Html.Kendo().Grid<EmailStatisticReportViewModel>()
+            .Name("grid")
+            .Columns(columns =>
+            {
+                columns.Bound(c => c.Date)
+                    .Format("{0:MM.dd.yyyy}")
+                    .Title("Date")
+                    .Width(100);
+
+                columns.Bound(c => c.IncomingEmails)
+                    .Sortable(false)
+                    .Filterable(false)
+                    .Width(120);
+
+                columns.Bound(c => c.OutgoingEmails)
+                    .Sortable(false)
+                    .Filterable(false)
+                    .Width(120);
+
+                columns.Bound(c => c.User1Emails)
+                    .Title("sarah")
+                    .ClientTemplate("#=User1Emails#/#=User1Dismissed#")
+                    .Sortable(false)
+                    .Filterable(false)
+                    .Width(120);
+
+                columns.Bound(c => c.User2Emails)
+                    .Title("Matt")
+                    .ClientTemplate("#=User2Emails#/#=User2Dismissed#")
+                    .Sortable(false)
+                    .Filterable(false)
+                    .Width(120);
+
+                columns.Bound(c => c.User3Emails)
+                    .Title("vera")
+                    .ClientTemplate("#=User3Emails#/#=User3Dismissed#")
+                    .Sortable(false)
+                    .Filterable(false)
+                    .Width(120);
+
+                columns.Bound(c => c.User4Emails)
+                    .Title("igor")
+                    .ClientTemplate("#=User4Emails#/#=User4Dismissed#")
+                    .Sortable(false)
+                    .Filterable(false)
+                    .Width(120);
+
+                columns.Bound(c => c.OtherEmails)
+                    .ClientTemplate("#=OtherEmails#/#=OtherDismissed#")
+                    .Sortable(false)
+                    .Filterable(false)
+                    .Width(120);
+
+                columns.Bound(c => c.SystemEmails)
+                    .Sortable(false)
+                    .Filterable(false)
+                    .Width(120);
+
+            })
+            //.Events(e => e.DataBound("dataBound"))
+            .Sortable(conf => conf.Enabled(true).SortMode(GridSortMode.SingleColumn))
+            .Filterable(conf => conf.Enabled(true))
+            .Navigatable(conf => conf.Enabled(false))
+            .Scrollable(conf => conf.Enabled(false))
+            .Selectable(conf => conf.Enabled(false))
+            .Pageable(conf => conf.Enabled(true).Refresh(true))
+            .AutoBind(false)
+            .DataSource(dataSource => dataSource
+                .Ajax()
+                .ServerOperation(false)
+                .PageSize(50)
+                .Sort(conf => conf.Add(o => o.Date))
+                .Read(read => read.Action("GetAll", "EmailStatisticReport")
+                  .Data("GetGridParams")))
+        )
+    </div>
+</div>
+
+<script>
+    var emailStatisticVm = null;
+
+    function GetGridParams() {
+        console.log("GetGridParams");
+        if (emailStatisticVm != null)
+            return emailStatisticVm.getGridParams();
+        return {};
+    }
+
+    $(document).ready(function () {
+        var settings = {
+            gridId: "#grid"
+        };
+
+        emailStatisticVm = new EmailStatisicReportViewModel(settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+        ko.applyBindings(emailStatisticVm, document.getElementById('page-content'));
+    });
+</script>

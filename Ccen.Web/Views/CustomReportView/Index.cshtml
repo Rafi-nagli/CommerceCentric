@@ -1,0 +1,267 @@
+﻿@using Amazon.Web.ViewModels
+@using Kendo.Mvc.UI
+@using Ccen.Web.ViewModels.CustomReports
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<script type="text/javascript">
+    var customReportViewModel = function (model, settings) {
+        var self = this;
+        self.settings = settings;
+        self.gridId = settings.gridId;
+        self.grid = $("#" + self.gridId).data("kendoGrid");
+        self.type = model.ReportDataType;
+
+        self.prepareItemRow = function (r) {
+            r.text = ko.observable(r.Text);
+            r.value = ko.observable(r.Value);
+        };
+
+        self.prepareFilterRow = function (r) {
+
+            r.field = ko.observable(r.Field);
+            r.title = ko.observable(r.Field.Title);
+            r.name = ko.observable(r.Field.FullName);
+            r.dataType = ko.observable(r.Field.DataType);
+            r.predefinedFieldId = ko.observable(r.PredefinedFieldId);
+            r.operationString = ko.observable(r.OperationString);
+            r.valueString = ko.observable(r.ValueString);
+
+            r.id = ko.observable(r.Id);
+            var availableOperations = r.AvailableOperationsString;
+            availableOperations.forEach(function (f) { self.prepareOperationRow(f); });
+
+            var availableItems = r.Items;
+            availableItems.forEach(function (f) { self.prepareItemRow(f); });
+            r.availableItems = ko.observable(availableItems);
+        };
+
+        self.prepareOperationRow = function (r) {
+            r = ko.observable(r);
+        };
+
+        self.initFilters = model.Filters;
+        var usedFilters = model.Filters;
+        usedFilters.forEach(function (f) { self.prepareFilterRow(f); });
+        self.usedFilters = ko.observableArray(usedFilters);
+        console.log(self.usedFilters());
+
+        self.dataBound = function () {
+        }
+
+        self.getGridParams = function () {
+            var dataModel = {
+                Id: 1,
+                ReportDataType: self.type,
+                Filters: $.map(self.usedFilters(), function (val, key) {
+                    return {
+                        Id: 1,
+                        ValueString: val.Field.DataType == "datetime" ? kendo.toString(val.valueString(), 'MM/dd/yyyy') : val.valueString()
+                    }
+                }),
+                ValuesListString: $.map(self.usedFilters(), function (val, key) {
+                    try {
+                        return val.valueString().join();
+                    }
+                    catch{ return val.valueString()}
+                }).join(";"),
+                IdsListString: $.map(self.usedFilters(), function (val, key) {
+                    return val.Id;
+                }).join(";"),
+                ValuesList: $.map(self.usedFilters(), function (val, key) {
+                    try {
+                        return val.valueString().join();
+                    }
+                    catch { return val.valueString() }
+                })
+            };
+            return dataModel;
+        };
+
+        self.search = function () {
+            var m =  self.getGridParams();
+            console.log(m);
+            self.grid.dataSource.read(m);
+        }
+
+        self.getExportUrl = function () {
+            var m = self.getGridParams();
+            return self.settings.exportUrl + "?ValuesListString=" + m.ValuesListString + "&IdsListString=" + m.IdsListString + "&ReportDataType=" + m.ReportDataType
+        }        
+
+        self.clear = function () {
+            var i = 0;
+            usedFilters.forEach(function (f) {                
+                f.valueString(self.initFilters[i].ValueString);
+                i++;
+            });
+        }
+
+        self.dateChanged = function (f) {
+            f.sender.element.trigger("change" + f.sender.element.val());
+            f.sender.element.closest("div").find("input[type='hidden']").val(f.sender.element.val());
+            console.log(f.sender.element.closest("div").find("input[type='hidden']").val());
+            f.sender.element.closest("div").find("input[type='hidden']").trigger("change");
+            //f.sender.element.closest("div").find("input[type='text']").blur();
+        }
+        
+        helper.ui.addTopPager(self.grid);       
+    }
+</script>
+
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/orders.ico" />
+}
+
+
+<div id="page-content">
+    <ol class="breadcrumb">
+        <li><a href="#">Reports</a></li>
+        <li>Custom Reports</li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <table id="droptarget">
+                <tbody data-bind="foreach: usedFilters">
+                    <tr>
+                        <td style="width: 170px">
+                            <span data-bind="text: Header"></span>
+                        </td>
+                        <td>
+                            <div data-bind="if: Items.length > 0 && !Multi">
+                                <input data-bind="kendoDropDownList: { data: availableItems, value: valueString, dataTextField: 'text', optionLabel: 'Select...', dataValueField: 'value', change: $root.operatorChanged }" />
+                                <input type="hidden" data-bind="value: ValueString">
+                            </div>
+                            <div data-bind="if: Items.length > 0 && Multi">
+                                <input data-bind="kendoMultiSelect: { data: availableItems, value: valueString, dataTextField: 'text', optionLabel: 'Select...', dataValueField: 'value', change: $root.operatorChanged }" />
+                                <input type="hidden" data-bind="value: ValueString">
+                            </div>
+                            <div data-bind="if: Field.DataType === 'datetime' && Items.length == 0">
+                                <input data-bind="kendoDatePicker: { value: valueString, format: 'MM/dd/yyyy' }"
+                                       class="k-input" style="width: 100%;">
+                            </div>
+                            <div data-bind="if: Field.DataType !== 'datetime' && Items.length == 0">
+                                <input type="text" data-bind="value: valueString,
+                                           valueUpdate: 'afterkeydown'"
+                                       class=" k-textbox">
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <button class="k-button"
+                    style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                    data-bind="click: search">
+                <span class='glyphicon glyphicon-search am-icon'></span>Search
+            </button>
+            <button class="k-button"
+                    style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                    data-bind="click: clear">
+                <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+            </button>
+            <a data-bind="attr: { href: getExportUrl() }" class="k-button" style="margin-right: 20px">
+                <img src="/Images/excel.png" width="20" style="margin-right:2px">
+                Export
+            </a>
+        </div>
+    </div>
+
+    @ViewBag.Columns
+    <div>
+        @(Html.Kendo().Grid<object>()
+          .Name("grid")
+          .Columns(columns =>
+          {
+              var fields = Model.Fields;
+              if (fields == null)
+              {
+                  return;
+              }
+              foreach (var f in fields)
+              {
+                  if (f == null)
+                  {
+                      continue;
+                  }
+
+                  if (f.DisplayType == DisplayTypeEnum.Image)
+                  {
+                      columns.Bound(f.FullName).Title("").ClientTemplate(String.Format("#= tmpl.t('image-template', data.{0})#", f.FullName)).Width(f.Width);
+                      continue;
+                  }
+
+                  if (f.DisplayType == DisplayTypeEnum.Link)
+                  {
+                      columns.Bound(f.FullName).Title(f.Title).ClientTemplate(String.Format("#= tmpl.t('link-template', data.{0})#", f.FullName)).Width(f.Width);
+                      continue;
+                  }
+
+                  if (f.DisplayType == DisplayTypeEnum.LinkButton)
+                  {
+                      columns.Bound(f.FullName).Title("").ClientTemplate(String.Format("#= tmpl.t('link-button-template', data.{0})#", f.FullName)).Width(f.Width);
+                      continue;
+                  }
+
+                  if (f.Width == -1)
+                  {
+                      columns.Bound(f.FullName).Title(f.Title).Format(f.Format);
+                      continue;
+                  }
+                  columns.Bound(f.FullName).Title(f.Title).Width(f.Width).Visible(f.Width > 0).Format(f.Format);
+              }
+
+          })
+          .Pageable(conf => conf.Enabled(true).Refresh(true))
+          .AutoBind(false)
+
+          .DataSource(dataSource => dataSource
+              .Ajax()
+
+              //.Sort(conf => conf.Add("SortField").Descending())
+              .PageSize(50)
+              .Read(read =>  read.Action(MVC.CustomReportView.ActionNames.GetReportItems, MVC.CustomReportView.Name).Data("GetGridParams"))))
+    </div>
+</div>
+
+<script type="text/x-kendo-template" id="link-template">
+    <a href="#=data.HRef#" target="_blank">
+        #=data.Text#
+    </a>
+</script>
+
+<script type="text/x-kendo-template" id="link-button-template">
+    <a href="#=data.HRef#" target="_blank"
+       class="k-button">
+        <span class='glyphicon glyphicon-#=data.Icon# am-icon'></span>View
+    </a>
+</script>
+
+<script type="text/x-kendo-template" id="image-template">
+    <img src="#=data#" style="max-width: 75px; max-height: 75px" ; />
+</script>
+
+
+<script>
+    var customReportViewVm = null;
+    function GetGridParams() {
+        if (customReportViewVm == undefined)
+            return {};
+        return customReportViewVm.getGridParams();
+    }
+
+    $(document).ready(function () {
+        console.log("onReady");
+        var settings = {
+            gridId: "grid",
+            exportUrl: '@Url.Action(MVC.CustomReportView.ExportToExcel())',
+        }
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        customReportViewVm = new customReportViewModel(model, settings);
+        ko.applyBindings(customReportViewVm, document.getElementById('page-content'));
+    });
+</script>

@@ -1,0 +1,7 @@
+﻿@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@model string
+           
+@(Html.Kendo().DropDownListFor(m => m).BindTo(OptionsHelper.Countries)
+                        .Value(Model ?? Constants.DefaultCountryCode)
+                        .HtmlAttributes(new { id = ViewData.TemplateInfo.GetFullHtmlFieldName(string.Empty) + "_wrapper" }))

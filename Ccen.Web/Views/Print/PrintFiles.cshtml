@@ -1,0 +1,63 @@
+﻿@using Amazon.Web.ViewModels
+@using Kendo.Mvc.UI
+@{
+    ViewBag.Title = "Print Files";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/print.ico" />
+}
+<script>
+    var rowNumber = 0;
+
+    function resetRowNumber(e) {
+        rowNumber = 0;
+    }
+
+    function renderNumber(data) {
+        $('#total').text(rowNumber + 1 + " items");
+        return ++rowNumber;
+    }
+</script>
+
+
+<div id="page-content">
+    <ol class="breadcrumb">
+        <li><a href="#">Labels</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div>
+        @(Html.Kendo().Grid<LabelPrintPackViewModel>()
+            .Name("grid")
+            .Columns(columns =>
+            {
+                columns.Bound(c => c.Id)
+                    .ClientTemplate("#= renderNumber(data) #")
+                    .Title("#")
+                    .Width(40)
+                    .Sortable(false);
+                columns.Bound(c => c.FormattedFileName)
+                    .Title("File Name")
+                    .ClientTemplate("<a target='_blank' href='" + @Url.Action("GetLabelPrintFile", "Print") + "?id=#=Id#'>#=FormattedFileName#</a>")
+                    .Width(260);
+                columns.Bound(c => c.NumberOrPerson)
+                    .Title("Count / Person");
+                columns.Bound(c => c.FormattedCreateDate)
+                    .Width(180)
+                    .Title("Create Date");
+                columns.Bound(c => c.FileName)
+                    .Title("")
+                    .Width(100)
+                    .ClientTemplate("<a target='_blank' class='k-button k-button-icontext' href='" + @Url.Action("GetLabelPrintFile", "Print") + "?id=#=Id#'>View</a>");
+            })
+                         .Pageable(conf => conf.Enabled(true))
+                    .DataSource(dataSource => dataSource
+                             .Ajax()
+                             .PageSize(50)
+                             .Read(read => read.Action("GetPrintFiles", "Print")))
+            )
+
+    </div>
+</div>

@@ -1,0 +1,76 @@
+﻿@using System.Security.AccessControl
+@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@{
+    bool isDebugMode = false;
+    #if (DEBUG)
+        isDebugMode = false;
+    #endif
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>@ViewBag.Title</title>
+
+    @RenderSection("Icon", required:false)
+
+    @RenderSection("Icon", required: false)
+    @Styles.Render("~/Content/css-bootstrap")
+    @Styles.Render("~/Content/kendo/2013/bootstrap")
+    @Styles.Render("~/Content/tooltip/tip-twitter/tip-twitter.css")
+    @Styles.Render("~/Content/bootstrap")
+    @Scripts.Render("~/bundles/modernizr")
+    @*@Scripts.Render("~/bundles/jquery")*@
+
+    <script src="https://code.jquery.com/jquery-1.9.1.min.js" integrity="sha256-wS9gmOZBqsqWxgIVgA8Y9WcQOa7PgSIX+rPA0VL2rbQ=" crossorigin="anonymous"></script>
+
+    @Scripts.Render("~/bundles/jqueryval")
+    @Scripts.Render("~/bundles/kendo")
+    @Scripts.Render("~/bundles/ko3")
+    @Scripts.Render("~/bundles/utils")
+    @Scripts.Render("~/bundles/helpers")
+    @Scripts.Render("~/bundles/common")
+    @Scripts.Render("~/bundles/app")
+    @Scripts.Render("~/bundles/models")
+    @Scripts.Render("~/bundles/components")
+    @Scripts.Render("~/bundles/bootstrap")
+
+    <script src="~/Scripts/highcharts/4.2.3/js/highcharts.js"></script>
+</head>
+
+<body class="k-content amz-content amz" style="background-color: white">
+    <div class="console"></div>
+
+    <div class="mobile-page">
+        <header id="page-header">
+            <table class="noborder" style="width: 100%">
+                @if (Ccen.Web.AppSettings.IsDebug || isDebugMode)
+                {
+                    <tr class="debug-status">
+                        <td colspan="3">Database: @AppInfoHelper.GetDatebaseName() @(isDebugMode ? "- Debug" : "- Release")</td>
+                    </tr>
+                }
+                <tr>
+                    <td>
+                        <div class="title">
+                            <h1>CommerCentric</h1>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </header>
+        <section class="main">
+            @RenderBody()
+        </section>
+        <footer></footer>
+    </div>
+    
+    @RenderSection("scripts", false)
+</body>
+</html>

@@ -1,0 +1,316 @@
+﻿@using Amazon.Core.Models
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Products.Edits.ItemCopyViewModel
+@{
+    Layout = null;
+}
+
+@using Amazon.Web.HtmlExtend
+@using Kendo.Mvc.UI
+@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var ItemCopyModel = function(model, settings) {
+        var self = this;
+
+        self.id = ko.observable(model.Id);
+        self.parentASIN = ko.observable(model.ParentASIN);
+        self.market = ko.observable(model.Market);
+        self.marketplaceId = ko.observable(model.MarketplaceId);
+        
+        self.prepareItem = function (entry, index) {
+            entry.isSelected = ko.observable(entry.IsSelected);
+            entry.isAlreadyExists = ko.observable(entry.IsAlreadyExists);
+            entry.canEdit = ko.computed(function () {
+                return !entry.IsSelected;
+            });
+        }
+
+        model.Marketplaces.forEach(function (entry, index) {
+            self.prepareItem(entry, index);
+        });
+
+        self.marketplaces = ko.observable(model.Marketplaces);
+        console.log(self.marketplaces());
+
+        self.copyAction = function (data, e) {
+            var sender = $(e.target);
+
+            helper.ui.showLoading(sender, "copying...");
+            //popupWindow.customAction("requestBarcode");
+            $.ajax({
+                url: '@Url.Action("Copy", "ItemEdit")',
+                data: JSON.stringify(self.getModel()),
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                type: 'POST',
+                cache: false,
+                success: function (result) {
+                    helper.ui.hideLoading(sender);
+                    if (result.IsSuccess)
+                        self.close();
+                }
+            });
+        }
+
+        self.getModel = function () {
+            var markets = $.map(self.marketplaces(), function (n) {
+                console.log(n.isSelected() + ": " + n.Name);
+
+                return {
+                    Market: n.Market,
+                    MarketplaceId: n.MarketplaceId,
+                    IsSelected: n.isSelected(),
+                }
+            });
+
+            markets = $.grep(markets, function (m) { return m.IsSelected; })
+
+            return {
+                Id: self.id(),
+                ParentASIN: self.parentASIN(),
+                Market: self.market(),
+                MarketplaceId: self.marketplaceId(),
+                Marketplaces: markets
+            };
+        }
+
+        self.close = function() {
+            popupWindow.close();
+        }
+    };
+
+
+    $(document).ready(function() {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var itemCopyModel = new ItemCopyModel(model);
+
+        ko.applyBindings(itemCopyModel, document.getElementById('item-copy-container'));
+    });
+</script>
+
+
+<div id="item-copy-container" class="inventory-popup">
+    @Html.ValidationSummary(true)
+    <input type="hidden" name="Market" data-bind="value: market" />
+    <input type="hidden" name="MarketplaceId" data-bind="value: marketplaceId" />
+    <input type="hidden" name="ParentASIN" data-bind="value: parentASIN" />
+    <div class="k-edit-form-container" style="margin-bottom: 15px; width: 450px">
+        <div>
+            <div class="k-widget k-grid k-secondary grid-small">
+                <table style="width: 450px">
+                    <colgroup>
+                        <col style="width: 40px" />
+                        <col style="width: 80px" />
+                        <col style="width: 250px" />
+                    </colgroup>
+                    <thead class="k-grid-header">
+                        <tr>
+                            <th class="k-header"></th>
+                            <th class="k-header">To market</th>
+                            <th class="k-header">Style Already Exists</th>
+                        </tr>
+                    </thead>
+                    <tbody data-bind="foreach: marketplaces">
+                        <tr class="k-master-row">
+                            <td>
+                                <input type="checkbox" data-bind="checked: isSelected, enable: canEdit()" />
+                            </td>
+                            <td><span data-bind="text: Name"></span></td>
+                            <td>
+                                <span data-bind="visible: isAlreadyExists">Yes</span>
+                                <span data-bind="visible: !isAlreadyExists()">No</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="clear"></div>
+        </div>
+
+        <div class="k-edit-buttons k-state-default" style="text-align: right">
+            <table style="margin-left: auto; text-align: right">
+                <tr>
+                    <td>
+                        <a class="k-button k-button-icontext" data-bind="click: copyAction">
+                            <span class="k-icon k-update"></span> Copy
+                        </a>
+                    </td>
+                    <td>
+                        <a class="k-button k-button-icontext" data-bind="click: close">
+                            <span class="k-icon k-cancel"></span> Close
+                        </a>
+                    </td>
+                </tr>
+            </table>          
+           
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@*<script>
+    var ItemCopyModel = function(model, settings) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+
+        self.market = ko.observable(model.Market);
+        self.marketplaceId = ko.observable(model.MarketplaceId);
+
+        self.isLoading = ko.observable(false);
+
+        self.marketplaces = ko.observable(model.Marketplaces);
+
+        self.prepareVariation = function(entry, index) {
+            entry.isSelected = ko.observable(entry.IsSelected);
+            entry.canEdit = ko.computed(function () {
+                return !entry.IsSelected;
+            });
+        }
+
+        self.getModel = function() {
+            return {
+                MarketplaceList: $.map(self.marketplaces(), function (n) {
+                    console.log(n.isSelected() + ": " + n.Name);
+
+                    return {
+                        Market: n.Market,
+                        MarketplaceId: n.MarketplaceId,
+                        IsSelected: n.isSelected(),
+                    }
+                })
+            };
+        }
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function() {
+            return self.errors().length === 0;
+        });
+
+        self.onSubmit = function(data, e) { // function(data, e) {
+            var sender = $(e.target);
+
+            //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+            //http://jsfiddle.net/KHFn8/3238/
+            if (self.isValid()) { //validator.validate() &&
+                console.log("sync validate true");
+                $('#submit').click();
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                e.preventDefault();
+                return false;
+            }
+        };
+    };
+
+    $(document).ready(function() {
+        console.log("onready");
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+            isAdmin: @(AccessManager.CanEditSystemInfo() ? 1 : 0),
+        };
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        var itemCopyModel = new ItemCopyModel(model, settings);
+        ko.applyBindings(itemCopyModel, document.getElementById('copy-item-container'));
+    });
+</script>
+
+<div id="copy-item-container">
+    <div id="edit-container" class="inventory-popup am-item-popup">
+        <div class="k-edit-form-container" style="padding: 10px;">
+
+            <input type="hidden" name="Market" data-bind="value: market" />
+            <input type="hidden" name="MarketplaceId" data-bind="value: marketplaceId" />
+            <input type="hidden" name="Id" data-bind="value: id" />
+
+            <div class="panel panel-default" data-bind="visible: isNew">
+                <div class="panel-heading">Copy to:</div>
+                <div class="panel-body">
+                    <table style="width: 700px">
+                        <colgroup>
+                            <col style="width: 250px" />
+                            <col style="width: 250px" />
+                            <col style="width: 150px" />
+                        </colgroup>
+                        <tr>
+                            <td style="vertical-align: top">
+                                <div data-bind="foreach: marketplaces">
+                                    <input type="checkbox" data-bind="checked: isSelected, enable: canEdit()" /> <span data-bind="Name"></span>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="k-edit-buttons k-state-default popup-button-panel" style="position: static">
+        <table style="width: 100%">
+            <tr>
+                <td>
+                    <table style="margin-left: auto">
+                        <tr>
+                            <td>
+                                <button tabindex="100000"
+                                        type="button"
+                                        id="preSubmit"
+                                        data-bind="click: onSubmit, enable: canSubmit, css: {'k-state-disabled': !canSubmit() }"
+                                        class="k-button k-button-icontext k-grid-update">
+                                    <span class="k-icon k-update"></span>Save
+                                </button>
+
+                                <button type="submit"
+                                        id="submit"
+                                        style="display: none">
+                                    Save
+                                </button>
+                            </td>
+                            <td style="padding-left: 4px">
+                                <button class="k-button k-button-icontext k-grid-cancel"
+                                        type="reset"
+                                        id="cancel"
+                                        tabindex="100001"
+                                        onclick="popupWindow.close()">
+                                    <span class="k-icon k-cancel"></span>Cancel
+                                </button>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>*@

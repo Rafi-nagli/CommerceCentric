@@ -1,0 +1,213 @@
+﻿<script>
+    var AttachOrderToPopupModel = function (model,
+        settings)
+    {
+        var self = this;
+
+        self.popupNode = null;
+        self.popup = null;
+
+        self.settings = settings;
+        self.model = model;
+
+        console.log("orderId: " + self.model.Id);
+
+        self.attachedToOrderId = ko.observable(model.AttachedToOrderId);
+
+        self.attachOrderToUrl = self.settings.urls.attachOrderTo;
+
+        self.submitCallback = self.settings.submitCallback;
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function () {
+            return self.errors().length === 0;
+        });
+
+        self.validate = function () { // function(data, e) {
+            if (self.isValid()) { //validator.validate() &&
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                return false;
+            }
+        };
+
+        self.show = function () {
+            console.log($("#attachOrderToPopup").length);
+            $("#attachOrderToPopup").each(function (i) {
+                var popup = $(this).data("kendoWindow");
+                if (popup != null) {
+                    console.log("close previous setTracking popup");
+
+                    ko.cleanNode($(this)[0]);
+                    popup.close();
+                    popup.destroy();
+                }
+                else {
+                    $(this).remove();
+                }
+            });
+
+            console.log("AttachOrderToPopupModel.create");
+
+            $('body').prepend("<div id='attachOrderToPopup'></div>");
+            self.popupNode = $('#attachOrderToPopup');
+
+            self.popupNode.kendoWindow({
+                modal: true,
+                width: "400px",
+                title: "Attach Order To",
+                visible: false,
+                close: self.closeEvent,
+                actions: [
+                    "Close"
+                ],
+            });
+
+            self.popup = self.popupNode.data("kendoWindow");
+            self.popup.content($("#attachOrderToPopupContent").html());
+            self.popup.center().open();
+
+            ko.applyBindings(self, self.popupNode[0]);
+        };
+
+        self.submit = function () {
+            var defer = $.Deferred();
+            var dataModel = {
+                orderId: self.model.Id,
+                toOrderString: self.attachedToOrderId()
+            };
+            console.log(dataModel);
+            $.ajax({
+                url: self.settings.urls.attachOrderTo,
+                data: JSON.stringify(dataModel),
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                type: 'POST',
+                success: function(result) {
+                    console.log("onSuccess");
+                    if (result != null)
+                        self.attachedToOrderId(result.AttachedToOrderId);
+                    else
+                        self.attachedToOrderId(null);
+                    defer.resolve(result);
+                },
+                error: function() {
+                    defer.reject();
+                }
+            });
+            return defer;
+        }
+
+        self.orderIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: self.settings.urls.getOrderIdList,
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if (action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.onSave = function(data, e) {
+            console.log('AttachOrderToPopupModel.onSave');
+            console.log(self.attachedToOrderId());
+
+            if (self.validate()) {
+                $(e.target).showLoading("updating...");
+                self.submit().done(function (result) {
+                    console.log("result");
+                    console.log(result);
+                    self.submitCallback(result);
+                    self.onClose();
+                });
+            }
+        }
+
+        self.onClose = function() {
+            console.log('AttachOrderToPopupModel.onClose');
+            self.closeEvent();
+            self.popup.close();
+        }
+
+        self.closeEvent = function () {
+            console.log('disable validation');
+            //self.trackingNumber.rules.remove(function (item) {
+            //    console.log(item.rule);
+            //    return item.rule == "required";
+            //});
+            //self.trackingNumber.extend({ validatable: false });
+            console.log('after disable validation');
+        }
+    }
+</script>
+
+<!-- ko stopBinding: true -->
+<div style="display: none">
+    <div id="attachOrderToPopupContent" class="attachOrderToContent">
+        <div class="k-edit-form-container" style="width: auto; font-size: 13px">
+            <div class="inventory-popup">
+                <table style="width: 100%">
+                    <tr>
+                        <td style="text-align: right">
+                            Attach order to:
+                        </td>
+                        <td>
+                            
+                                <input type="text"
+                                       style="width: 180px"
+                                       data-bind="kendoAutoComplete: {
+                                            value: attachedToOrderId,
+                                            data: {},
+                                            highlightFirst: true,
+                                            minLenght: 3,
+                                            dataSource: orderIdSource },
+                                        valueUpdate: 'afterkeydown'"
+                                       class="k-textbox" />
+   
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+
+            <div class="k-edit-buttons k-state-default popup-button-panel" style="position: static">
+                <table style="margin-left: auto">
+                    <tr>
+                        <td style="margin-right: 5px">
+                            <button tabindex="-1"
+                                    data-bind="click: onSave"
+                                    class="k-button">
+                                <span class="k-icon k-update"></span>
+                                <span>Save</span>
+                            </button>
+                        </td>
+                        <td style="vertical-align: bottom">
+                            <button class="k-button k-button-icontext k-grid-cancel"
+                                    data-bind="click: onClose">
+                                <span class="k-icon k-cancel"></span>Cancel
+                            </button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- /ko -->

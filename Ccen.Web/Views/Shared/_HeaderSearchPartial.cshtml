@@ -1,0 +1,98 @@
+﻿<script type="text/javascript">
+    var HeaderSearchModel = function () {
+        var self = this;
+
+        self.orderNumber = ko.observable('');
+
+        self.search = function() {
+            var url = '@Url.Action("Orders", "Order")' + "?orderId=" + self.orderNumber();
+            window.open(url, '_blank');
+        };
+
+        self.searchHistory = new SearchHistoryViewModel({
+            getSearchHistoryUrl: '@Url.Action("GetSearchHistory", "Order")'
+        });
+        self.searchHistory.orderNumber.subscribe(function () {
+            self.orderNumber(self.searchHistory.orderNumber());
+            self.search(true);
+        });
+
+        self.orderIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetOrderIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if (action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.searchByKeyCmd = function (data, event) {
+            if (event.keyCode == 13)
+                self.search(true);
+            return true;
+        };
+    };
+
+    $(document).ready(function() {
+        headerSearchModel = new HeaderSearchModel();
+        ko.applyBindings(headerSearchModel, document.getElementById("header-search-block"));
+    });
+</script>
+
+<div id="header-search-block" class="header-search">
+    <div>
+        @*<div class="pull-left" style="padding: 6px;">
+            Order #
+        </div>*@
+        <div class="pull-left" style="width: 300px">
+            <div class="input-group">
+                <div class="input-group-btn">
+                    <button type="button" class="btn btn-primary dropdown-toggle"
+                            data-bind="event: { mouseover: searchHistory.init }"
+                            data-toggle="dropdown"
+                            aria-haspopup="true"
+                            aria-expanded="false">
+                        <span class='glyphicon glyphicon-menu am-icon'
+                              style="font-size: 14px">
+                        </span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" data-bind="foreach: searchHistory.lastSearchedOrderIdList">
+                        <li data-bind="click: function() { $root.searchHistory.setSearchOrderId($data) }">
+                            <a href="#" data-bind="text: $data"></a>
+                        </li>
+                    </ul>
+                </div>
+
+                <input type="text"
+                       style="width: 220px"
+                       data-bind="kendoAutoComplete: {
+                    value: orderNumber,
+                    data: {},
+                    sugest: true,
+                    highlightFirst: true,
+                    minLenght: 3,
+                    placeholder: 'Order #',
+                    dataSource: orderIdSource },
+                valueUpdate: 'afterkeydown',
+                event: { keypress: searchByKeyCmd }"
+                       class="k-textbox" />
+
+            </div>
+        </div>
+        <div class="clearfix"></div>
+    </div>
+</div>

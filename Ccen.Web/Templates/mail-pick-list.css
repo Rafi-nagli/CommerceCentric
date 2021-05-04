@@ -1,0 +1,29 @@
+﻿.pick-list {
+    color: black;
+    width: 450px;
+    font-family: Verdana,Tahoma,Arial,Helvetica,Sans-Serif;
+}
+
+.pick-list table {
+    padding: 0px;
+    margin: 0px;
+    border-spacing: 0px;
+    border-collapse: collapse;
+    width: 450px;
+}
+
+.pick-list .img {
+     width: 85px;
+} 
+.pick-list td { 
+    border: 1px solid #999; 
+    padding: 5px 3px 5px 3px; 
+}
+
+.pick-list .instructions {
+    padding: 20px 0px;
+    font-size: 24px;
+    color: red;
+    font-weight: bold;
+    width: 450px;
+}

@@ -1,0 +1,286 @@
+﻿@using Amazon.Common.Helpers
+@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Feeds
+@using Amazon.Web.ViewModels.Inventory
+@using Amazon.Web.ViewModels.Messages
+@using Amazon.Web.ViewModels.ScanOrders
+@using Amazon.Web.ViewModels.Vendors
+@using Kendo.Mvc.UI
+@model Amazon.Web.Models.SearchFilters.FeedFilterViewModel
+@{
+    ViewBag.Title = "Feeds";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/inventory.ico" />
+}
+
+<style>
+    .k-grid tbody a.k-button {
+        min-width: 78px;
+    }
+</style>
+
+<script src="~/Scripts/knockout-kendo.min.js" type="text/javascript"></script>
+
+
+<script>
+    var FeedListModel = function (model, settings) {
+        var self = this;
+        ko.BaseViewModel.call(self);
+
+        //Init
+        self.model = model;
+        self.settings = settings;
+
+        self.gridId = self.settings.gridId;
+        self.gridNode = $(self.gridId);
+        self.grid = self.gridNode.data("kendoGrid");
+
+   
+        //Params
+        self.market = ko.observable(model.Market);
+        self.marketplaceId = ko.observable(model.MarketplaceId);
+
+        self.minDate = new Date(2000, 1, 1);
+        self.maxDate = new Date();
+        self.maxDate.setHours(23);
+        self.maxDate.setMinutes(59);
+
+        self.dateFrom = ko.observable('');
+        self.dateTo = ko.observable('');
+
+        self.typeList = ko.observable(model.TypeList);
+        self.typeValue = ko.observable(model.Type);
+        self.typeValue.subscribe(function () { self.search(); });
+
+        //Search
+        self.search = function () {
+            var params = self.getGridParams();
+
+            self.resetRowNumber(0);
+
+            if (self.grid.dataSource.page() != 1) {
+                self.grid.dataSource.page(1); //May call read
+            }
+            self.grid.dataSource.read(params);
+        };
+        
+        self.searchByKeyCmd = function (data, event) {
+            if (event.keyCode == 13)
+                self.search(true);
+            return true;
+        };
+
+        self.getGridParams = function () {
+            console.log("getGridParams");
+
+            var from = kendo.toString(self.dateFrom(), 'MM/dd/yyyy');
+            var to = kendo.toString(self.dateTo(), 'MM/dd/yyyy');
+            var market = self.market();
+            var marketplaceId = self.marketplaceId();
+            var type = self.typeValue();
+
+            return {
+                Market: market,
+                MarketplaceId: marketplaceId,
+                DateFrom: from,
+                DateTo: to,
+                Type: type
+            };
+        };
+
+        self.clear = function () {
+            self.dateFrom('');
+            self.dateTo('');
+            self.market(self.model.Market);
+            self.marketplaceId(self.model.MarketplaceId);
+            self.typeValue(self.model.Type);
+        };
+
+        self.clearAndSearch = function () {
+            self.clear();
+            self.search(false);
+        };
+
+        self.searchByButton = function () {
+            self.search(true);
+        };
+
+
+        //Grid
+
+        self.onDataBound = function (e) {
+            console.log("dataBound");
+            var start = (self.grid.dataSource.page() - 1) * self.grid.dataSource.pageSize();
+            self.resetRowNumber(start);
+            //var items = self.grid.dataSource.data();
+            //var index = start + 1;
+            //console.log(items);
+            //items.forEach(function(i) {
+            //    console.log(i);
+            //    i.Index = index++;
+            //    console.log(i.Index);
+            //});
+        };
+
+        helper.ui.addTopPager(self.grid);
+
+        self.search(false);
+    };
+</script>
+
+<div id="page-content">
+
+    <ol class="breadcrumb">
+        <li><a href="#">Reports</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <table>
+                <colgroup>
+                    <col style="width: 120px" />
+                    <col style="width: 210px"/>
+                    <col style="width: 70px" />
+                    <col style="width: 500px" />
+                </colgroup>
+                <tr>
+                    <th>Date: </th>
+                    <td colspan="2">
+                        <table>
+                            <tr>
+                                <td>from</td>
+                                <td>
+                                    <input class="data-picker" data-bind="kendoDatePicker: { value: dateFrom, format: 'MM/dd/yyyy', min: minDate, max: maxDate }"/>
+                                </td>
+                                <td>to</td>
+                                <td>
+                                    <input class="data-picker" data-bind="kendoDatePicker: { value: dateTo, format: 'MM/dd/yyyy', min: minDate, max: maxDate }"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Type:</th>
+                    <td>
+                        <input style="width:180px"
+                               data-bind="kendoDropDownList: {data: typeList, value: typeValue, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'All' }" />
+                    </td>
+                </tr>
+            </table>
+            <button class="k-button filter-button"
+                    data-bind="click: searchByButton">
+                <span class='glyphicon glyphicon-search am-icon'></span>Search
+            </button>
+            <button class="k-button filter-button"
+                    data-bind="click: clearAndSearch">
+                <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+            </button>
+        </div>
+    </div>
+
+    @(Html.Kendo().Grid<FeedViewModel>()
+          .Name("FeedList")
+          .Editable(e => e.Mode(GridEditMode.PopUp))
+          .Columns(columns =>
+          {
+              columns.Bound(c => c.Id)
+                  .ClientTemplate("#=feedListVm.renderNumber(data)#")
+                  .Title("#")
+                  .Width(20)
+                  .Sortable(false);
+              columns.Bound(c => c.FormattedName)
+                  .Title("Name");
+              columns.Bound(c => c.Status)
+                .Width(200)
+                .ClientTemplate("#=FormattedStatus#")
+                .Title("Status");
+              columns.Bound(c => c.SubmitDate)
+                  .Format("{0:" + DateHelper.DateTimeFormat + "}")
+                  .Width(150)
+                  .Title("Create Date");
+          })
+          .Sortable(conf => conf.Enabled(true).SortMode(GridSortMode.SingleColumn))
+          .Pageable(conf => conf.Enabled(true).Refresh(true))
+          .Filterable(conf => conf.Enabled(true))
+          .AutoBind(false)
+          .Events(e =>
+          {
+              e.DataBound("onDataBound");
+          })
+          .ClientDetailTemplateId("itemsTemplate")
+          .DataSource(dataSource => dataSource
+              .Ajax()
+              .ServerOperation(false)
+              .PageSize(50)
+              .Model(conf => conf.Id(m => m.Id))
+              .Sort(conf => {
+                  conf.Add(n => n.SubmitDate).Descending();
+              })
+              .Read(read => read.Action(MVC.Feed.ActionNames.GetAll, MVC.Feed.Name)
+                  .Data("GetGridParams"))))
+
+</div>
+
+
+<script id="itemsTemplate" type="text/kendo-tmpl">
+    @(Html.Kendo().Grid<FeedMessageViewModel>()
+        .Name("FeedMessages_#=Id#")
+        .Columns(c =>
+        {
+            c.Bound(m => m.MessageId).Width(35);
+            c.Bound(m => m.Message).Title("Message");
+            c.Bound(m => m.MessageCode).Width(200).Title("Message Code");
+            c.Bound(m => m.ResultCode).Width(200).Title("Result Code");
+
+        })
+        .DataSource(dataSource => dataSource
+            .Ajax()
+            .Model(conf => conf.Id(m => m.Id))
+            .Read(read => read.Action(MVC.Feed.ActionNames.GetAllMessage, MVC.Feed.Name, new { feedId = "#=Id#" })))
+        .ToClientTemplate()
+        )
+    
+</script>
+
+<script>
+    var feedListVm = null;
+
+    function GetGridParams() {
+        console.log("GetGridParams");
+        if (feedListVm != null)
+            return feedListVm.getGridParams();
+        return {};
+    }
+
+    function onDataBound(e) {
+        if (feedListVm != null)
+            feedListVm.onDataBound(e);
+    }
+
+    $(document).ready(function() {
+        var settings = {
+            gridId: "#FeedList",
+            idFieldName: "Id"
+        };
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        feedListVm = new FeedListModel(model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+        ko.applyBindings(feedListVm, document.getElementById('page-content'));
+    });
+
+</script>

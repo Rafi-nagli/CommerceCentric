@@ -1,0 +1,134 @@
+﻿<script type="text/javascript">
+    var IbcCloseoutInfoModel = function () {
+        var self = this;
+
+        self.ibcInfoes = ko.observableArray([]);
+
+        self.prepareRow = function(r) {
+            r.toCloseoutCount = ko.observable(r.ToCloseoutCount);
+            r.toCloseoutWeight = ko.observable(r.ToCloseoutWeight);
+            r.toCloseoutWeightLb = ko.computed(function () {
+                return r.toCloseoutWeight() / 16;
+            });
+            r.ibcOrdersCount = ko.observable(r.IbcOrdersCount);
+            r.ibcOrdersWeight = ko.observable(r.IbcOrdersWeight);
+            r.ibcOrdersWeightLb = ko.computed(function () {
+                return r.ibcOrdersWeight() / 16;
+            });
+
+            r.isSuccess = ko.observable(r.IsSuccess);
+            r.name = ko.observable(r.Name);
+        }
+
+        self.onDhlCloseout = function (m, e) {
+            $(e.target).showLoading("processing...");
+            $.ajax({
+                cache: true,
+                url: '@Url.Action("GetCloseoutForm", "IbcCloseout")',
+                success: function (result) {
+                    self.ibcInfoes([]);
+                    if (result.IsSuccess) {
+                        Message.popup("Close manifest has been successfully generated", Message.POPUP_INFO);
+
+                        self.load();
+                    } else {
+                        Message.popup(result.Message, Message.POPUP_INFO);
+                    }
+                    $(e.target).hideLoading();
+                }
+            });
+        }
+
+        self.hasToCloseoutLabels = ko.computed(function () {
+            var sum = 0;
+            self.ibcInfoes().forEach(function (m) { sum += m.toCloseoutCount() || 0; });
+            return sum > 0;
+        });
+
+        self.enableCloseoutLabels = ko.computed(function () {
+            var weight = 0;
+            self.ibcInfoes().forEach(function (m) { weight += m.toCloseoutWeightLb() || 0; });
+            return dataUtils.roundPrice(weight) >= 14;
+        });
+
+        self.load = function () {
+            $.ajax({
+                cache: false,
+                url: '@Url.Action("GetInfo", "IbcCloseout")',
+                success: function (result) {
+                    if (result.IsSuccess)
+                    {
+                        for (var i = 0; i < result.Data.length; i++) {
+                            self.prepareRow(result.Data[i]);
+                        }
+
+                        self.ibcInfoes(result.Data);                        
+                    }
+                    else
+                    {
+                        self.ibcInfoes([]);
+                    }
+                }
+            });
+        };
+
+        self.load();
+    };
+
+    var ibcCloseoutInfoModel = null;
+    $(document).ready(function () {
+        ibcCloseoutInfoModel = new IbcCloseoutInfoModel();
+        ko.applyBindings(ibcCloseoutInfoModel, document.getElementById("ibc-closeout-block"));
+    });
+</script>
+
+
+<style>
+    .amz-dhl-closeout {
+        font-size: 12px;
+    }
+
+    .amz-dhl-closeout td {
+        padding: 2px;
+        border-collapse: collapse;
+        border-top: 1px solid #efefef;
+        border-bottom: 1px solid #efefef;
+        border-right: 1px solid #efefef;
+        border-left: 1px solid #efefef;
+    }
+
+    /*.amz-dhl-closeout tr:last-child td {
+        border-bottom: none;
+    }*/
+
+    /*.amz-dhl-closeout tr:nth-last-child(1) td {
+        border-bottom: none;
+    }*/
+</style>
+
+<div id="ibc-closeout-block" class="amz-dhl-closeout">
+    <table>
+        <thead>
+            <tr>
+                <td>IBC</td>
+                <td>orders</td>
+                <td>labels</td>
+            </tr>
+        </thead>
+        <tbody  data-bind="foreach: ibcInfoes">
+            <tr>
+                <td><span data-bind="text: name"></span></td>
+                <td>
+                    <span data-bind<span data-bind="textFormatted: ibcOrdersCount, ifEmpty: '-'"></span> (<span data-bind="textFormatted: ibcOrdersWeightLb, pattern: '0.00'"></span>lb)
+                </td>
+                <td>
+                    <span data-bind="textFormatted: toCloseoutCount, ifEmpty: '-'"></span> (<span data-bind="textFormatted: toCloseoutWeightLb, pattern: '0.00'"></span>lb)
+                </td>
+            </tr>
+        </tbody>        
+    </table>
+        
+    <div @*data-bind="visible: hasToCloseoutLabels"*@>
+        <button class="k-button" data-bind="click: onDhlCloseout, enable: enableCloseoutLabels, css: { 'k-state-disabled': !enableCloseoutLabels() }">Close IBC Manifest</button>
+    </div>
+</div>

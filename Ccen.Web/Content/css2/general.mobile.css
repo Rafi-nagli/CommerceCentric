@@ -1,0 +1,15 @@
+﻿@media only screen and (max-device-width: 1024px) {
+    .mobile .k-button, .mobile .k-grid .k-button, .k-window .k-edit-form-container .k-button {
+        margin-top: 4px;
+        margin-bottom: 4px;
+        padding: 10px 20px;
+    }
+
+    .mobile .filters tr {
+        padding-bottom: 20px;
+    }
+
+    .k-window .wizard .nav-tabs li a {
+        padding: 15px 15px; 
+    }
+}

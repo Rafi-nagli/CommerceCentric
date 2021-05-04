@@ -1,0 +1,289 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.ViewModels
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@{
+    ViewBag.Title = "Pending Orders";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@model Amazon.Web.ViewModels.Pages.OrderPageViewModel
+
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/orders.ico" />
+}
+
+<style>
+    .k-master-row .k-hierarchy-cell .k-icon {
+        visibility: hidden;
+    }
+</style>
+
+<script>
+    var PendingOrderViewModel = function(gridId) {
+        var self = this;
+
+        self.defaultMarket = @((int)Model.DefaultMarket);
+        self.defaultMarketplaceId = '@(Model.DefaultMarketplaceId)';
+
+        self.marketValue = ko.observable(self.defaultMarket + "_" + self.defaultMarketplaceId);
+        self.marketList = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.MarketList));
+        self.market = ko.computed(function() {
+            return self.marketValue().split('_')[0];
+        });
+        self.marketplaceId = ko.computed(function() {
+            return self.marketValue().split('_')[1];
+        });
+
+        ko.BaseViewModel.call(self);
+
+        self.grid = $(gridId).data("kendoGrid");
+
+        self.toggleHold = function(id, onHold) {
+            var gridData = self.grid.dataSource.data();
+            console.log(onHold);
+            var toggledHold = onHold == "false" ? true : false;
+            var holdButton = null;
+
+            $.each(gridData, function(i, row) {
+                if (row.EntityId == id) {
+                    console.log(toggledHold);
+                    console.log(row.OnHold);
+                    row.OnHold = toggledHold;
+
+                    var $tr = $('tr[data-uid="' + row.uid + '"]');
+                    var button = $tr.find("#holdButton");
+                    button.html(toggledHold ? "UnHold" : "Hold");
+
+                    helper.ui.kendoFastRedrawRow(self.grid, row, $tr, [2, 7], 1);
+                    helper.ui.disableRow($tr, toggledHold, ['holdButton']);
+
+                    holdButton = $tr.find("#holdButton");
+                }
+            });
+
+            helper.ui.showLoading(holdButton);
+
+            $.ajax({
+                url: '@Url.Action("SetOnHold", "Order")',
+                data: { id: id, onHold: toggledHold },
+                cache: false,
+                async: true,
+                success: function() {
+                    helper.ui.hideLoading(holdButton);
+                }
+            });
+        };
+
+
+        //Grid
+        self.dataBound = function(e) {
+            self.resetRowNumber();
+
+            var data = self.grid.dataSource.data();
+            console.log("dataBound");
+            //Expand all rows
+            this.expandRow(this.tbody.find("tr.k-master-row"));
+            $.each(data, function(i, row) {
+                helper.ui.disableRow($('tr[data-uid="' + row.uid + '"]'), row.OnHold, ['holdButton']);
+
+                paintOrderRow(row, 5, 9, 4, self.grid.columns.length);
+            });
+
+            self.rowTotal(self.grid.dataSource.total());
+        };
+
+        self.grid.bind("dataBound", self.dataBound);
+
+        self.getGridParams = function () {
+            console.log(self.market() + "_" + self.marketplaceId());
+            return {
+                Market: self.market(),
+                MarketplaceId: self.marketplaceId(),
+            };
+        };
+
+
+
+        //Search
+        self.search = function () {
+            self.resetRowNumber();
+            self.grid.dataSource.read(self.getGridParams());
+        };
+
+        self.clear = function () {
+            self.marketValue(self.defaultMarket + "_" + self.defaultMarketplaceId);
+            self.search();
+        };
+        
+        self.grid.dataSource.transport.read.data = self.getGridParams();
+
+        
+        
+        //Init
+        helper.ui.addTopPager(self.grid);
+
+        self.clear();
+    };
+
+</script>
+
+<div id="page-content">
+    <h1>Pending Orders - <span data-bind="text: rowTotal">0</span></h1>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <div>
+                <a class="k-button"
+                   target="_blank"
+                   style="margin: 0px 10px 0px 0; padding: 3px 20px 3px 20px"
+                   href="@Url.Action(MVC.Print.PrintPendingPickList())">Pick List</a>
+            </div>
+
+            <div class="messages-block">
+                <div><span id="infoMessage" class="text-info"></span></div>
+                <div><span id="errorMessage" class="label label-danger"></span></div>
+                <div><span id="successMessage" class="label label-success"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <table>
+                <colgroup>
+                    <col style="width: 100px"/>
+                    <col style="width: 210px"/>
+                </colgroup>
+                <tr>
+                    <th>Market:</th>
+                    <td>
+                        <input id="SearchMarket"
+                               style="width: 180px"
+                               data-bind="kendoDropDownList: {data: marketList, value: marketValue, dataTextField: 'Text', dataValueField: 'Value' }"/>
+                    </td>
+                </tr>
+            </table>
+            <button class="k-button"
+                    style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                    data-bind="click: search">
+                <span class='glyphicon glyphicon-search am-icon'></span>Search
+            </button>
+            <button class="k-button"
+                    style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                    data-bind="click: clear">
+                <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+            </button>
+        </div>
+    </div>
+    
+    <div class="orders-grid">
+        @(Html.Kendo().Grid<OrderViewModel>()
+              .Name("grid")
+              .Columns(columns =>
+              {
+                  columns.Bound(c => c.OrderId)
+                      .ClientTemplate("#= pendingOrderVm.renderNumber(data) #")
+                      .Title("#")
+                      .Width(20)
+                      .Sortable(false);
+                  columns.Bound(c => c.OrderId)
+                      .Sortable(false)
+                      .Width(100)
+                      .ClientTemplate("#= tmpl.t('status-column-template', data)# #= tmpl.t('order-info-column-template', data)#")
+                      .Title("Status");
+                  columns.Bound(c => c.PersonName)
+                      .Sortable(true)
+                      .ClientTemplate("#= tmpl.t('orderid-column-template', data)# #= tmpl.t('tracking-column-template', data)# #= tmpl.t('buyer-column-template', data)#")
+                      .Title("Person name / Order details");
+                  columns.Bound(c => c.Quantity)
+                      .Sortable(false)
+                      .Title("Qty")
+                      .Width(40);
+                  columns.Bound(c => c.ShippingMethodId)
+                      .Sortable(false)
+                      .ClientTemplate("#= tmpl.t('servicetype-column-template', data)#")
+                      .Title("Ship. Service")
+                      .Width(60);
+                  columns.Bound(c => c.ItemPrice)
+                      .Width(80)
+                      .ClientTemplate("#= tmpl.t('price-column-template', data)#")
+                      .Sortable(false)
+                      .Title("Price");
+                  columns.Bound(c => c.Weight)
+                      .Sortable(false)
+                      .Width(80)
+                      .Title("Weight")
+                      .ClientTemplate("#= tmpl.t('weight-column-template', data)#");
+                  columns.Bound(c => c.OrderDate)
+                      .Sortable(true)
+                      .Format("{0:MM.dd.yyyy HH:mm}")
+                      .Width(95);
+                  if (AccessManager.CanEditOrder())
+                  {
+                      columns.Bound(c => c.OrderId)
+                          .Sortable(false)
+                          .Title("Actions")
+                          .Width(118)
+                          .ClientTemplate(
+                              " <a target='_blank' class='k-button k-button-icontext' style='margin-top:4px' href='" + @Url.Action(MVC.Print.GetPackingSlip()) + "?orderId=#=EntityId#'>Packing Slip</a>"
+                              + " <button class='k-button k-button-icontext' id='holdButton' style='margin-top:4px' onclick='pendingOrderVm.toggleHold(\"#=EntityId#\", \"#=OnHold#\")'>#if(OnHold) {# UnHold #} else {# <span class='glyphicon glyphicon-ban-circle am-icon'></span>Hold #}#</button>");
+                  }
+              })
+              .ClientDetailTemplateId("itemsTemplate")
+              .Sortable(conf => conf.Enabled(true).SortMode(GridSortMode.SingleColumn))
+              .Navigatable(conf => conf.Enabled(false))
+              .Scrollable(conf => conf.Enabled(false))
+              .Selectable(conf => conf.Enabled(false))
+              .Pageable(conf => conf.Enabled(true).Refresh(true))
+              .AutoBind(false)
+              .DataSource(dataSource => dataSource
+                  .Ajax()
+                  .PageSize(50)
+                  .ServerOperation(false)
+                  .Model(conf => conf.Id(m => m.OrderDate))
+                  .Sort(conf => conf.Add(o => o.OrderDate).Descending())
+                  .Read(read => read.Action(MVC.Order.ActionNames.GetPendingOrders, MVC.Order.Name)))
+              )
+    </div>
+</div>
+
+<script id="itemsTemplate" type="text/kendo-tmpl">
+    #if (1) {#
+        </td>
+        </tr>
+    #}#
+    #if (Items != null) {
+    for (var i=0; i < Items.length; i++) {#
+    <tr class="k-detail-row">
+        <td colspan="2"></td>
+        <td>#= tmpl.t('order-item-image-column-template', data.Items[i])#</td>
+        <td>#= tmpl.t('order-item-buyer-column-template', Items[i])#</td>
+        <td>#= Items[i].Quantity#</td>
+        <td></td>
+        <td>#= tmpl.t('order-item-price-column-template', Items[i])#</td>
+        <td><div>#=data.Items[i].WeightString#</div></td>
+        <td></td>
+        <td>
+            #if (Items.Length != i - 1) {#
+        </td>
+    </tr>
+    #}#
+    #}
+    }#
+</script>
+
+@Html.Partial(MVC.Shared.Views._TemplatesOrder)
+
+<script>
+    var pendingOrderVm = null;
+
+    $(document).ready(function () {
+        console.log("onReady");
+
+        pendingOrderVm = new PendingOrderViewModel('#grid');
+        ko.applyBindings(pendingOrderVm, document.getElementById('page-content'));
+    });
+</script>
+

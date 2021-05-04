@@ -1,0 +1,190 @@
+﻿<script>
+    var SetTrackingNumberPopupModel = function (shippings,
+        settings)
+    {
+        var self = this;
+
+        self.settings = settings;
+        self.popupNode = null;
+        self.popup = null;
+        
+        shippings.forEach(function(n) {
+            n.trackingNumber = ko.observable(n.TrackingNumber)
+                .extend(ko.validation.patterns.requred("*"));
+            n.carrier = ko.observable(n.Carrier);
+        });
+
+        self.shippings = shippings;
+
+        self.setTrackingNumberUrl = settings.setTrackingNumberUrl;
+
+        self.submitCallback = settings.submitCallback;;
+        
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function () {
+            return self.errors().length === 0;
+        });
+
+        self.validate = function () { // function(data, e) {
+            if (self.isValid()) { //validator.validate() &&
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                return false;
+            }
+        };
+
+        self.show = function () {
+            console.log($("#setTrackingNumberPopup").length);
+            $("#setTrackingNumberPopup").each(function (i) {
+                var popup = $(this).data("kendoWindow");
+                if (popup != null) {
+                    console.log("close previous setTracking popup");
+
+                    ko.cleanNode($(this)[0]);
+                    popup.close();
+                    popup.destroy();
+                }
+                else {
+                    $(this).remove();
+                }
+            });
+
+            console.log("SetTrackingNumberPopupModel.create");
+
+            $('body').prepend("<div id='setTrackingNumberPopup'></div>");
+            self.popupNode = $('#setTrackingNumberPopup');
+
+            self.popupNode.kendoWindow({
+                modal: true,
+                width: "400px",
+                title: "Set Tracking Number",
+                visible: false,
+                close: self.closeEvent,
+                actions: [
+                    "Close"
+                ],
+            });
+
+            self.popup = self.popupNode.data("kendoWindow");
+            self.popup.content($("#setTrackingNumberPopupContent").html());
+            self.popup.center().open();
+
+            ko.applyBindings(self, self.popupNode[0]);
+        };
+
+        self.submit = function () {
+            var defer = $.Deferred();
+            var dataModel = $.map(self.shippings, function(n) {
+                return {
+                    ShippingInfoId: n.ShippingInfoId,
+                    TrackingNumber: n.trackingNumber(),
+                    Carrier: n.carrier(),
+                }
+            });
+            $.ajax({
+                url: self.setTrackingNumberUrl,
+                data: JSON.stringify({ shippings: dataModel }),
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                type: 'POST',
+                success: function(result) {
+                    console.log("onSuccess");
+                    defer.resolve();
+                },
+                error: function() {
+                    defer.reject();
+                }
+            });
+            return defer;
+        }
+
+        self.onSave = function(data, e) {
+            console.log('SetTrackingNumberPopupModel.onSave');
+            console.log(self.shippings);
+
+            if (self.validate()) {
+                $(e.target).showLoading("updating...");
+                self.submit().done(function() {
+                    self.submitCallback(self.shippings);
+                    self.onClose();
+                });
+            }
+        }
+
+        self.onClose = function() {
+            console.log('SetTrackingNumberPopupModel.onClose');
+            self.closeEvent();
+            self.popup.close();
+        }
+
+        self.closeEvent = function () {
+            console.log('disable validation');
+            //self.trackingNumber.rules.remove(function (item) {
+            //    console.log(item.rule);
+            //    return item.rule == "required";
+            //});
+            //self.trackingNumber.extend({ validatable: false });
+            console.log('after disable validation');
+        }
+    }
+</script>
+
+<!-- ko stopBinding: true -->
+<div style="display: none">
+    <div id="setTrackingNumberPopupContent" class="setTrackingNumberContent">
+        <div class="k-edit-form-container" style="width: auto; font-size: 13px">
+            <div class="inventory-popup">
+                <table style="width: 100%">
+                    <tr>
+                        <td style="vertical-align: top">
+                            <div class="editor-label">Tracking Numbers</div>
+                        </td>
+                    </tr>
+                    <tbody data-bind="foreach: shippings">
+                        <tr>
+                            <td>
+                                <div class="editor-label">
+                                    Package <span data-bind="text: ($index() + 1)"></span>, <span data-bind="text: ShippingMethodName"></span>:
+                                </div>
+                                <div class="editor-field">
+                                    <input style="width: 100px"
+                                           data-bind="kendoDropDownList: {data: settings.carrierList, value: carrier, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+
+                                    <input type="text" class="k-textbox" data-bind="value: trackingNumber"/>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+
+            <div class="k-edit-buttons k-state-default popup-button-panel" style="position: static">
+                <table style="margin-left: auto">
+                    <tr>
+                        <td style="margin-right: 5px">
+                            <button tabindex="-1"
+                                    data-bind="click: onSave"
+                                    class="k-button">
+                                <span class="k-icon k-update"></span>
+                                <span>Save</span>
+                            </button>
+                        </td>
+                        <td style="vertical-align: bottom">
+                            <button class="k-button k-button-icontext k-grid-cancel"
+                                    data-bind="click: onClose">
+                                <span class="k-icon k-cancel"></span>Cancel
+                            </button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- /ko -->

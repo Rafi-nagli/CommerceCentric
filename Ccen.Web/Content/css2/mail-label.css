@@ -1,0 +1,113 @@
+﻿
+
+.am-row-disabled {
+    color: gray;
+}
+
+.am-row-disabled td {
+    color: gray;
+}
+
+.am-row-disabled td a {
+    color: gray;
+}
+
+.am-row-highlight td {
+    background-color: #8a8a8a;
+}
+
+.am-mail {
+    color: black;
+}
+
+.am-mail .label {
+    font-size: 85%;
+}
+
+.am-mail .panel-heading {
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+
+.am-mail .input-validation-error {
+    background-color: rgb(235, 182, 182)
+}
+
+.am-mail table {
+    padding: 0px;
+    margin: 0px;
+    border: none;
+}
+
+
+.am-mail .mailing-info {
+
+}
+
+.am-mail .search-block {
+    
+}
+
+.am-mail .search-block input[type='text'] {
+    font-size: 14px;
+    width: 250px;
+    padding: 3px;
+}
+
+.am-mail .search-block .order-grid {
+    padding-top: 15px;
+}
+
+.am-mail .lb {
+    padding: 0px 10px 10px 5px;
+}
+
+.am-mail .lb table td {
+    padding: 5px;
+}
+
+.am-mail .order-items {
+    padding-left: 5px;
+}
+
+.am-mail .order-items table td {
+    padding: 3px;
+    vertical-align: top;
+}
+
+.am-mail .order-items table th {
+    font-weight: normal;
+    padding: 2px 3px;
+    background-color: #f5f5f5;
+}
+
+.am-mail .address-block table td {
+    padding: 5px;
+}
+
+.am-mail .address-block table th {
+    padding: 5px;
+    font-weight: normal;
+}
+
+.am-mail .address-block textarea {
+    width: 300px;
+}
+
+.am-mail .address-block .k-textbox {
+    width: 300px;
+}
+
+.am-mail .lb input[type='text'] {
+    width: 80px;
+}
+
+.am-mail .shipping div {
+    padding: 10px 10px 10px 5px;
+}
+
+.am-mail .highlight-comment {
+    font-weight: bold;
+}
+

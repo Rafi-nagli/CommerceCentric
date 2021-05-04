@@ -1,0 +1,73 @@
+﻿@using Amazon.Web.HtmlExtend
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Inventory
+@using Kendo.Mvc.UI
+@model MergeStyleViewModel
+@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var MergeStyleModel = function(model) {
+        var self = this;
+
+        self.mainStyleId = ko.observable("");
+        self.secondStyleId = ko.observable("");
+
+        self.styleIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetStyleIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if(action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+    };
+</script>
+
+<div id="edit-container" class="inventory-popup">
+    <div class="k-edit-form-container">
+        <div>
+            <div class="editor-label" style="width: 30%">To <span class='gray'>(main style id)</span>:</div>
+            <div class="editor-field" style="padding-top: 5px">
+                <input style='width: 180px' class="k-textbox" name="InputMainStyleId" data-bind="kendoAutoComplete: {
+                           value: mainStyleId,
+                           data: {},
+                           minLenght: 3,
+                           dataSource: styleIdSource }"/>
+            </div>
+        </div>
+        <div>
+            <div class="editor-label" style="width:30%">From <span class='gray'>(join style id)</span>:</div>
+            <div class="editor-field" style="padding-top:5px">
+                <input style='width: 180px' class="k-textbox" name="InputSecondStyleId" data-bind="kendoAutoComplete: {
+                           value: secondStyleId,
+                           data: {},
+                           minLenght: 3,
+                           dataSource: styleIdSource }" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var mergeStyleModel = new MergeStyleModel(model);
+
+        ko.applyBindings(mergeStyleModel, document.getElementById('edit-container'));
+    });
+</script>

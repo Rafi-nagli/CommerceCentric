@@ -1,0 +1,154 @@
+﻿.amz .k-widget {
+    background-color: #626262;
+}
+
+
+.amz .k-menu .k-item {
+    height: 28px;
+}
+
+.amz .k-menu .k-group .k-item>.k-link {
+    padding-top: 0.5em;
+}
+
+.amz .k-header, 
+.amz .k-grid-header, 
+.amz .k-toolbar, 
+.amz .k-dropdown-wrap, 
+.amz .k-picker-wrap, 
+.amz .k-numeric-wrap, 
+.amz .k-grouping-header, 
+.amz .k-pager-wrap, 
+/*.amz .k-textbox, */
+.amz .k-button, 
+.amz .k-progressbar, 
+.amz .k-draghandle, 
+.amz .k-autocomplete, 
+.amz .k-tabstrip-items .k-item, 
+.amz .km-pane-wrapper>.km-pane>.km-view>.km-content {
+    background-image: none;
+    background-color: #4f4f4f;   
+}
+
+.amz .k-state-highlight {
+    background-color: #8f8f8f;
+}
+
+.amz .k-state-hover, .amz .k-state-hover:hover {
+    background-image: none;
+    background-color: #8d8d8d;
+}
+
+.amz .k-autocomplete.k-state-hover,
+.amz .k-autocomplete.k-state-focused,
+.amz .k-picker-wrap.k-state-hover,
+.amz .k-picker-wrap.k-state-focused,
+.amz .k-numeric-wrap.k-state-hover,
+.amz .k-numeric-wrap.k-state-focused,
+.amz .k-dropdown-wrap.k-state-hover,
+.amz .k-dropdown-wrap.k-state-focused {
+    /*background-image: none;*/
+    background-color: #5f5f5f;
+}
+
+.amz .k-autocomplete.k-state-default,
+.amz .k-picker-wrap.k-state-default,
+.amz .k-numeric-wrap.k-state-default,
+.amz .k-dropdown-wrap.k-state-default {
+    background-image: none;
+    background-color: #4f4f4f;   
+}
+
+.amz .k-secondary .k-button, 
+.amz .k-secondary.k-button {
+    background-image: none;
+    background-color: #4f4f4f;
+}
+
+.amz .k-secondary .k-button:hover, 
+.amz .k-secondary.k-button:hover {
+    background-color: #5f5f5f;
+}
+
+.amz .k-tabstrip-items .k-state-active, 
+.amz .k-ie7 .k-tabstrip-items .k-state-active .k-loading {
+    background-color: #6d6d6d;
+}
+
+.amz .k-tabstrip .k-content.k-state-active {
+    background-color: #6d6d6d;
+}
+
+.amz .k-pager-wrap,
+.amz .k-grid-toolbar {
+    background-color: #8f8f8f;
+    color: white;
+    border: 1px solid #333;
+}
+
+.amz .k-master-row, .amz .k-detail-row {
+    background-color: #626262;
+}
+
+/*.amz .k-state-selected {
+    background-color: #8f8f8f;
+}*/
+
+.amz .k-alt, 
+.amz .k-separator {
+    background-color: #595959;
+}
+
+.amz .k-content, 
+.amz .k-editable-area, 
+.amz .k-panelbar>li.k-item, 
+.amz .k-panel>li.k-item, 
+.amz .k-tiles {
+    background-color: #626262;
+}
+
+.amz .k-content .k-upload {
+    background: none;
+}
+
+/*Override kendo disabled */
+.amz textarea:disabled,
+.amz input:not([type]):disabled, 
+.amz input[type="color"]:disabled, 
+.amz input[type="date"]:disabled, 
+.amz input[type="datetime"]:disabled, 
+.amz input[type="datetime-local"]:disabled, 
+.amz input[type="email"]:disabled, 
+.amz input[type="month"]:disabled, 
+.amz input[type="password"]:disabled, 
+.amz input[type="number"]:disabled, 
+.amz input[type="search"]:disabled, 
+.amz input[type="tel"]:disabled, 
+.amz input[type="text"]:disabled, 
+.amz input[type="time"]:disabled, 
+.amz input[type="url"]:disabled, 
+.amz input[type="week"]:disabled {
+    background-color: rgb(235, 235, 228);
+}
+
+.amz input:disabled, 
+.amz textarea:disabled {
+    color: rgb(84, 84, 84);
+}
+
+.amz .k-flat-button {
+    -webkit-border-radius: 0px;
+    border-radius: 0px;
+}
+
+.amz .k-grid-pager li {
+    line-height: 2.0em;
+}
+
+.amz .k-pager-wrap .k-pager-numbers .k-link {
+    background: none;
+}
+
+.amz .k-pager-wrap .k-link {
+    background: #1d1d1d
+}

@@ -1,0 +1,317 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.ViewModels.Inventory
+
+@{
+    Layout = null;
+}
+
+
+<script type="text/javascript">
+    var UploadOrderFeedModel = function(model, settings) {
+        var self = this;
+
+        self.isLoaded = ko.observable(false);
+
+        self.popupNode = null;
+        self.popup = null;
+
+        self.settings = settings;
+        self.model = model;
+
+        self.messages = ko.observableArray([]);
+
+        self.submitCallback = settings.submitCallback;
+        self.fileName = ko.observable("");
+        self.fieldMappingsId = ko.observable(null);
+        self.fieldMappingsList = ko.observableArray(model.FieldMappingsList);
+
+
+        self.onUploadSuccess = function (e) {
+            console.log("onUploadSuccess");
+            var data = e.response.Data;
+            console.log(data);
+            if (data != null && data.length > 0 && data[0].length > 0) {
+                console.log(data[0][0]);
+                self.fileName(data[0][0].ServerFileName);
+                //self.attachedFile(data[0][0]);
+            }
+
+            //$.publish("PV_Grid_Access_OnAddNewRecord_Event");
+        }
+
+        self.onUploadError = function (e) {
+            console.log("onUploadError");
+            console.log(e);
+            //self.uploadedFile(null);
+            self.messages.push(new MessageString("Unable to upload attachment", MessageStatus.ERROR));
+        }
+
+        self.submit = function () {
+            var defer = $.Deferred();
+            var dataModel = {
+                FileName: self.fileName(),
+                FieldMappingsId: self.fieldMappingsId()
+            };
+            $.ajax({
+                url: self.settings.urls.submit,
+                data: JSON.stringify({ model: dataModel }),
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                type: 'POST',
+                success: function(result) {
+                    console.log("onSuccess");
+                    console.log(result);
+                    if (result.IsSuccess) {
+                        defer.resolve();
+                    } else {
+                        defer.reject();
+                        self.messages(result.Messages);
+                    }
+                },
+                error: function (result) {
+                    console.log(result);
+                    self.messages(result.Messages);
+                    defer.reject();
+                }
+            });
+            return defer;
+        }
+
+        self.onSave = function(data, e) {
+            console.log('onSave');
+
+            if (self.validate()) {
+                $(e.target).showLoading("updating...");
+                self.submit().done(function () {
+                    if (self.submitCallback != null)
+                        self.submitCallback(null);
+                    self.onClose();
+                }).always(function() {
+                    $(e.target).hideLoading();
+                });
+            }
+        }
+
+        self.show = function () {
+            console.log($("#uploadFeedPopup").length);
+            $("#uploadFeedPopup").each(function (i) {
+                var popup = $(this).data("kendoWindow");
+                if (popup != null) {
+                    console.log("close previous uploadSale popup");
+
+                    ko.cleanNode($(this)[0]);
+                    popup.close();
+                    popup.destroy();
+                }
+                else {
+                    $(this).remove();
+                }
+            });
+
+            console.log("UploadFeedPopupModel.create");
+
+            $('body').prepend("<div id='uploadFeedPopup'></div>");
+            self.popupNode = $('#uploadFeedPopup');
+
+            self.popupNode.kendoWindow({
+                modal: true,
+                width: "600px",
+                title: "Add feed",
+                visible: false,
+                close: self.closeEvent,
+                actions: [
+                    "Close"
+                ],
+            });
+
+            self.popup = self.popupNode.data("kendoWindow");
+            self.popup.content($("#upload-feed-container").html());
+            self.popup.center().open();
+
+            ko.applyBindings(self, self.popupNode[0]);
+        };
+
+
+        self.addMappings = function (sender, id) {
+            var params = "";
+            var title = "Add Mappings";
+            if (id != null) {
+                params = "?id=" + id;
+                title = "Edit Mappings";
+            }
+            popupWindow.initAndOpenWithSettings({
+                content: self.settings.urls.editFeed + params,
+                title: title,
+                width: 800,
+                customAction: self.onMappingPopupCustomAction,
+                //closeSuccess: self.onPopupCloseSuccess,
+                //submitCallback: function (result) {
+                //    console.log("submitCallback");
+                //    //self.prepareRow(result.Row);
+                //    //self.grid.updateRowField(result.Row, result.UpdateFields);
+                //    self.search();
+                //}
+            });
+        };
+
+        self.onMappingPopupCustomAction = function (actionName, data) {
+            console.log("onMappingPopupCustomAction");
+            console.log(actionName);
+            console.log(data);
+
+            if (actionName == "Refresh") {
+                self.fieldMappingsList.push({
+                    Text: data.FeedName,
+                    Value: data.Id,
+                });
+            }
+        }
+
+
+        self.onClose = function() {
+            console.log('onClose');
+            //self.closeEvent();
+            self.popup.close();
+        }
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function () {
+            return self.errors().length === 0;
+        });
+
+        self.validate = function () { // function(data, e) {
+            if (self.isValid()) { //validator.validate() &&
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                return false;
+            }
+        };
+
+        //self.errors = ko.validation.group(self, { deep: true });
+        //self.isValid = ko.computed(function() {
+        //    return self.errors.length == 0;
+        //});
+        //self.onSubmit = function(e) { // function(data, e) {
+        //    //console.log(data);
+        //    console.log(e);
+        //    console.log("save click");
+
+        //    //var validator = $("#form").kendoValidator().data('kendoValidator');
+
+        //    //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+        //    //http://jsfiddle.net/KHFn8/3238/
+        //    if (self.errors().length == 0) { //validator.validate() &&
+        //        console.log("validate true");
+
+        //        return true;
+        //    } else {
+        //        console.log("validate false");
+        //        self.errors.showAllMessages();
+        //        e.preventDefault();
+        //        return false;
+        //    }
+        //};
+
+        self.isLoaded(true);
+    };
+
+    $(document).ready(function() {
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        //var node = document.getElementById('upload-sale-container');
+        //ko.applyBindings(viewModel, node);
+
+        //$('#operation-container').parent().next().find("#submit").click(viewModel.onSubmit);
+    });
+</script>
+
+<!-- ko stopBinding: true -->
+<div style="display: none">
+    <div id="upload-feed-container">
+        @Html.ValidationSummary(true)
+
+
+        <div class="inventory-popup">
+            <div class="k-edit-form-container" style="width: auto">
+
+                <table>
+                    <colgroup>
+                        <col style="width: 120px" />
+                    </colgroup>
+                    <tr>
+                        <td>File: </td>
+                        <td>
+                            <input type="file" name="files" data-bind="kendoUpload: {
+                                           async: {
+                                               saveUrl: '@Url.Action("UploadFeed", "UploadOrders")',
+                                               autoUpload: true,
+                                           },
+                                           showFileList: true,
+                                           multiple: false,
+                                           success: onUploadSuccess,
+                                           error: onUploadError
+                                           }" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Field mappings: </td>
+                        <td>
+                            <input style="width: 200px"
+                                   data-bind="kendoDropDownList: {data: fieldMappingsList, value: fieldMappingsId, dataTextField: 'Text', dataValueField: 'Value' }" />
+
+
+                            <a href="#"
+                               class="k-button k-button-icontext k-grid-add"
+                               data-bind="click: addMappings">
+                                <span class="k-icon k-add"></span>
+                                New Field Mappings
+                            </a>
+                        </td>
+                    </tr>
+                </table>
+
+                <messages params="{ messages: messages }"></messages>
+            </div>
+        </div>
+
+
+        <div class="clear"></div>
+
+        <div class="k-edit-buttons k-state-default popup-button-panel"
+             style="position: static">
+            <table style="margin-left: auto">
+                <tr>
+                    <td>
+                        <button tabindex="300"
+                                data-bind="click: onSave"
+                                class="k-button k-button-icontext k-grid-update">
+                            <span class="k-icon k-update"></span>Save
+                        </button>
+                    </td>
+
+                    <td>
+                        <button class="k-button k-button-icontext k-grid-cancel"
+                                tabindex="301"
+                                data-bind="click: onClose">
+                            <span class="k-icon k-cancel"></span>Cancel
+                        </button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- /ko -->

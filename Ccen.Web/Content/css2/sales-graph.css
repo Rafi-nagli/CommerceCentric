@@ -1,0 +1,65 @@
+﻿.sales-graph {
+    color: #333;
+}
+
+.sales-graph .graph {
+    background-color: white;
+    text-align: center;
+}
+
+.sales-graph .graph .info {
+    color: #333;
+}
+
+.sales-graph .filter-panel {
+    margin-top: 10px;
+    background-color: white;
+    color: #333;
+}
+
+.sales-graph .filter-panel .filters {
+    padding: 10px 10px 10px 25px;
+    margin: 10px;
+    float: left;
+    border-left: 1px #bbb solid;
+}
+
+.sales-graph .filter-panel .info {
+    padding: 10px 10px 10px 25px;
+    float: left;
+    width: 200px;
+}
+
+.sales-graph .filter-panel .info .caption {
+    padding-bottom: 2px;
+    padding-top: 5px;
+}
+
+.sales-graph .filter-panel .info .value {
+    font-weight: bold;
+}
+
+.sales-graph .filter-panel .button-panel {
+    padding: 10px 0px;
+}
+
+.sales-graph .filter-panel .child-items {
+    padding-top: 10px;
+
+}
+
+.sales-graph .filter-panel .sku-list {
+    height: 90px;
+    padding-right: 10px;
+    overflow-y: scroll;
+}
+
+.sales-graph .empty-data-message {
+    font-weight: bold;
+    text-align: center;
+    width: 100%;
+    padding: 20px 0px;
+    background-color: white;
+    display: none;
+    color: black;
+}

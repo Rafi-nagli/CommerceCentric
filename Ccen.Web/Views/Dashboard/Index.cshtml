@@ -1,0 +1,189 @@
+﻿@using Amazon.Common.Helpers
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Graph
+@{
+    ViewBag.Title = "Dashboard";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+
+    </style>
+
+<script>
+    Highcharts.setOptions({
+        lang: {
+            thousandsSep: ','
+        }
+    });
+</script>
+
+<div id="page-content">
+
+    <div class="dashboard">
+        @if (AccessManager.IsRestricted)
+        {
+            <table style="width: 100%">
+                <colgroup>
+                    <col style="width: 50%" />
+                    <col style="width: 50%" />
+                </colgroup>
+                <tr>
+                    <td class="panel-cell">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">Inventory by Character</div>
+                            <div class="panel-body">
+                                @Html.Partial("_InventoryByFeature", new FeatureGraphPageViewModel()
+                                {
+                                    HtmlPrefix = "MainLicense",
+                                    FeatureId = StyleFeatureHelper.MAIN_LICENSE,
+                                    SeriesName = "Character",
+                                    EnableSubFeature = true
+                                })
+                            </div>
+                        </div>
+                    </td>
+                    <td class="panel-cell">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">Inventory by Product Type</div>
+                            <div class="panel-body">
+                                @Html.Partial("_InventoryByFeature", new FeatureGraphPageViewModel()
+                                {
+                                    HtmlPrefix = "ProductType",
+                                    FeatureId = StyleFeatureHelper.ITEMSTYLE,
+                                    SeriesName = "Product Types",
+                                    EnableSubFeature = false
+                                })
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+
+            <table style="width: 100%">
+                <colgroup>
+                    <col style="width: 70%" />
+                    <col style="width: 30%" />
+                </colgroup>
+                <tr>
+                    <td class="panel-cell">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">Inventory Status</div>
+                            <div class="panel-body">
+                                @Html.Partial("_InventoryStatus")
+                            </div>
+                        </div>
+                    </td>
+                    <td class="panel-cell">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">News</div>
+                            <div class="panel-body">
+                                @Html.Partial("_News")
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        }
+        else
+        {
+            <table style="width: 100%">
+                <colgroup>
+                    <col style="width: 40%"/>
+                    <col style="width: 35%"/>
+                    <col style="width: 25%"/>
+                </colgroup>
+                <tr>
+                    <td class="panel-cell">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">Sales</div>
+                            <div class="panel-body">
+                                @Html.Partial("_SalesByDate")
+                            </div>
+                        </div>
+                    </td>
+                    <td class="panel-cell">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">Sales by Marketplace</div>
+                            <div class="panel-body">
+                                @Html.Partial("_SalesByMarketplace")
+                            </div>
+                        </div>
+                    </td>
+                    <td class="panel-cell" rowspan="2">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">System messages</div>
+                            <div class="panel-body">
+                                @Html.Partial("_SystemMessages")
+                            </div>
+                        </div>
+
+                        <div class="panel panel-default">
+                            <div class="panel-heading">System status</div>
+                            <div class="panel-body">
+                                @Html.Partial("_SystemStatus")
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="panel-cell">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">Sales by Product Type</div>
+                            <div class="panel-body">
+                                @Html.Partial("_SalesByProductType")
+                            </div>
+                        </div>
+                    </td>
+                    <td class="panel-cell">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">Inventory by Product Type</div>
+                            <div class="panel-body" style="padding-bottom: 58px">
+                                @Html.Partial("_InventoryByFeature", new FeatureGraphPageViewModel()
+                                {
+                                    HtmlPrefix = "ProductType",
+                                    FeatureId = StyleFeatureHelper.ITEMSTYLE,
+                                    SeriesName = "Product Types",
+                                    EnableSubFeature = false
+                                })
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+
+            <table style="width: 100%">
+                <colgroup>
+                    <col style="width: 40%"/>
+                    <col style="width: 30%"/>
+                    <col style="width: 30%"/>
+                </colgroup>
+                <tr>
+                    <td class="panel-cell">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">Inventory by Character</div>
+                            <div class="panel-body">
+                                @Html.Partial("_InventoryByFeature", new FeatureGraphPageViewModel()
+                                {
+                                    HtmlPrefix = "MainLicense",
+                                    FeatureId = StyleFeatureHelper.MAIN_LICENSE,
+                                    SeriesName = "Character",
+                                    EnableSubFeature = true
+                                })
+                            </div>
+                        </div>
+                    </td>
+                    <td class="panel-cell">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">Shipping providers</div>
+                            <div class="panel-body">
+                                @Html.Partial("_ShippingByCarrier")
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        }
+    </div>
+</div>
+

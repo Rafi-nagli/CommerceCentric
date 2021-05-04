@@ -1,0 +1,94 @@
+﻿@using Amazon.Web.HtmlExtend
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Inventory.OpenBoxViewModel
+@{
+    Layout = null;
+    Model.StyleItems.Title = "Quantities in One Box";
+}
+
+<script type="text/javascript">
+    var OpenBoxViewModel = function(model) {
+        var self = this;
+        console.log(model.CreateDateUtc);
+        //var date = moment.tz(model.)
+
+        var date = moment.utc(model.CreateDateUtc);//, "America/New_York");//model.CreateDate).tz("EST");
+        self.CreateDateUtc = ko.observable(new Date(date.format()));
+        self.StyleString = ko.observable(model.StyleString);
+    }
+
+    $(document).ready(function() {
+        console.log("onready");
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+            
+        };
+
+        var vm = new OpenBoxViewModel(model, settings);
+        ko.applyBindings(vm, document.getElementById('edit-container'));
+    });
+</script>
+
+<div id="edit-container">
+    @Html.ValidationSummary(true)
+
+    @Html.HiddenFor(m => m.Id)
+    @Html.HiddenFor(m => m.StyleId)
+
+    <div class="k-edit-form-container">
+        <div class="editor-label">Style Id</div>
+        <div class="editor-field" style="padding-top: 6px">
+            <span style="font-weight: bold" data-bind="text: StyleString"></span>
+        </div>
+
+        <div class="editor-label">Boxes ID</div>
+        <div class="editor-field">
+            @Html.TextBoxFor(m => m.BoxBarcode, new {@class = "k-textbox", style = "width: 210px" })
+            @Html.ValidationMessageFor(m => m.BoxBarcode)
+        </div>
+
+        <div class="editor-label"># of Boxes</div>
+        <div class="editor-field">
+            @Html.Kendo().IntegerTextBoxFor(m => m.BoxQuantity)
+            @Html.ValidationMessageFor(m => m.BoxBarcode)
+        </div>
+
+        <div class="editor-label">Owned</div>
+        <div class="editor-field" style="margin-top: 3px">
+            @Html.EditorFor(m => m.Owned)
+            @Html.ValidationMessageFor(m => m.Owned)
+        </div>
+
+        <div class="editor-label">Cost</div>
+        <div class="editor-field">
+            @Html.Kendo().CurrencyTextBoxFor(m => m.Price)
+            @* @Html.ValidationMessageFor(m => m.Price)*@
+        </div>
+        <div class="editor-label">Printed</div>
+        <div class="editor-field" style="margin-top: 3px">
+            @Html.EditorFor(m => m.Printed)
+        </div>
+
+        <div class="editor-label">Poly bags</div>
+        <div class="editor-field" style="margin-top: 3px">
+            @Html.EditorFor(m => m.PolyBags)
+        </div>
+
+        <div class="editor-label">Archived</div>
+        <div class="editor-field" style="margin-top: 3px">
+            @Html.CheckBoxFor(m => m.Archived)
+        </div>
+
+        <div class="editor-label">Invoice Date</div>
+        <div class="editor-field">
+            <input name="CreateDateUtc" data-bind="kendoDateTimePicker: { value: CreateDateUtc, format: 'MM/dd/yyyy HH:mm' }"/>
+        </div>
+
+        <div class="clear"></div>
+        <div style="padding-top: 10px; padding-left: 50px">
+            @Html.Partial("_ItemStyleItems", Model.StyleItems)
+        </div>
+        <div class="clear"></div>
+    </div>
+
+</div>

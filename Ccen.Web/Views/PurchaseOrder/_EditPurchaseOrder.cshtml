@@ -1,0 +1,304 @@
+﻿@using Amazon.Web.HtmlExtend
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.PurchaseOrders.PurchaseOrderViewModel
+@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var PuchaseOrderViewModel = function(model, settings) {
+        var self = this;
+        //var date = moment.tz(model.)
+
+        self.settings = settings;
+        self.submitCallback = settings.submitCallback;
+
+        var date = moment.utc(model.ReceiveDate);//, "America/New_York");//model.CreateDate).tz("EST");
+
+        self.id = model.Id;
+        self.receiveDate = ko.observable(new Date(date.format()));
+        self.boxQuantity = ko.observable(model.BoxQuantity);
+
+        self.styleString = ko.observable(model.StyleString);
+        self.styleErrorMessage = ko.observable('');
+        self.styleStringLoading = ko.observable(false);
+
+        self.prepareSize = function (size) {
+            size.name = ko.observable(size.Text);
+            size.quantity = ko.observable(1);
+            size.styleItemId = ko.observable(size.Value);
+            size.boxItemId = ko.observable(null);
+        }
+
+        self.prepareRow = function (row) {
+            row.name = ko.observable(row.Size);
+            row.quantity = ko.observable(row.Quantity);
+            row.styleItemId = ko.observable(row.Id);
+            row.boxItemId = ko.observable(row.BoxItemId);
+        }
+
+        model.Sizes.forEach(function (entry) {
+            self.prepareRow(entry);
+        });
+
+        self.sizeList = ko.observableArray(model.Sizes);
+        self.isSizeListLoaded = ko.observable(false);
+
+        self.canEditStyle = ko.observable(dataUtils.isNullOrEmpty(model.StyleString));
+
+
+
+
+        self.styleIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: self.settings.urls.getStyleIdListUrl,
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if (action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.styleString.subscribe(function () {
+            console.log("styleString.rise");
+            self.styleErrorMessage('');
+            self.styleStringLoading(true);
+            $.ajax({
+                url: '@Url.Action("GetStyleSizes", "AutoComplete")',
+                data: { styleString: self.styleString(), onlyWithQty: false },
+                cache: false,
+                success: function (data) {
+                    console.log("styleString.success");
+                    console.log(data);
+                    self.styleStringLoading(false);
+                    if (data.Data != null && data.Data.length > 0) {
+                        data.Data.forEach(function (entry) {
+                            self.prepareSize(entry);
+                        });
+
+                        self.sizeList(data.Data);
+                        self.isSizeListLoaded(true);
+                    } else {
+                        self.styleErrorMessage('StyleId is not found');
+                        self.isSizeListLoaded(false);
+                        self.sizeList([]);
+                    }
+                }
+            });
+        });
+
+        self.getDataModel = function () {
+            return {
+                Id: self.id,
+                StyleString: self.styleString(),
+                ReceiveDate: self.receiveDate(),
+                BoxQuantity: self.boxQuantity(),
+                Sizes: $.map(self.sizeList(), function (e) {
+                    return {
+                        Id: e.styleItemId(),
+                        Quantity: e.quantity(),
+                        BoxItemId: e.boxItemId(),
+                    }
+                })
+            };
+        }
+
+        self.saveInProgress = ko.observable(false);
+        self.canSubmit = ko.computed(function () {
+            return !self.saveInProgress()
+                && !dataUtils.isNullOrEmpty(self.styleString())
+                && self.sizeList().length > 0;
+        });
+
+        self.onSave = function (sender) {
+            self.submit();
+        };
+
+        self.submit = function (sender) {
+            self.saveInProgress(true);
+            var dataModel = self.getDataModel();
+
+            $.ajax({
+                method: "POST",
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                traditional: true,
+                async: true,
+                cache: false,
+                data: JSON.stringify(dataModel),
+
+                url: '@Url.Action(MVC.PurchaseOrder.Submit())',
+
+                success: function (data) {
+                    self.submitCallback();
+                    self.onClose();
+                },
+                complete: function(data) {
+                    self.saveInProgress(false);
+                },
+            });
+        };
+
+        self.show = function () {
+            console.log($("#viewSaleEventPopup").length);
+            $("#viewSaleEventPopup").each(function (i) {
+                var popup = $(this).data("kendoWindow");
+                if (popup != null) {
+                    console.log("close previous viewSaleEventPopup popup");
+
+                    ko.cleanNode($(this)[0]);
+                    popup.close();
+                    popup.destroy();
+                }
+                else {
+                    $(this).remove();
+                }
+            });
+
+            console.log("ViewSaleEventPopupModel.create");
+
+            $('body').prepend("<div id='viewSaleEventPopup'></div>");
+            self.popupNode = $('#viewSaleEventPopup');
+
+            self.popupNode.kendoWindow({
+                modal: true,
+                width: "450px",
+                title: "Add Purchase Order",
+                visible: false,
+                close: self.closeEvent,
+                actions: [
+                    "Close"
+                ],
+            });
+
+            self.popup = self.popupNode.data("kendoWindow");
+            self.popup.content($("#edit-container").html());
+            self.popup.center().open();
+
+            ko.applyBindings(self, self.popupNode[0]);
+        };
+
+        self.onClose = function () {
+            console.log('onClose');
+            //self.closeEvent();
+            self.popup.close();
+        }
+    }
+
+
+
+    @*$(document).ready(function() {
+        console.log("onready");
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+            getStyleIdListUrl: '@Url.Action("GetStyleIdList", "AutoComplete")',
+        };
+
+        var vm = new OpenBoxViewModel(model, settings);
+        ko.applyBindings(vm, document.getElementById('edit-container'));
+    });*@
+
+    $(document).ready(function () {
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+    });
+</script>
+
+<!-- ko stopBinding: true -->
+<div style="display: none">
+    <div id="edit-container">
+        @Html.ValidationSummary(true)
+
+        @Html.HiddenFor(m => m.Id)
+
+
+        <div class="k-edit-form-container">
+            <div class="editor-label">Style Id</div>
+            <div class="editor-field" style="padding-top: 6px">
+                <input type="text"
+                       style="width: 180px"
+                       data-bind="kendoAutoComplete: {
+                                   value: styleString,
+                                   data: {},
+                                   minLenght: 3,
+                                    /*enabled: canEditStyle,*/
+                                    highlightFirst: true,
+                                   dataSource: styleIdSource },
+                                valueUpdate: 'afterkeydown'"
+                       class="k-textbox" />
+            </div>
+
+            <div class="editor-label"># of Boxes</div>
+            <div class="editor-field">
+                <input type="text" class="k-textbox" data-bind="value: boxQuantity" />
+            </div>
+
+            <div class="editor-label">Receive Date</div>
+            <div class="editor-field">
+                <input data-bind="kendoDateTimePicker: { value: receiveDate, format: 'MM/dd/yyyy HH:mm' }" />
+            </div>
+
+            <div class="clear"></div>
+            <div style="padding-top: 10px; padding-left: 50px">
+                <div class="k-widget k-grid k-secondary grid-small">
+                    <table style="width: 100%;">
+                        <thead class="k-grid-header">
+                            <tr>
+                                <th class="k-header">Size</th>
+                                <th class="k-header">Breakdown</th>
+                            </tr>
+                        </thead>
+                        <tbody data-bind="foreach: sizeList">
+                            <tr class="k-master-row" data-bind="css: { 'k-alt': $index() % 2 == 1 }">
+                                <td><span data-bind="text: name"></span></td>
+                                <td><input type="text" class="k-textbox" data-bind="value: quantity" /></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="clear"></div>
+        </div>
+        <div class="clear" style="padding-bottom: 15px"></div>
+
+        <div class="k-edit-buttons k-state-default popup-button-panel"
+             style="position: static">
+            <table style="margin-left: auto">
+                <tr>
+                    <td>
+                        <button class="k-button k-button-icontext k-grid-update"
+                                tabindex="301"
+                                data-bind="click: onSave, enable: canSubmit, css: {'k-state-disabled': !canSubmit() }" ">
+                            <span class="k-icon k-update"></span>Save
+                        </button>
+
+                        <button class="k-button k-button-icontext k-grid-cancel"
+                                tabindex="301"
+                                data-bind="click: onClose">
+                            <span class="k-icon k-cancel"></span>Cancel
+                        </button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+<!-- /ko -->

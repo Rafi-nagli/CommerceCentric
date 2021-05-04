@@ -1,0 +1,114 @@
+﻿@using Amazon.Web.Models
+@model Amazon.Web.ViewModels.Settings.ShippingChargeCollectionViewModel
+
+@{
+    ViewBag.Title = "Shipping Charge Settings";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<script>
+    var ShippingChargesViewModel = function (model, settings) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+        self.messages = ko.observableArray([]);
+
+        //self.ShippingCharges.forEach(function (e) {
+        //    e.chargePercent = ko.observable(e.ChargePercent);
+        //});
+
+        self.shippingCharges = ko.observable(model.ShippingCharges);
+
+        self.onSave = function () {
+            self.messages.removeAll();
+            $.ajax({
+                url: '@Url.Action("SetShippingCharges", "Settings")',
+                data: JSON.stringify({ ShippingCharges: self.shippingCharges() }),
+                type: 'POST',
+                contentType: 'application/json',
+                success: function(result) {
+                    if (result.IsSuccess) {
+                    }
+                    self.messages(result.Messages);
+                }
+            });
+        }
+    }
+</script>
+
+
+<div id="page-content">
+    <ol class="breadcrumb">
+        <li><a href="#">System</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div id="shipping-charges-content">
+        <div style="padding: 0px 15px 0px 15px" class="qty-panel">
+            <div class="k-widget k-grid k-secondary grid-small" style="height: 600px; overflow-y: scroll; width: 550px">
+                <table>
+                    <colgroup>
+                        <col style="width: 250px" />
+                        <col style="width: 250px" />
+                        <col style="" />
+                    </colgroup>
+                    <thead class="k-grid-header">
+                        <tr>
+                            <th class="k-header">Provider Name</th>
+                            <th class="k-header">Method Name</th>
+                            <th class="k-header">Charge, %</th>
+                        </tr>
+                    </thead>
+
+                    <tbody data-bind='foreach: shippingCharges'>
+                        <tr class="k-master-row" data-bind="css: { 'k-alt': $index() % 2 == 1 }">
+                            <td>
+                                <span data-bind="text: ShippingProviderName"></span>
+                            </td>
+                            <td>
+                                <span data-bind="text: ShippingMethodName"></span>
+                            </td>
+                            <td>
+                                <input type="number" class="k-textbox" style="width: 60px" data-bind="value: ShippingChargePercent" />
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="padding: 10px 10px 10px 200px; width: 550px; text-align: right">
+                <button class="k-button" data-bind="click: onSave" style="width: 120px">Save</button>
+            </div>
+            <div>
+                <messages params="{ messages: messages }"></messages>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script type="text/javascript">
+    var shippingChargesHistoryVm = null;
+
+    $(document).ready(function () {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        var settings = {
+        };
+
+        shippingChargesHistoryVm = new ShippingChargesViewModel(model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error-inline",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(shippingChargesHistoryVm, document.getElementById('shipping-charges-content'));
+    });
+</script>
+

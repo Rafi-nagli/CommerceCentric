@@ -1,0 +1,149 @@
+﻿@using Amazon.Web.ViewModels
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@{
+    ViewBag.Title = "Check Rank";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+
+}
+
+<script>
+    var CheckRankModel = function() {
+        var self = this;
+
+        self.asin = ko.observable('');
+        self.rank = ko.observable('');
+        self.closestListings = ko.observable([]);
+
+        self.errorMessage = ko.observable('');
+
+        self.status = ko.observable(null);
+
+        self.isSuccess = ko.computed(function() {
+            return self.status() == 1;
+        });
+        self.isError = ko.computed(function() {
+            return self.status() == 2;
+        });
+        self.isLoading = ko.computed(function() {
+            return self.status() == 0;
+        });
+
+        self.check = function() {
+            self.status(0);
+
+            var data = { asin: self.asin() };
+            $.ajax({
+                url: '@Url.Action("GetRank", "Item")',
+                data: data,
+                cache: false,
+                success: function(result) {
+                    if (result.IsSuccess) {
+                        if (result.Data == null) {
+                            self.status(2);
+                            self.errorMessage("No rank info");
+                        }
+                        else {
+                            self.status(1);
+                            self.rank(result.Data.Rank);
+                            self.closestListings(result.Data.ClosestListings);
+                        }
+                    } else {
+                        self.status(2);
+                        self.errorMessage(result.Message);
+                    }
+                }
+            });
+        }
+    }
+    
+    $(document).ready(function () {
+        var model = new CheckRankModel();
+        ko.applyBindings(model, document.getElementById("page-content"));
+    });
+</script>
+
+<style>
+    .admin-panel { color: black; }
+    
+    .operation {
+        margin: 10px 0px;
+        padding: 5px 10px;
+        border-left: 4px solid gray;
+    }
+</style>
+
+
+<div style="padding-left:7px">
+    <div><span id="infoMessage" style="color: red; font-size: 13px;"></span></div>
+    <div><span id="errorMessage" style="color: red; font-size: 13px;"></span></div>
+    <div><span id="successMessage" style="color: lightgreen; font-size: 13px;"></span></div>
+</div>
+
+<div id="page-content" class="admin-panel">
+    <ol class="breadcrumb">
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+    <div>
+        <div class="operation">
+            <div>ASIN:</div>
+            <div>
+                <input type="text" data-bind="value: asin" /> <button data-bind="click: check"><span class='glyphicon glyphicon-search am-icon'></span></button>
+            </div>
+            <div style="padding: 20px 0px; display: none" data-bind="visible: isLoading">
+                <div class="text-success">Loading...</div>
+            </div>
+            <div style="padding: 20px 0px; display: none" data-bind="visible: isSuccess">
+                <div class="text-success">Rank: #<span style="font-weight: bold" data-bind="textFormatted: rank, pattern: '###,###,###,##0'"></span></div>
+            </div>
+            <div style="padding: 20px 0px; display: none" data-bind="visible: isError">
+                <div class="text-danger">Can't retrieve rank. Details: <span data-bind="text: errorMessage"></span></div>
+            </div>
+
+            <div class="closest-listings" data-bind="visible: isSuccess">
+                <div>Closest listings:</div>
+                <div class="k-widget k-grid k-secondary grid-small" style="width: 600px">
+                    <table style="width: 100%">
+                        <colgroup>
+                            <col style="width: 100px" />
+                            <col style="width: 100px" />
+                            <col style="width: 180px" />
+                            <col style="width: 120px" />
+                        </colgroup>
+                        <thead class="k-grid-header">
+                            <tr>
+                                <th class="k-header">ASIN</th>
+                                <th class="k-header">Rank</th>
+                                <th class="k-header">Style</th>
+                                <th class="k-header">
+                                    Sold Units
+                                    <div class="gray">(seven days)</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody data-bind="foreach: closestListings">
+                            <tr class="k-master-row" data-bind="css: { 'k-alt': $index() % 2 == 1 }">
+                                <td>
+                                    <a data-bind="attr: { 'href': MarketUrl }" target="_blank"><span data-bind="text: ASIN"></span></a>
+                                </td>
+                                <td>
+                                    #<span data-bind="textFormatted: Rank, pattern: '###,###,###,##0'"></span>
+                                </td>
+                                <td>
+                                    <a data-bind="attr: { 'href': StyleUrl }" target="_blank"><span data-bind="text: StyleString"></span></a> - <span data-bind="text: StyleSize" />
+                                </td>
+                                <td>
+                                    <span data-bind="textFormatted: SoldUnits, patter: '###,###,##0', ifEmpty: '0'"></span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

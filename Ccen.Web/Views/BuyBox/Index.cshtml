@@ -1,0 +1,309 @@
+﻿@using Amazon.Web.ViewModels
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@{
+    ViewBag.Title = "Buy Box Status";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+
+}
+
+<script>
+    var BuyBoxViewModel = function(settings) {
+        var self = this;
+
+        self.settings = settings;
+
+        self.grid = $(settings.gridId).data("kendoGrid");
+
+        ko.BaseViewModel.call(self);
+
+        self.defaultMarket = settings.defaultMarket;
+        self.defaultMarketplaceId = settings.defaultMarketplaceId;
+
+        self.period = ko.observable(1);
+        self.periodList = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(BuyBoxStatusViewModel.PeriodList));
+        self.period.subscribe(function() { self.search(); });
+
+        self.inStock = ko.observable(true);
+        self.inStock.subscribe(function() { self.search(); });
+
+        self.includeIgnored = ko.observable(false);
+        self.includeIgnored.subscribe(function() { self.search(); });
+
+        self.marketValue = ko.observable(self.defaultMarket + "_" + self.defaultMarketplaceId);
+        self.marketList = settings.marketList;
+        self.market = ko.computed(function () {
+            return self.marketValue() != null ? self.marketValue().split('_')[0] : 0;
+        });
+        self.marketplaceId = ko.computed(function () {
+            return self.marketValue() != null ? self.marketValue().split('_')[1] : "";
+        });
+
+        self.getGridParams = function () {
+            console.log("market:" + self.market());
+            return {
+                period: self.period(),
+                inStock: self.inStock(),
+                includeIgnored: self.includeIgnored(),
+                market: self.market(),
+                marketplaceId: self.marketplaceId(),
+            };
+        }
+
+        self.search = function () {
+            var params = self.getGridParams();
+
+            console.log("search: market: " + self.market());
+            if (self.isValid()) {
+                self.resetRowNumber();
+                if (self.grid.dataSource.page() != 1) {
+                    self.grid.dataSource.page(1); //May call read
+                }
+                self.grid.dataSource.read(params);
+            }
+        };
+
+        self.clear = function() {
+            self.period(1);
+            self.marketValue(null);
+            self.inStock(true);
+            self.includeIgnored(false);
+
+            self.search();
+        };
+
+        self.clearAndSearch = function () {
+            self.clear();
+            self.search(false);
+        };
+
+        self.searchByButton = function () {
+            self.search(true);
+        };
+
+
+        self.toggleIgnored = function(id, isIgnored) {
+            var grid = self.grid;
+            var gridData = grid.dataSource.data();
+            console.log(isIgnored);
+            var toggledIgnored = isIgnored == "false" ? true : false;
+            $.each(gridData, function(i, row) {
+                if (row.EntityId == id) {
+                    console.log(toggledIgnored);
+                    console.log(row.IsIgnored);
+                    row.IsIgnored = toggledIgnored;
+
+                    var $tr = $('tr[data-uid="' + row.uid + '"]');
+                    var button = $tr.find("#ignoreButton");
+                    button.html(toggledIgnored ? "Enable" : "Ignore");
+                    //calcChecked();
+
+                    helper.ui.kendoFastRedrawRow(grid, row, $('tr[data-uid="' + row.uid + '"]'), [0]);
+                }
+            });
+
+            $.ajax({
+                url: '@Url.Action(MVC.BuyBox.SetIgnored())',
+                data: { id: id, isIgnored: toggledIgnored },
+                cache: false,
+                async: false,
+                success: function() {
+                }
+            });
+        };
+
+        self.grid.bind("dataBound", function(e) {
+            self.resetRowNumber();
+            self.rowTotal(self.grid.dataSource.total());
+        });
+
+        self.errors = ko.validation.group(self, { observable: true, live: true });
+        self.isValid = ko.computed(function () { return self.errors().length === 0; });
+
+        helper.ui.addTopPager(self.grid);
+
+        self.search();
+    };
+</script>
+
+<div id="page-content">
+    <ol class="breadcrumb">
+        <li><a href="#">Reports</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <div class="messages-block">
+                <div><span id="infoMessage" class="text-info"></span></div>
+                <div><span id="errorMessage" class="label label-danger"></span></div>
+                <div><span id="successMessage" class="label label-success"></span></div>
+            </div>
+
+            <table>
+                <tr>
+                    <th>Market:</th>
+                    <td>
+                        <input style="width:180px"
+                               data-bind="kendoDropDownList: {data: marketList, value: marketValue, dataTextField: 'Text', dataValueField: 'Value' }" />
+                    </td>
+                    <th>Period:</th>
+                    <td>
+                        <input style="width: 180px" data-bind="kendoDropDownList: { data: periodList, value: period, dataTextField: 'Text', dataValueField: 'Value' }" />
+                    </td>
+                    <th>
+                        <input type="checkbox" data-bind="checked: inStock" /> In Stock
+                    </th>
+                    <th>
+                        <input type="checkbox" data-bind="checked: includeIgnored" /> Include Ignored
+                    </th>
+                </tr>
+            </table>
+            <button class="k-button filter-button"
+                    data-bind="click: searchByButton">
+                <span class='glyphicon glyphicon-search am-icon'></span>Search
+            </button>
+            <button class="k-button filter-button"
+                    data-bind="click: clearAndSearch">
+                <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+            </button>
+        </div>
+    </div>
+
+    <div>
+        @(Html.Kendo().Grid<BuyBoxStatusViewModel>()
+            .Name("grid")
+            .Columns(columns =>
+            {
+                columns.Bound(c => c.EntityId)
+                    .ClientTemplate("#= buyBoxVm.renderNumber(data) #")
+                    .Title("#")
+                    .Width(50)
+                    .Sortable(false);
+
+                columns.Bound(c => c.Thumbnail)
+                    .Sortable(false)
+                    .Filterable(false)
+                    .Width(80)
+                    .ClientTemplate("#if(HasImage){# <div class='image-box-holder'><a href='#=ProductUrl#' target='_blank'><img src='#=Thumbnail#' style='max-width: 75px' /></a></div> #}#")
+                    .Title("Picture");
+
+                columns.Bound(c => c.ASIN)
+                    .Sortable(true)
+                    .Filterable(true)
+                    .Width(120);
+
+                columns.Bound(c => c.ParentASIN)
+                    .Sortable(true)
+                    .Filterable(true)
+                    .ClientTemplate("<a class='asin' style='font-weight:normal' target='_blank' href='#=MarketUrl#'>#=ParentASIN#</a>")
+                    .Title("Parent ASIN")
+                    .Width(120);
+
+                columns.Bound(c => c.StyleString)
+                    .Sortable(true)
+                    .Filterable(true)
+                    .ClientTemplate("<a class='asin' target='_blank' href='#=StyleUrl#'>#=StyleString#</a>")
+                    .Title("Style ID");
+
+                columns.Bound(c => c.Size)
+                    .Sortable(true)
+                    .Filterable(true)
+                    .Title("Size")
+                    .Width(120);
+
+                columns.Bound(c => c.Quantity)
+                    .ClientTemplate("#=tmpl.isNull(Quantity, '-')#")
+                    .Sortable(true)
+                    .Filterable(true)
+                    .Title("Remaining Qty")
+                    .Width(110);
+
+                columns.Bound(c => c.Price)
+                    .ClientTemplate("$#=Price#")
+                    .Sortable(true)
+                    .Filterable(true)
+                    .Title("Price")
+                    .Width(80);
+
+                columns.Bound(c => c.WinnerPrice)
+                    .ClientTemplate("#if (WinnerSalePrice != null) {# <span>$#=WinnerSalePrice# (Sale)</span> #} else { if (WinnerPrice != null) {# <span>$#=WinnerPrice#</span> #} else {# <span>-</span> #} }#")
+                    .Sortable(true)
+                    .Filterable(true)
+                    .Title("Win. Price")
+                    .Width(110);
+
+                columns.Bound(c => c.StatusFormatted)
+                    .Sortable(true)
+                    .Title("Status")
+                    .Width(120);
+
+                columns.Bound(c => c.LostWinnerDate)
+                    .ClientTemplate("#=LostWinnerDateFormatted#")
+                    //.Format("{0:MM.dd.yyyy HH:mm}")
+                    .Width(100)
+                    .Sortable(true)
+                    .Title("Lost buy box");
+
+                columns.Bound(c => c.EntityId)
+                    .ClientTemplate("<button class='k-button k-button-icontext' id='ignoredButton' style='display:block;margin-top:4px' onclick='buyBoxVm.toggleIgnored(\"#=EntityId#\", \"#=IsIgnored#\")'>#if(IsIgnored) {# Enable #} else {# <span class='glyphicon glyphicon-ban-circle am-icon'></span>Ignore #}#</button>")
+                    .Width(100)
+                    .Title("")
+                    .Sortable(false)
+                    .Filterable(false);
+            })
+                //.Events(e => e.DataBound("dataBound"))
+            .AutoBind(false)
+            .Sortable(conf => conf.Enabled(true).SortMode(GridSortMode.SingleColumn))
+            .Filterable(conf => conf.Enabled(true))
+            .Navigatable(conf => conf.Enabled(false))
+            .Scrollable(conf => conf.Enabled(false))
+            .Selectable(conf => conf.Enabled(false))
+            .Pageable(conf => conf.Enabled(true).Refresh(true))
+            .DataSource(dataSource => dataSource
+                .Ajax()
+                .ServerOperation(false)
+                .PageSize(50)
+                .Model(conf => conf.Id(m => m.ASIN))
+                .Sort(conf => conf.Add(o => o.LostWinnerDate).Descending())
+                .Read(read => read.Action("GetBuyBox", "BuyBox").Data("GetGridParams")))
+        )
+    </div>
+</div>
+
+<script>
+    var buyBoxVm = null;
+
+    function GetGridParams() {
+        console.log("GetGridParams");
+        if (buyBoxVm != null)
+            return buyBoxVm.getGridParams();
+        return {};
+    }
+
+    $(document).ready(function () {
+        var marketList = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.AmazonMarketList));
+
+        var settings = {
+            gridId: "#grid",
+            marketList: marketList,
+            defaultMarket: @((int)Amazon.Core.Models.MarketType.Amazon),
+            defaultMarketplaceId: '@(Amazon.Core.Models.MarketplaceKeeper.AmazonComMarketplaceId)',
+        };
+
+        buyBoxVm = new BuyBoxViewModel(settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+        ko.applyBindings(buyBoxVm, document.getElementById('page-content'));
+    });
+</script>

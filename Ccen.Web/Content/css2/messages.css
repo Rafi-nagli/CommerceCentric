@@ -1,0 +1,69 @@
+﻿/*MESSAGE BLOCK, POPUP*/
+.k-window .message .buttons {
+    padding: 10px;
+    text-align: right;
+}
+
+.k-window .message .buttons a {
+    margin-left: 10px;
+}
+
+.k-window .message {
+    padding: 5px;
+}
+
+.k-window .message .red-warning {
+    color: red;
+}
+
+.k-window .message .orange-warning {
+    color: orange;
+}
+
+.k-window .message .list {
+    padding: 5px;
+}
+
+.k-window .message div {
+    padding: 5px;
+}
+
+.top-bar {
+    display: none; 
+    position: fixed;
+    top: 0px; 
+    left: 0px; 
+    width:100%; 
+    text-align: center; 
+    background-color: gray; 
+    color: white; 
+    padding: 8px;
+    z-index: 10000;
+}
+
+
+/*Message Result Component*/
+.messages-block {
+    padding-left: 7px;
+    background: #efefef;
+    text-align: center;
+    font-size: 15px;
+}
+
+.messages-block .label {
+    font-weight: normal;
+}
+
+
+.messages {
+    padding: 10px 0px 10px 0px;
+}
+
+.messages .alert {
+    margin-bottom: 8px;
+    padding: 10px;
+}
+
+.messages .message-string {
+    list-style: none;
+}

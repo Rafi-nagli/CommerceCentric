@@ -1,0 +1,80 @@
+﻿@using Amazon.Web.ViewModels
+@using Amazon.Web.ViewModels.History
+@using Amazon.Web.ViewModels.Reports
+@using Kendo.Mvc.UI
+@{
+    ViewBag.Title = "Sync History";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<script>
+    var rowNumber = 0;
+
+    function resetRowNumber(e) {
+        rowNumber = 0;
+    }
+
+    function renderNumber(data) {
+        if (data.IsOrder) {
+            return ++rowNumber;
+        }
+        return "";
+    }
+</script>
+
+<div id="page-content">
+    <ol class="breadcrumb">
+        <li><a href="#">Reports</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="grid-small">
+        @(Html.Kendo().Grid<SyncHistoryViewModel>()
+              .Name("grid")
+              .Columns(columns =>
+              {
+                  columns.Bound(c => c.Id).Filterable(false).Sortable(false).ClientTemplate("#= renderNumber(data) #").Title("#").Width(25);
+                  columns.Bound(c => c.Type).ClientTemplate("#=FormattedType#").Title("Type");
+                  columns.Bound(c => c.Status).ClientTemplate("#=FormattedStatus#").Title("Status");
+                  columns.Bound(c => c.ProcessedTotal).Title("Processed");
+                  columns.Bound(c => c.ProcessedWithError).Title("With error");
+                  columns.Bound(c => c.ProcessedWithWarning).Title("With warning");
+                  columns.Bound(c => c.StartDate).ClientTemplate("#=kendo.toString(FormattedStartDate, 'MM.dd.yyyy HH:mm')#").Width(200).Title("Start Date");
+                  columns.Bound(c => c.EndDate).ClientTemplate("# if (FormattedEndDate != null) {# #=kendo.toString(FormattedEndDate, 'MM.dd.yyyy HH:mm')# #} else {# - #}#").Width(200).Title("End Date");
+              })
+              .Sortable(conf => conf.Enabled(true).SortMode(GridSortMode.SingleColumn))
+              .Pageable(conf => conf.Enabled(true))
+              .Filterable(conf => conf.Enabled(true))
+              .ClientDetailTemplateId("itemsTemplate")
+              .DataSource(dataSource => dataSource
+                  .Ajax()
+                  .Sort(conf => conf.Add(s => s.StartDate).Descending())
+                  .PageSize(15)
+                  .Read(read => read.Action("GetSyncHistory", "History")))
+              )
+    </div>
+</div>
+
+
+<script id="itemsTemplate" type="text/kendo-tmpl">
+    @(Html.Kendo().Grid<SyncMessageViewModel>()
+            .Name("SyncMessages_#=Id#")
+            .Columns(columns =>
+            {
+                columns.Bound(c => c.EntityId).Title("Order Id").Width(200);
+                columns.Bound(c => c.Status).Title("Status").ClientTemplate("\\#=FormattedStatus\\#").Width(100);
+                columns.Bound(c => c.FormattedMessages).Title("Message").Sortable(false).Filterable(false).Encoded(false);
+                columns.Bound(c => c.FormattedCreateDate).Title("Date").Format("{0:MM.dd.yyyy HH:mm}").Width(200);
+            })
+            .Pageable(p => p.Enabled(true))
+            .Filterable(f => f.Enabled(true))
+            .Sortable(f => f.Enabled(true).SortMode(GridSortMode.SingleColumn))
+            .DataSource(dataSource => dataSource
+                    .Ajax()
+                //.Sort(conf => conf.Add(s => s.Status).Descending())
+                    .PageSize(15)
+                    .Read(read => read.Action("GetSyncMessages", "History", new { syncHistoryId = "#=Id#" })))
+                    .ToClientTemplate()
+    )
+
+</script>

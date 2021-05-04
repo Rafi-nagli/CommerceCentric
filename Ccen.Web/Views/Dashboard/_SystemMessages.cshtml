@@ -1,0 +1,57 @@
+﻿<script>
+    var SystemMessagesViewModel = function() {
+        var self = this;
+        self.isLoading = ko.observable(true);
+
+        self.messages = ko.observableArray([]);
+        self.hasSystemMessages = ko.computed(function () {
+            return self.messages().length > 0;
+        });
+
+        self.init = function() {
+            $.ajax({
+                cache: false,
+                url: '@Url.Action("GetSystemMessages", "Dashboard")',
+                success: function(result) {
+                    if (result.IsSuccess) {
+                        var messages = result.Data;
+                        self.prepareData(messages);
+                        self.messages(messages);
+                    }
+                    self.isLoading(false);
+                }
+            });
+        }
+
+        self.prepareData = function(items) {
+            $.each(items, function(i, n) {
+
+            });
+        }
+
+        self.init();
+    };
+
+    $(document).ready(function () {
+        systemMessagesViewModel = new SystemMessagesViewModel();
+        ko.applyBindings(systemMessagesViewModel, document.getElementById("system-messages-panel"));
+    });
+</script>
+
+<div id="system-messages-panel">
+    <div data-bind="visible: isLoading" class="loading">
+        <span class="glyphicon glyphicon-refresh glyphicon-refresh-animate"></span>
+        <span>Loading...</span>
+    </div>
+    <div data-bind="visible: !isLoading()">
+        <div data-bind="foreach: messages, visible: hasSystemMessages">
+            <div class="status-line">
+                <span data-bind="text: Name"></span>
+                <a href="javascript:;" class="label label-danger" data-bind="text: FormattedStatus, attr: { 'title': Message }"></a>
+            </div>
+        </div>
+        <div data-bind="visible: !hasSystemMessages()">
+            <span class="label label-success">None</span>
+        </div>
+    </div>
+</div>

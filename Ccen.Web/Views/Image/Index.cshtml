@@ -1,0 +1,117 @@
+﻿@using Amazon.Web.ViewModels
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@{
+    ViewBag.Title = "Upload Image";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+
+}
+
+<script>
+    var ImageModel = function() {
+        var self = this;
+
+        self.imageUrl = ko.observable("");
+        self.isSuccess = ko.observable(false);
+        self.isError = ko.observable(false);
+
+        self.onImageSelect = function (e) {
+            console.log("onImageSelect");
+            $.each(e.files, function (index, value) {
+                var ext = value.extension.toLowerCase();
+                var ok = ext == ".jpg"
+                    || ext == ".jpeg"
+                    || ext == ".png"
+                    || ext == ".bmp";
+
+                if (!ok) {
+                    e.preventDefault();
+                    alert("Please upload image files");
+                }
+            });
+
+            self.isSuccess(false);
+            self.isError(false);
+        };
+
+        self.onUploadSuccess = function (e) {
+            console.log("onUploadSuccess");
+            var data = e.response.Data;
+            console.log(data);
+            if (data.length > 0) {
+                self.imageUrl(data[0]);
+                self.isSuccess(true);
+                self.isError(false);
+            }
+
+            //$.publish("PV_Grid_Access_OnAddNewRecord_Event");
+        }
+
+        self.onUploadError = function (e) {
+            console.log("onUploadError");
+            console.log(e);
+            self.isError(true);
+            self.isSuccess(false);
+        }
+    }
+
+
+
+    $(document).ready(function () {
+        var model = new ImageModel();
+        ko.applyBindings(model, document.getElementById("page-content"));
+    });
+</script>
+
+<style>
+    .admin-panel { color: black; }
+    
+    .operation {
+        margin: 10px 0px;
+        padding: 5px 10px;
+        border-left: 4px solid gray;
+    }
+</style>
+
+
+<div style="padding-left:7px">
+    <div><span id="infoMessage" style="color: red; font-size: 13px;"></span></div>
+    <div><span id="errorMessage" style="color: red; font-size: 13px;"></span></div>
+    <div><span id="successMessage" style="color: lightgreen; font-size: 13px;"></span></div>
+</div>
+
+<div id="page-content" class="admin-panel">
+    <ol class="breadcrumb">
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+    <div>
+        <div class="operation">
+            <div>Choose image:</div>
+            <div>
+                <input type="file" name="files" data-bind="kendoUpload: {
+                                       async: {
+                                           saveUrl: '@Url.Action("SaveSingle", "Image")',
+                                           autoUpload: true,
+                                       },
+                                       showFileList: true,
+                                       multiple: false,
+                                       select: onImageSelect,
+                                       success: onUploadSuccess,
+                                       error: onUploadError
+                                       }"/>
+
+            </div>
+            <div style="padding: 20px 0px;" data-bind="visible: isSuccess">
+                <div class="text-success" style="font-weight: bold">Successfully uploaded:</div>
+                <div><a target="_blank" href="" data-bind="attr: { href: imageUrl }, html: imageUrl"></a></div>
+            </div>
+            <div style="padding: 20px 0px" data-bind="visible: isError">
+                <div class="text-danger" style="font-size: bold">Upload fail</div>
+            </div>
+        </div>
+    <div/>
+</div>

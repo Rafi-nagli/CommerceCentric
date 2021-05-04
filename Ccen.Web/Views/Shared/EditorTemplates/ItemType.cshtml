@@ -1,0 +1,9 @@
+﻿@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@model int?
+@(Html.Kendo().DropDownListFor(m => m).DataTextField("Text")
+                          .DataValueField("Value")
+                          .Value(Model.ToString())
+                          .OptionLabel("Select...")
+                          .BindTo(OptionsHelper.ItemTypes))
+                          

@@ -1,0 +1,788 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Core.Models.Items
+@using Amazon.Web.HtmlExtend
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Inventory.StylePriceViewModel
+@{
+    Layout = null;
+}
+
+
+<script type="text/javascript">
+    var StylePriceModel = function(model, settings) {
+        var self = this;
+
+        self.isLoaded = ko.observable(false);
+
+        self.settings = settings;
+        self.model = model;
+
+        self.id = model.StyleId;
+        self.type = model.Type;
+
+        self.styleString = model.StyleString;
+        self.excessiveShipmentAmount = ko.observable(model.ExcessiveShipmentAmount);
+
+        console.log("Type=" + self.type);
+        console.log(settings.styleTypes.reference);
+        self.isReferenceType = ko.observable(self.type == settings.styleTypes.reference);
+        self.canEdit = ko.observable(settings.editAccess && !self.isReferenceType());
+
+        self.groupSalePrice = ko.observable();
+        self.groupSFPSalePrice = ko.observable();
+        self.groupApplyMode = ko.observable();
+
+        self.maxPiecesOnSale = ko.observable(model.MaxPiecesOnSale);
+        self.hasMaxPiecesOnSale = ko.computed(function() {
+            return self.maxPiecesOnSale() != null && self.maxPiecesOnSale() > 0;
+        });
+
+        model.Sizes.forEach(function(entry) {
+            console.log(entry);
+
+            entry.sourceSaleId = ko.observable(entry.SaleId);
+            entry.saleId = ko.observable(entry.SaleId);
+
+            entry.initSalePrice = ko.observable(null);
+            entry.initSFPSalePrice = ko.observable(null);
+            entry.newSalePrice = ko.observable(null);
+            entry.newSFPSalePrice = ko.observable(null);
+
+            entry.initSalePrice.subscribe(function () {
+                var newValue = dataUtils.roundToTwoPrecision(parseInt(entry.initSalePrice()) + (entry.Weight > 16 ? 8.49 : 6.49)); //NOTE: was 7.49, but we need to be .99
+                if (newValue > 0)
+                    entry.initSFPSalePrice(newValue);
+                else
+                    entry.initSFPSalePrice(null);
+            });
+            entry.newSalePrice.subscribe(function () {
+                var newValue = dataUtils.roundToTwoPrecision(parseInt(entry.newSalePrice()) + (entry.Weight > 16 ? 8.49 : 6.49)); //NOTE: was 7.49, but we need to be .99
+                if (newValue > 0)
+                    entry.newSFPSalePrice(newValue);
+                else
+                    entry.newSFPSalePrice(null);
+            });
+
+
+            entry.applyMode = ko.observable(entry.ApplyMode == 0 ? "0" : "1");
+            entry.marketMode = ko.observable(entry.MarketMode == 0 ? "0" : "1");
+
+            entry.isPermanent = ko.computed(function() {
+                return entry.applyMode() == "1";
+            });
+
+            entry.saleStartDate = ko.observable(kendo.parseDate(entry.SaleStartDate)).extend({
+                required: {
+                    message: "*",
+                    onlyIf: function() {
+                        if (entry.isPermanent())
+                            return false;
+                        return entry.saleId() != null || !dataUtils.isEmpty(entry.initSalePrice());
+                    }
+                }
+            });
+            entry.saleEndDate = ko.observable(kendo.parseDate(entry.SaleEndDate));
+            entry.minPrice = ko.observable(entry.MinPrice);
+            entry.maxPrice = ko.observable(entry.MaxPrice);
+
+            entry.minListingPrice = ko.observable(entry.MinListingPrice);
+            entry.maxListingPrice = ko.observable(entry.MaxListingPrice);
+            entry.hasPriceRange = ko.computed(function () {
+                return entry.maxListingPrice() - entry.minListingPrice() > 0.05;
+            });
+            entry.lastChangePriceDate = ko.observable(kendo.parseDate(entry.LastChangeDate)).extend({ format: 'MM/dd/yyyy' });
+
+            entry.maxPiecesOnSale = ko.observable(entry.MaxPiecesOnSale || self.maxPiecesOnSale()).extend({
+                required: {
+                    message: "* (or start/end dates)",
+                    onlyIf: function() {
+                        if (entry.isPermanent())
+                            return false;
+                        console.log("maxPiecesOnSale.validate");
+                        console.log(entry.initSalePrice());
+                        return (entry.saleId() != null || !dataUtils.isEmpty(entry.initSalePrice())) && entry.saleEndDate() == null;
+                    }
+                }
+            });
+
+            entry.saleToMarkets = ko.observable(entry.SaleToMarkets);
+
+            entry.initSalePrice.subscribe(function() {
+                if (entry.initSalePrice() != null) {
+                    if (entry.saleStartDate() == null)
+                        entry.saleStartDate(new Date());
+                }
+            });
+
+            entry.filteredSaleToMarkets = ko.computed(function() {
+                if (entry.saleToMarkets() == null)
+                    return [];
+
+                return $.grep(entry.saleToMarkets(), function(m) {
+                    return m.SalePrice != null
+                        || m.SalePercent != null
+                        || m.SFPSalePrice != null;
+                });
+            });
+
+            entry.onCustomSelected = function(markets) {
+                if ((entry.saleId() == null || entry.saleId() == 0) && markets.length > 0) {
+                    entry.saleId(markets[0].SaleId);
+                    console.log("set saleId=" + markets[0].SaleId);
+                }
+                if (entry.saleStartDate() == null)
+                    entry.saleStartDate(new Date());
+                entry.saleToMarkets(markets);
+                entry.initSalePrice(null);
+                entry.initSFPSalePrice(null);
+            };
+
+            entry.onCustomSelect = function(data, e) {
+                console.log('onCustomSelect, styleItemId=' + entry.StyleItemId);
+                var model = {
+                    styleItemId: entry.StyleItemId,
+                    initSalePrice: entry.initSalePrice(),
+                    initSFPSalePrice: entry.initSFPSalePrice(),
+                    newSalePrice: entry.newSalePrice(),
+                    newSFPSalePrice: entry.newSFPSalePrice(),
+
+                    styleString: self.styleString,
+                    styleSize: entry.Size,
+                };
+                var settings = {
+                    submitCallback: entry.onCustomSelected,
+                    markets: self.settings.markets,
+                    urls: {
+                        getListingsByStyleSize: '@Url.Action("GetListingsByStyleSize", "InventoryPrice")',
+                        setListingsToStyleSize: '@Url.Action("SetListingsForStyleSize", "InventoryPrice")'
+                    }
+                };
+                var popupModel = new ListingSelectPopupModel(model,
+                    settings);
+                popupModel.show();
+            }
+
+            entry.onShowSales = function(data, e) {
+                console.log('onShowSales, styleItemId=' + entry.StyleItemId);
+
+                popupWindow.initAndOpenWithSettings({
+                    content: self.settings.urls.salesPopup + "?styleItemId=" + entry.StyleItemId,
+                    level: 2,
+                    title: "Sales",
+                    width: 1000,
+                    resize: function (e) {
+
+                    }
+                });
+            }
+
+            entry.onViewHistory = function () {
+                console.log("viewHistory, id=" + entry.StyleItemId);
+                popupWindow.initAndOpenWithSettings({
+                    content: self.settings.urls.viewHistory + "?styleItemId=" + entry.StyleItemId,
+                    title: "View History, " + entry.Size + "/" + tmpl.isNull(entry.Color, '-') + ", " + entry.StyleItemId,
+                    level: 2,
+                    width: 800,
+                    customAction: null,
+                    submitSuccess: function (result) {
+                        console.log("onViewHistory.success");
+                    }
+                });
+            };
+
+            entry.hasSale = ko.computed(function() {
+                return entry.saleId() != null;
+            });
+
+            entry.hasSavedSale = ko.computed(function() {
+                return entry.sourceSaleId() != null && entry.hasSale();
+            });
+
+            entry.removeSale = function() {
+                entry.saleId(null);
+                entry.saleToMarkets([]);
+                if (!self.hasMaxPiecesOnSale())
+                    entry.maxPiecesOnSale(null);
+                entry.saleStartDate(null);
+                entry.saleEndDate(null);
+                entry.initSalePrice(null);
+                entry.initSFPSalePrice(null);
+                entry.newSalePrice(null);
+                entry.newSFPSalePrice(null);
+            };
+
+            console.log("Weight: " + entry.Weight);
+        });
+
+        self.sizes = ko.observableArray(model.Sizes);
+
+        self.groupSalePrice.subscribe(function () {
+            self.sizes().forEach(function (s) {
+                if (!s.hasSale()) {
+                    s.initSalePrice(self.groupSalePrice());
+                }
+                else {
+                    s.newSalePrice(self.groupSalePrice());
+                }
+            });
+        });
+        self.groupSFPSalePrice.subscribe(function () {
+            self.sizes().forEach(function (s) {
+                if (!s.hasSale())
+                    s.initSFPSalePrice(self.groupSFPSalePrice());
+                else
+                    s.newSFPSalePrice(self.groupSFPSalePrice());
+            });
+        });
+        self.groupApplyMode.subscribe(function () {
+            self.sizes().forEach(function (s) {
+                if (!s.hasSale())
+                    s.applyMode(self.groupApplyMode());
+                else
+                    s.applyMode(self.groupApplyMode());
+            });
+        });
+
+
+        self.maxPiecesOnSale.subscribe(function() {
+            self.sizes().forEach(function(s) {
+                s.maxPiecesOnSale(self.maxPiecesOnSale());
+            });
+        });
+
+
+
+        self.switchToEdit = function() {
+            console.log("switchToEdit, id=" + self.id);
+            popupWindow.customAction("openStyleEdit", {
+                id: self.id,
+                type: self.type,
+            });
+        };
+        self.canSwitchToEdit = ko.observable(settings.editAccess);
+
+        self.switchToQty = function() {
+            console.log("switchToQty, id=" + self.id);
+
+            popupWindow.customAction("openStyleQuantity", {
+                id: self.id,
+                type: self.Type,
+            });
+        };
+
+        self.canSwitchToQty = ko.computed(function() {
+            return self.isLoaded();
+        });
+
+
+        self.validateSalePrice = function () {
+            var defer = $.Deferred();
+
+            //Sale price highest then maxPrice
+            var saleIssueSizes = $.grep(self.sizes(), function (m) {
+                return (m.newSalePrice() != null && m.maxListingPrice() != null && m.newSalePrice() >= m.maxListingPrice());
+            });
+            console.log("sale issue sizes: " + saleIssueSizes.length);
+            if (saleIssueSizes.length > 0) {
+                var sizes = $.map(saleIssueSizes, function (m) { return m.Size; });
+                var message = "The following sizes: " + "\"" + sizes.join("\", \"") + "\", have sale price higher then current max regular price"
+                Message.popupAsync({
+                    title: 'Confirm',
+                    message: message,
+                    type: Message.YES_NO
+                }).done(function () {
+                    defer.resolve();
+                }).fail(function () {
+                    defer.reject();
+                });
+            }
+            else {
+                defer.resolve();
+            }
+
+            return defer;
+        }
+
+        self.validateWeight = function () {
+            var defer = $.Deferred();
+
+            //No weight
+            var warningSizes = $.grep(self.sizes(), function (m) {
+                return (m.newSalePrice() != null || m.initSalePrice() != null) && m.Weight == null;
+            });
+            console.log("warning sizes: " + warningSizes.length);
+            if (warningSizes.length > 0) {
+                var sizes = $.map(warningSizes, function (m) { return m.Size; });
+                var message = "The following sizes: " + "\"" + sizes.join("\", \"") + "\", don't have weight and can have issues with international price calculation"
+                Message.popupAsync({
+                    title: 'Confirm',
+                    message: message,
+                    type: Message.YES_NO
+                }).done(function () {
+                    defer.resolve();
+                }).fail(function () {
+                    defer.reject();
+                });
+            }
+            else {
+                defer.resolve();
+            }
+
+            return defer;
+        }
+
+        self.asyncValidate = function () {
+            var defer = $.Deferred();
+
+            self.validateSalePrice()
+                .done(function () {
+                    self.validateWeight().done(function () {
+                        defer.resolve();
+                    }).fail(function () {
+                        defer.reject();
+                    });
+                })
+                .fail(function () {
+                    defer.reject();
+                });
+
+            return defer;
+        };
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function() {
+            return self.errors().length === 0;
+        });
+
+        self.onSave = function (data, e) {
+            console.log("onSave");
+            var sender = $(e.target);
+            helper.ui.showLoading(sender);
+            self.asyncValidate().done(function (result) {                
+                helper.ui.hideLoading(sender);
+                $('#submit').click();
+            }).fail(function () {
+                console.log("fail");
+                helper.ui.hideLoading(sender);
+            });
+        };
+
+
+        self.onSubmit = function(data, e) { // function(data, e) {
+            //console.log(data);
+            console.log(e);
+            console.log("save click");
+
+            //var validator = $("#form").kendoValidator().data('kendoValidator');
+
+            //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+            //http://jsfiddle.net/KHFn8/3238/
+            if (self.isValid()) { //validator.validate() &&
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+
+                e.preventDefault();
+                return false;
+            }
+        };
+
+        self.isLoaded(true);
+    };
+
+    $(document).ready(function() {
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+            markets: {
+                amazonCom: '@((int)MarketType.Amazon)',
+                amazonUk: '@((int)MarketType.AmazonEU)',
+                amazonAu: '@((int)MarketType.AmazonAU)',
+                walmart: '@((int)MarketType.Walmart)',
+                walmartCA: '@((int)MarketType.WalmartCA)',
+                jet: '@((int)MarketType.Jet)',
+                magento: '@((int)MarketType.Magento)',
+                eBay: '@((int)MarketType.eBay)',
+            },
+            marketplaces: {
+                amazonCa: '@(MarketplaceKeeper.AmazonCaMarketplaceId)',
+                amazonMx: '@(MarketplaceKeeper.AmazonMxMarketplaceId)'
+            },
+
+            styleTypes: {
+                default: '@((int)StyleTypes.Default)',
+                reference: '@((int)StyleTypes.References)'
+            },
+
+            urls: {
+                salesPopup: '@Url.Action(MVC.Item.SalesPopupByStyleItem())',
+                viewHistory: '@(Url.Action("ViewPriceHistory", "PriceHistory"))',
+            },
+            editAccess: @(AccessManager.CanEditStyle() ? 1 : 0),
+        };
+
+        var viewModel = new StylePriceModel(model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(viewModel, $('#edit-price-container')[0]);
+
+        $('#edit-price-container input[type=checkbox][data-toggle^=toggle]').bootstrapToggle({
+            size: 'mini',
+
+        });
+    });
+</script>
+
+<div id="edit-price-container">
+    @Html.ValidationSummary(true)
+
+    @Html.HiddenFor(m => m.Id)
+    @Html.HiddenFor(m => m.StyleId)
+
+    <div class="inventory-popup">
+        <div class="k-edit-form-container" style="width: auto">
+            <div>
+                <div style="padding: 5px 15px 0px 15px">
+                    <table class="noborder" style="width: 100%; padding-bottom: 0px">
+                        <tr>
+                            <td style="vertical-align: top; padding-top: 10px; width: 90px">
+                                <img height='75' style='border: 0' src='@Model.Thumbnail'/>
+                            </td>
+                            <td style="vertical-align: top; padding-top: 10px">
+                                <b><span class="gray">Style:</span></b>
+                                <span style="font-size: 14px" data-bind="text: styleString"></span>
+
+                                <div style="margin-top: 8px;">
+                                    <table>
+                                        <tr>
+                                            <td>
+                                                <span>Excessive Shipment</span>
+                                                <div class="note">max difference to ignore, $</div>
+                                            </td>
+                                            <td>
+                                                <input autocomplete="off"
+                                                       data-bind='value: excessiveShipmentAmount'
+                                                       name="ExcessiveShipmentAmount"
+                                                       style="width: 60px"
+                                                       class="k-textbox" />
+                                            </td>
+                                        </tr>
+                                    </table>                                    
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="clear"></div>
+                <div style="padding: 0px 15px 20px 15px" class="qty-panel">
+                    <div style="padding: 0px 0px 4px 0px; font-weight: bold">Prices/Sales</div>
+                    <div class="k-widget k-grid k-secondary grid-small">
+                        <table style="width: 100%;">
+                            <colgroup>
+                                <col style="width: auto"/>
+                                <col style="width: 120px" />
+                                <col style="width: 280px"/>
+                                <col style="width: 90px"/>
+                                <col style="width: 100px"/>
+                                <col style="width: 100px"/>
+                                <col style="width: 90px"/>
+                                <col style="width: 70px" />
+                            </colgroup>
+                            <thead class="k-grid-header">
+                            <tr>
+                                <td class="k-header"></td>
+                                <td class="k-header"></td>
+                                <td class="k-header" style="font-size: 11px">
+                                    <div>
+                                        Sale Price: <input autocomplete="off"
+                                                           data-bind='value: groupSalePrice'
+                                                           tabindex="1"
+                                                           autofocus="autofocus"
+                                                           style="width: 60px"
+                                                           class="k-textbox" />
+                                        /FPB: <input autocomplete="off"
+                                                     data-bind='value: groupSFPSalePrice'
+                                                     tabindex="2"
+                                                     autofocus="autofocus"
+                                                     style="width: 60px"
+                                                     class="k-textbox" />
+                                    </div>
+                                    <div>
+                                        <input type="radio"
+                                               value="0"
+                                               tabindex="3"
+                                               data-bind='checked: groupApplyMode' />
+                                        <span style="line-height: 20px; vertical-align: top">Sale</span>
+                                        <input type="radio"
+                                               value="1"
+                                               tabindex="4"
+                                               style="margin-left: 5px"
+                                               data-bind='checked: groupApplyMode' />
+                                        <span style="line-height: 20px; vertical-align: top">Permanent</span>
+                                    </div>
+                                </td>
+                                <td colspan="3" class="k-header">
+                                    <input type="number"
+                                           data-bind='value: maxPiecesOnSale, attr: { name: "MaxPiecesOnSale" }'
+                                           style="width: 60px"
+                                           tabindex="2" 
+                                           class="k-textbox"/> for whole style
+                                </td>
+                                <td class="k-header" colspan="2">
+
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th class="k-header">Size / Color</th>
+                                <th class="k-header">Price Range</th>
+                                <th class="k-header">Sale Price / Listings</th>
+                                <th class="k-header">Max Pieces</th>
+                                <th class="k-header">Sale Start</th>
+                                <th class="k-header">Sale End</th>
+                                <th class="k-header">Info</th>
+                                <th class="k-header"></th>
+                            </tr>
+                            </thead>
+
+                            <tbody data-bind='foreach: sizes'>
+                            <tr class="k-master-row" data-bind="css: { 'k-alt': $index() % 2 == 1 }">
+                                <td>
+                                    <input type="hidden" data-bind='value: Size, attr: { name: "Sizes[" + $index() + "].Size" }'/>
+                                    <input type="hidden" data-bind='value: StyleItemId, attr: { name: "Sizes[" + $index() + "].StyleItemId" }'/>
+                                    <input type="hidden" data-bind='value: saleId, attr: { name: "Sizes[" + $index() + "].SaleId" }'/>
+                                    <div class="gray remark">
+                                        <label data-bind="text: SizeGroupName"></label>
+                                    </div>
+                                    <span data-bind="text: Size"></span> / <span data-bind="textFormatted: Color, ifEmpty: '-'"></span>
+                                </td>
+                                <td>
+                                    <table>
+                                        <tr>
+                                            <td><span class="gray">Min:</span></td>
+                                            <td><input style='width: 50px;' class="k-textbox" data-bind='value: minPrice, attr: { name: "Sizes[" + $index() + "].MinPrice", tabindex: $index() * 2 + 400 }' autocomplete='off' /></td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="gray">Max:</span></td>
+                                            <td><input style='width: 50px' class="k-textbox" data-bind='value: maxPrice, attr: { name: "Sizes[" + $index() + "].MaxPrice", tabindex: $index() * 2 + 1 + 400 }' autocomplete='off' /></td>
+                                        </tr>
+                                    </table>
+                                </td>
+                                <td>
+                                    <table>
+                                        <tr>
+                                            <td style="padding: 0px 3px;" class="remark" colspan="2">
+                                                <div data-bind="visible: !hasSale()">
+                                                    Start Price: <input autocomplete="off"
+                                                                        data-bind='value: initSalePrice, enable: !hasSale(), attr: { name: "Sizes[" + $index() + "].InitSalePrice", tabindex: $index() + 20  }'
+                                                                        style="width: 55px"
+                                                                        class="k-textbox" />
+                                                    /FPB: <input autocomplete="off"
+                                                                 data-bind='value: initSFPSalePrice, enable: !hasSale(), attr: { name: "Sizes[" + $index() + "].InitSFPSalePrice", tabindex: $index() + 20  }'
+                                                                 style="width: 55px"
+                                                                 class="k-textbox" />
+                                                </div>
+                                                <div data-bind="visible: hasSavedSale()">
+                                                    New Price: <input autocomplete="off"
+                                                                      data-bind='value: newSalePrice, enable: hasSale(), attr: { name: "Sizes[" + $index() + "].NewSalePrice", tabindex: $index() + 20  }'
+                                                                      style="width: 55px"
+                                                                      class="k-textbox" />
+                                                    /FPB: <input autocomplete="off"
+                                                                 data-bind='value: newSFPSalePrice, enable: hasSale(), attr: { name: "Sizes[" + $index() + "].NewSFPSalePrice", tabindex: $index() + 20  }'
+                                                                 style="width: 55px"
+                                                                 class="k-textbox" />
+                                                </div>
+                                                <div data-bind="visible: hasSale">
+                                                    <div>
+                                                        <span class="note">Sales:</span>
+                                                        <div data-bind="foreach: filteredSaleToMarkets">
+                                                            <span data-bind="text: MarketName"></span>
+                                                            -
+                                                            <span data-bind="visible: SalePrice != null">
+                                                                <span data-bind="text: MarketCurrency"></span><span data-bind="text: SalePrice"></span>
+                                                            </span>
+                                                            <span data-bind="visible: SFPSalePrice != null">
+                                                                /FPB: <span data-bind="text: MarketCurrency"></span><span data-bind="text: SFPSalePrice"></span>
+                                                            </span>
+                                                            <span data-bind="visible: SalePercent != null">
+                                                                <span data-bind="text: SalePercent"></span>%
+                                                            </span>
+                                                            <span data-bind="visible: $index() != $parent.filteredSaleToMarkets().length - 1">, </span>
+                                                        </div>
+                                                        <span data-bind="visible: filteredSaleToMarkets().length == 0">no sale</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 0px 3px;">
+                                                <div data-bind="visible: !hasSavedSale()">
+                                                    <input type="radio"
+                                                           value="0"
+                                                           data-bind='checked: applyMode, attr: { name: "Sizes[" + $index() + "].ApplyMode", tabindex: $index() * 2 + 1500 }' />
+                                                    <span style="line-height: 20px; vertical-align: top">Sale</span>
+                                                    <input type="radio"
+                                                           value="1"
+                                                           style="margin-left: 5px"
+                                                           data-bind='checked: applyMode, attr: { name: "Sizes[" + $index() + "].ApplyMode", tabindex: $index() * 2 + 1501 }' />
+                                                    <span style="line-height: 20px; vertical-align: top">Permanent</span>
+                                                </div>
+                                                <div data-bind="visible: !hasSavedSale()">
+                                                    <input type="radio"
+                                                           value="0"
+                                                           data-bind='checked: marketMode, attr: { name: "Sizes[" + $index() + "].MarketMode", tabindex: $index() * 2 + 1502 }' />
+                                                    <span style="line-height: 20px; vertical-align: top">All</span>
+                                                    <input type="radio"
+                                                           value="1"
+                                                           style="margin-left: 5px"
+                                                           data-bind='checked: marketMode, attr: { name: "Sizes[" + $index() + "].MarketMode", tabindex: $index() * 2 + 1503 }' />
+                                                    <span style="line-height: 20px; vertical-align: top">Only AmzUS</span>
+                                                </div>
+                                            </td>
+                                            <td style="padding: 0px 3px; width: 40px">
+                                                <a class="k-button"
+                                                    style="min-width: 30px"
+                                                    data-bind="click: onCustomSelect, attr: { tabindex: $index() + 1000 }"><span class='glyphicon glyphicon-list-alt am-icon'></span></a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    @*<input type="text"
+                                           data-bind='value: SalePrice, attr: { name: "Sizes[" + $index() + "].SalePrice" }'
+                                           style="width: 60px"
+                                           autocomplete="off"
+                                           class="k-textbox" />*@
+                                </td>
+                                <td>
+                                    <div data-bind="visible: !$root.hasMaxPiecesOnSale()">
+                                        <input type="number"
+                                               data-bind='value: maxPiecesOnSale, 
+                                                attr: { name: "Sizes[" + $index() + "].MaxPiecesOnSale", tabindex: $index() + 2000 },
+                                                enable: !isPermanent()'
+                                               style="width: 60px"
+                                               class="k-textbox"/>
+                                    </div>
+                                    <div data-bind="visible: $root.hasMaxPiecesOnSale()">
+                                        <span class="remark">[whole style]</span>
+                                    </div>
+                                    <span class="note">Remaining: <span data-bind="text: RemainingQuantity"></span></span>
+                                </td>
+                                <td>
+                                    <input type="text"
+                                           style="width: 105px"
+                                           data-bind='kendoDatePicker: { value: saleStartDate, format: "MM/dd/yyyy" }, 
+                                            attr: { name: "Sizes[" + $index() + "].SaleStartDate", tabindex: $index() + 3000 },
+                                            enable: !isPermanent()'/>
+                                    <span data-bind="validationMessage: saleStartDate" class="red"></span>
+                                </td>
+                                <td>
+                                    <input type="text"
+                                           style="width: 105px"
+                                           data-bind='kendoDatePicker: { value: saleEndDate, format: "MM/dd/yyyy" }, 
+                                            attr: { name: "Sizes[" + $index() + "].SaleEndDate", tabindex: $index() + 4000 },
+                                            enable: !isPermanent()'/>
+                                    <span data-bind="validationMessage: saleEndDate" class="red"></span>
+                                </td>
+                                <td>
+                                    <div class="note">range: 
+                                        <span data-bind="visible: hasPriceRange">
+                                            $<span data-bind="text: minListingPrice"></span> - $<span data-bind="text: maxListingPrice"></span>
+                                        </span>
+                                        <span data-bind="visible: !hasPriceRange()">
+                                            $<span data-bind="text: maxListingPrice"></span>
+                                        </span>
+                                    </div>
+
+                                    @*<div>2 months sold: <span data-bind="value: recentSoldQty"></span></div>*@
+                                    <div class="note">changed: <span data-bind="text: lastChangePriceDate"></span></div>
+                                </td>
+                                <td>
+                                    <div><a href="javascript:;" class="remark" style="font-size: 12px;" data-bind="click: onViewHistory">history...</a></div>
+                                    <div style="padding-top: 5px">
+                                        <a class="k-button"
+                                           style="min-width: 30px"
+                                           data-bind="click: onShowSales, attr: { tabindex: $index() + 5100 }"><span class='glyphicon glyphicon-stats am-icon'></span></a>
+                                    </div>
+                                    <div style="padding-top: 5px">
+                                        <button href="#" data-bind='click: removeSale, visible: hasSale, attr: { tabindex: $index() + 5000 }' style="min-width: 20px; padding: 2px 7px 0px 6px" class="k-button">
+                                            <span class='glyphicon glyphicon-remove am-icon'></span>Clear
+                                        </button>
+                                    </div>
+                                </td>
+                                @*<td>
+                                    <div><span class="gray">Min:</span> <input style='width: 50px; margin-left: 4px' class="k-textbox" data-bind='value: minPrice, attr: { name: "Sizes[" + $index() + "].MinPrice", tabindex: $index() * 2 + 400 }' autocomplete='off' /></div>
+                                    <div><span class="gray">Max:</span> <input style='width: 50px' class="k-textbox" data-bind='value: maxPrice, attr: { name: "Sizes[" + $index() + "].MaxPrice", tabindex: $index() * 2 + 1 + 400 }' autocomplete='off' /></div>
+                                </td>*@
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="clear"></div>
+
+    @Html.Partial("_ListingSelectPopup")
+
+    <div class="k-edit-buttons k-state-default popup-button-panel"
+         style="position: static">
+        <table style="margin-left: auto">
+            <tr>
+                <td style="display: none; padding-right: 15px;"
+                    data-bind="visible: canSwitchToQty">
+                    <button class="k-button"
+                            tabindex="-1"
+                            data-bind="click: switchToQty">
+                        <span class="glyphicon glyphicon-list am-icon"></span>Switch to Quantity
+                    </button>
+                </td>
+                <td style="display: none; padding-right: 25px"
+                    data-bind="visible: canSwitchToEdit() && isLoaded()">
+                    <button class="k-button"
+                            tabindex="-1"
+                            data-bind="click: switchToEdit, visible: isLoaded">
+                        <span class="glyphicon glyphicon-pencil am-icon"></span>Switch to Edit
+                    </button>
+                </td>
+                @if (AccessManager.CanDoStyleOperations())
+                {
+                    <td>
+                        <button type="button"
+                                tabindex="100000"
+                                data-bind="click: onSave"
+                                class="k-button k-button-icontext k-grid-update">
+                            <span class="k-icon k-update"></span>Save
+                        </button>
+
+                        <button type="submit"
+                                style="display: none"
+                                id="submit">Save</button>
+                    </td>
+                }
+                <td>
+                    <button class="k-button k-button-icontext k-grid-cancel"
+                            type="reset"
+                            id="cancel"
+                            tabindex="100001"
+                            onclick="popupWindow.close()">
+                        <span class="k-icon k-cancel"></span>Cancel
+                    </button>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>

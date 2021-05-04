@@ -1,0 +1,55 @@
+﻿@model Amazon.Web.ViewModels.Orders.OrdersStatViewModel
+@{
+    ViewBag.Title = "Stat";
+    Layout = "~/Views/Shared/_LayoutMobile.cshtml";
+}
+
+<script>
+    var StatViewModel = function (model) {
+        var self = model;
+        return self;
+    };
+
+    $(document).ready(function () {
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        statViewModel = new StatViewModel(model);
+        ko.applyBindings(statViewModel, document.getElementById("stat-panel"));
+    });
+</script>
+
+<div id="stat-panel" class="stat-panel">
+    <div class="panel panel-default">
+        <div class="panel-heading" style="padding-top: 5px; padding-bottom: 5px">
+            <span style="font-size: 100%; color: #666">Total Orders: 
+            <span style="font-size: 135%" data-bind="text: TotalOrdersCount"></span></span>
+        </div>
+        <div class="panel-body">
+            <div>
+                <img src="~/Images/express_icon.png" width="72px" style="margin: 2px 5px 0px -4px" />
+                <span style="color: #777">Second day:</span> <span style="font-size: 110%; color:#000" data-bind="text: TotalSecondDay"></span>
+            </div>
+            <div>
+                <img src="~/Images/expedited_icon.png" width="72px" style="margin: 2px 5px 0px -4px"/>
+                <span style="color: #777">Expedited:</span> <span style="font-size: 110%; color:#000" data-bind="text: TotalPaidExpedited"></span>
+            </div>
+            <div style="padding-top: 20px">
+                Overdue: 
+                <span style="font-size: 110%" class='label' data-bind="css: { 'label-danger': OverdueOrdersCount > 0, 'label-success': OverdueOrdersCount == 0 }, text: OverdueOrdersCount"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel panel-default">
+        <div class="panel-heading">By Marketplace</div>
+        <div class="panel-body"
+             data-bind="foreach: Marketplaces">
+            <div>
+                <span data-bind="text: MarketName" style="color: #777"></span>: <span style="color: #000" data-bind="text: OrderCount"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="center-block" style="text-align: center">
+        <a class="btn btn-default" target="_blank" href="@Url.Action("Orders", "Order")">Home</a>
+    </div>
+</div>

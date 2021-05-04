@@ -1,0 +1,59 @@
+﻿.dashboard {
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-bottom: 50px;
+}
+
+.dashboard .loading {
+    padding: 10px 10px 10px 0px;
+}
+
+.dashboard .panel-cell {
+    vertical-align: top;
+    padding-bottom: 10px;
+}
+
+.dashboard .panel-default>.panel-heading {
+    font-weight: bold;
+    color: #666;
+    font-size: 16px;
+    padding: 6px 15px;
+}
+
+.dashboard .panel {
+    vertical-align: top;
+}
+
+.dashboard .panel {
+    margin: 10px 10px 10px 10px;
+}
+
+.dashboard .status-line {
+    padding: 5px 0px;
+    font-size: 12px;
+}
+
+.dashboard .status-line .caption {
+    color: green;
+    font-size: 14px;
+}
+
+.dashboard .graph-button-top-panel {
+    padding-bottom: 5px;
+    text-align: right;
+}
+
+.dashboard .graph-button-top-panel .btn {
+    margin-left: 0px;
+    margin-right: 5px;
+}
+
+.dashboard .graph-button-bottom-panel {
+    padding-top: 5px;
+    text-align: center;
+}
+
+.dashboard .graph-button-bottom-panel .btn {
+    margin-left: 10px;
+    margin-right: 10px;
+}

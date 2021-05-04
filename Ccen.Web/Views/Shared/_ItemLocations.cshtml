@@ -1,0 +1,163 @@
+﻿@model IList<Amazon.Web.ViewModels.Inventory.LocationViewModel>
+
+<script type="text/javascript">
+    var LocationModel = function(locations) {
+        var self = this;
+
+        self.requiredMessage = "required";
+        self.onlySymbolsMessage = "only symbols -, 0-9";
+
+        if (locations == null)
+            locations = [];
+
+        if (locations.length == 0)
+            locations.push({
+                Id: 0,
+                Isle: 0, /* ko.observable(0).extend({
+                        required: { messsage: '*'},
+                        pattern: {
+                            message: '*',
+                            params: '^(\d[-,\d]*)$'
+                        }
+                    }),*/
+                Section: 0, /* ko.observable(0).extend({
+                        required: { message: '*' },
+                        pattern: {
+                            message: '*',
+                            params: '^([1-9][-,1-9]*)$'
+                        }
+                    }),*/
+                Shelf: 0, /* ko.observable(0).extend({
+                        required: { message: '*' },
+                        pattern: {
+                            message: '*',
+                            params: '^([1-9][-,1-9]*)$'
+                        }
+                    }),*/
+                IsDefault: ko.observable(true)
+            });
+
+        self.locations = ko.observableArray(locations);
+
+        self.locations().forEach(function(entry) {
+            console.log(entry);
+            entry.Isle = ko.observable(entry.Isle).extend({
+                required: { message: self.requiredMessage },
+                pattern: {
+                    message: self.onlySymbolsMessage,
+                    params: '^([0-9][-,0-9]*)$'
+                }
+            });
+            entry.Section = ko.observable(entry.Section).extend({
+                required: { message: self.requiredMessage },
+                pattern: {
+                    message: self.onlySymbolsMessage,
+                    params: '^([0-9][-,0-9]*)$'
+                }
+            });
+            entry.Shelf = ko.observable(entry.Shelf).extend({
+                required: { message: self.requiredMessage },
+                pattern: {
+                    message: self.onlySymbolsMessage,
+                    params: '^([0-9][-,0-9]*)$'
+                }
+            });
+        });
+
+        self.addLocation = function() {
+            self.locations.push({
+                Id: 0,
+                Isle: ko.observable(0).extend({
+                    required: { message: self.requiredMessage },
+                    pattern: {
+                        message: self.onlySymbolsMessage,
+                        params: '^([0-9][-,0-9]*)$'
+                    }
+                }),
+                Section: ko.observable(0).extend({
+                    required: { message: self.requiredMessage },
+                    pattern: {
+                        message: self.onlySymbolsMessage,
+                        params: '^([0-9][-,0-9]*)$'
+                    }
+                }),
+                Shelf: ko.observable(0).extend({
+                    required: { message: self.requiredMessage },
+                    pattern: {
+                        message: self.onlySymbolsMessage,
+                        params: '^([0-9][-,0-9]*)$'
+                    }
+                }),
+                IsDefault: ko.observable(false)
+            });
+        };
+
+        self.removeLocation = function(location) {
+            self.locations.remove(location);
+        };
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function() {
+            return self.errors().length === 0;
+        });
+    };
+</script>
+<script type="text/javascript">
+    var locationVm = null;
+
+    $(document).ready(function() {
+        var locationItems = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        locationVm = new LocationModel(locationItems);
+
+        //ko.validation.init({
+        //    errorElementClass: "input-validation-error",
+        //    //errorClass: "input-validation-error",
+        //    errorMessageClass: "field-validation-error",
+        //    decorateElement: true,
+        //    decorateInputElement: true,
+        //    decorateElementOnModified: true
+        //});
+
+        ko.applyBindings(locationVm, document.getElementById('styleLocations'));
+
+        console.log("isValid locations: " + locationVm.isValid());
+    });
+</script>
+
+<!-- ko stopBinding: true -->
+
+<div id="styleLocations">
+    <div class="clear"></div>
+    <div class="style-location-block">
+        <table>
+            <colgroup>
+                <col style="width: 40px"/>
+            </colgroup>
+            <tr>
+                <th>Isle</th>
+                <th>Section</th>
+                <th>Shelf</th>
+                <th>Default</th>
+            </tr>
+            <tbody data-bind='foreach: locations'>
+                <tr>
+                    <td>
+                        <input type="hidden" data-bind='value: Id, attr: { name: "Locations[" + $index() + "].Id" }'/>
+                        <input style='width: 70px' class="k-textbox" data-bind='value: Isle, attr: { name: "Locations[" + $index() + "].Isle" }' />
+                    </td>
+                    <td><input style='width: 70px' class="k-textbox" data-bind='value: Section, attr: { name: "Locations[" + $index() + "].Section" }'/></td>
+                    <td><input style='width: 70px' class="k-textbox" data-bind='value: Shelf, attr: { name: "Locations[" + $index() + "].Shelf" }' /></td>
+                    <td><input type="checkbox" data-bind='checked: IsDefault, attr: { name: "Locations[" + $index() + "].IsDefault" }'/></td>
+                    <td><a href="#" data-bind='click: $root.removeLocation' style="width: 37px; padding: 2px 2px 0px 6px" class="k-button"><span class='glyphicon glyphicon-remove am-icon'></span></a></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <button type="button" class="k-button" style="width: 80px;" data-bind='click: addLocation'>
+            <span class="k-icon k-add am-icon"></span>Add
+        </button>
+    </div>
+</div>
+
+<!-- /ko -->

@@ -1,0 +1,323 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.ViewModels.Inventory
+
+@{
+    Layout = null;
+}
+
+
+<script type="text/javascript">
+    var ManageGroupPriceModel = function(model, settings) {
+        var self = this;
+
+        self.isLoaded = ko.observable(false);
+
+        self.popupNode = null;
+        self.popup = null;
+
+        self.settings = settings;
+        self.model = model;
+
+        self.messages = ko.observableArray([]);
+
+        self.submitCallback = settings.submitCallback;
+
+        self.applyMode = ko.observable("0");
+        self.salePrice = ko.observable();
+        self.fpbSalePrice = ko.observable();
+
+        self.isPermanent = ko.computed(function () {
+            return self.applyMode() == "1";
+        });
+        self.saleStartDate = ko.observable()
+            //.extend({
+            //required: {
+            //    message: "*",
+            //    onlyIf: function () {
+            //        if (self.isPermanent())
+            //            return false;
+            //        return true;
+            //    }
+            //}
+            //})
+            ;
+        self.saleEndDate = ko.observable(null);
+
+        self.market = ko.observable("0_"); //="All"
+            //.extend({
+            //required: {
+            //    message: "*"
+            //}
+            //})
+            
+        self.marketList = ko.observableArray(settings.marketList);
+        
+        self.submit = function () {
+            var defer = $.Deferred();
+            var market = null;
+            if (self.market() != null && self.market() != 0)
+                market = self.market().split('_')[0];
+           
+            var dataModel = {
+                Market: market,
+                DiscountPercent: self.discountPercent(),
+                ApplyMode: self.applyMode()
+            };
+            $.ajax({
+                url: self.settings.urls.submit,
+                data: JSON.stringify({ model: dataModel }),
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                type: 'POST',
+                success: function(result) {
+                    console.log("onSuccess");
+                    console.log(result);
+                    if (result.IsSuccess) {
+                        defer.resolve();
+                    } else {
+                        defer.reject();
+                        self.messages(result.Messages);
+                    }
+                },
+                error: function (result) {
+                    console.log(result);
+                    self.messages(result.Messages);
+                    defer.reject();
+                }
+            });
+            return defer;
+        }
+
+        self.onSave = function(data, e) {
+            console.log('onSave');
+
+            if (self.validate()) {
+                $(e.target).showLoading("updating...");
+                self.submit().done(function () {
+                    if (self.submitCallback != null)
+                        self.submitCallback(null);
+                    self.onClose();
+                }).always(function() {
+                    $(e.target).hideLoading();
+                });
+            }
+        }
+
+        self.show = function () {
+            console.log($("#uploadFeedPopup").length);
+            $("#uploadFeedPopup").each(function (i) {
+                var popup = $(this).data("kendoWindow");
+                if (popup != null) {
+                    console.log("close previous uploadSale popup");
+
+                    ko.cleanNode($(this)[0]);
+                    popup.close();
+                    popup.destroy();
+                }
+                else {
+                    $(this).remove();
+                }
+            });
+
+            console.log("UploadFeedPopupModel.create");
+
+            $('body').prepend("<div id='uploadFeedPopup'></div>");
+            self.popupNode = $('#uploadFeedPopup');
+
+            self.popupNode.kendoWindow({
+                modal: true,
+                width: "500px",
+                title: "Manage Price",
+                visible: false,
+                close: self.closeEvent,
+                actions: [
+                    "Close"
+                ],
+            });
+
+            self.popup = self.popupNode.data("kendoWindow");
+            self.popup.content($("#upload-feed-container").html());
+            self.popup.center().open();
+
+            ko.applyBindings(self, self.popupNode[0]);
+        };
+
+        self.onClose = function() {
+            console.log('onClose');
+            //self.closeEvent();
+            self.popup.close();
+        }
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function () {
+            return self.errors().length === 0;
+        });
+
+        self.validate = function () { // function(data, e) {
+            if (self.isValid()) { //validator.validate() &&
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                return false;
+            }
+        };
+
+        //self.errors = ko.validation.group(self, { deep: true });
+        //self.isValid = ko.computed(function() {
+        //    return self.errors.length == 0;
+        //});
+        //self.onSubmit = function(e) { // function(data, e) {
+        //    //console.log(data);
+        //    console.log(e);
+        //    console.log("save click");
+
+        //    //var validator = $("#form").kendoValidator().data('kendoValidator');
+
+        //    //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+        //    //http://jsfiddle.net/KHFn8/3238/
+        //    if (self.errors().length == 0) { //validator.validate() &&
+        //        console.log("validate true");
+
+        //        return true;
+        //    } else {
+        //        console.log("validate false");
+        //        self.errors.showAllMessages();
+        //        e.preventDefault();
+        //        return false;
+        //    }
+        //};
+
+        self.isLoaded(true);
+    };
+
+    $(document).ready(function() {
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        //var node = document.getElementById('upload-sale-container');
+        //ko.applyBindings(viewModel, node);
+
+        //$('#operation-container').parent().next().find("#submit").click(viewModel.onSubmit);
+    });
+</script>
+
+<style>
+    .price-details tr td { padding-top: 5px; vertical-align: top;}
+</style>
+
+<!-- ko stopBinding: true -->
+<div style="display: none">
+    <div id="upload-feed-container">
+        @Html.ValidationSummary(true)
+
+
+        <div class="inventory-popup">
+            <div class="k-edit-form-container" style="width: auto">
+
+                <table class="price-details">
+                    <colgroup>
+                        <col style="width: 145px" />
+                    </colgroup>
+                    <tr>
+                        <td>Target: </td>
+                        <td>
+
+                            <input type="radio"
+                                   value="0"
+                                   data-bind='checked: applyMode, attr: { name: "ApplyMode" }' />
+                            <span style="line-height: 20px; vertical-align: top">Sale</span>
+
+                            <input type="radio"
+                                   value="1"
+                                   style="margin-left: 15px"
+                                   data-bind='checked: applyMode, attr: { name: "ApplyMode" }' />
+                            <span style="line-height: 20px; vertical-align: top">Premanent</span>
+
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Price:</td>
+                        <td>
+                            Start Price: <input type="number" class="k-textbox" style="width: 80px" data-bind="value: salePrice" /> / FPB: <input type="number" class="k-textbox" style="width: 80px" data-bind="value: fpbSalePrice" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Period: </td>
+                        <td>
+
+                            <table>
+                                <tr>
+                                    <td>Start Date:</td>
+                                    <td>
+                                        <input type="text"
+                                               style="width: 105px"
+                                               data-bind='kendoDatePicker: { value: saleStartDate, format: "MM/dd/yyyy" },
+                                    attr: { name: "SaleStartDate"  },
+                                    enable: !isPermanent()' />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>End Date:</td>
+                                    <td>
+                                        <input type="text"
+                                               style="width: 105px"
+                                               data-bind='kendoDatePicker: { value: saleEndDate, format: "MM/dd/yyyy" },
+                                    attr: { name: "SaleEndDate"  },
+                                    enable: !isPermanent()' />
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Apply to marketplace listings: </td>
+                        <td>
+                            <input data-bind="kendoDropDownList: { data: marketList, value: market, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+                        </td>
+                    </tr>
+                </table>
+
+                <messages params="{ messages: messages }"></messages>
+            </div>
+        </div>
+
+
+        <div class="clear"></div>
+
+        <div class="k-edit-buttons k-state-default popup-button-panel"
+             style="position: static">
+            <table style="margin-left: auto">
+                <tr>
+                    <td>
+                        <button tabindex="300"
+                                style="margin-right: 10px"
+                                data-bind="click: onSave"
+                                class="k-button k-button-icontext k-grid-update">
+                            <span class="k-icon k-update"></span>Save
+                        </button>
+                    </td>
+
+                    <td>
+                        <button class="k-button k-button-icontext k-grid-cancel"
+                                tabindex="301"
+                                data-bind="click: onClose">
+                            <span class="k-icon k-cancel"></span>Cancel
+                        </button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- /ko -->

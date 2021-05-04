@@ -1,0 +1,127 @@
+﻿@using Amazon.Web.ViewModels
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@{
+    ViewBag.Title = "Admin Console";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+
+}
+
+<style>
+    .admin-panel { color: black; }
+    
+    .operation {
+        margin: 10px 0px;
+        padding: 5px 10px;
+        border-left: 4px solid gray;
+    }
+</style>
+
+<script>
+    var AdminModel = function() {
+        var self = this;
+        self.orderId = ko.observable("");
+
+        self.restartDWSService = function () {
+            Message.clear();
+            helper.ui.showLoading($('#restartDWSServiceButton'));
+            
+            $.ajax({
+                url: '@Url.Action("RestartDWSService", "Admin")',
+                cache: false,
+                success: function(data) {
+                    console.log(data);
+                    if (data.IsSuccess) {
+                        Message.success(data.Message);
+                    } else {
+                        Message.error(data.Message);
+                    }
+                    helper.ui.hideLoading($('#restartDWSServiceButton'));
+                }
+            });
+        }
+
+
+        self.resetShippings = function () {
+            Message.clear();
+            helper.ui.showLoading($('#resetShippingsButton'));
+            
+            $.ajax({
+                url: '@Url.Action("ResetShippings", "Admin")',
+                cache: false,
+                data: { orderId: self.orderId() },
+                success: function(data) {
+                    console.log(data);
+                    if (data.IsSuccess) {
+                        Message.success(data.Message);
+                    } else {
+                        Message.error(data.Message);
+                    }
+                    helper.ui.hideLoading($('#resetShippingsButton'));
+                }
+            });
+        };
+
+        self.updateCaches = function() {
+            Message.clear();
+            helper.ui.showLoading($('#updateCachesButton'));
+
+            $.ajax({
+                url: '@Url.Action("UpdateCaches", "Admin")',
+                cache: false,
+                data: {},
+                success: function(data) {
+                    console.log(data);
+                    if (data.IsSuccess) {
+                        Message.success(data.Message);
+                    } else {
+                        Message.error(data.Message);
+                    }
+                    helper.ui.hideLoading($('#updateCachesButton'));
+                }
+            });
+        };
+    };
+
+    $(document).ready(function() {
+        var model = new AdminModel();
+        ko.applyBindings(model, document.getElementById("page-content"));
+    });
+</script>
+
+<div style="padding-left:7px">
+    <div><span id="infoMessage" style="color: red; font-size: 13px;"></span></div>
+    <div><span id="errorMessage" style="color: red; font-size: 13px;"></span></div>
+    <div><span id="successMessage" style="color: lightgreen; font-size: 13px;"></span></div>
+</div>
+<h1>@ViewBag.Title</h1>
+
+<div id="page-content" class="admin-panel">
+    <ol class="breadcrumb">
+        <li><a href="#">Admin</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+    <div">
+        @*<div class="operation">
+            <div>Order Id:</div>
+            <div>
+                <input type="text" class="k-textbox" name="orderId" data-bind="value: orderId"/>
+                <input type="button" id="resetShippingsButton" class="k-button" value="Full Reset Shippings"
+                       data-bind="click: resetShippings"/>
+            </div>
+        </div>*@
+        <div class="operation">
+            <div><input type="button" id="restartDWSServiceButton" class="k-button" value="Restart DWS Service"
+       data-bind="click: restartDWSService" /></div>
+
+        @*<div class="operation">
+            <input type="button" id="updateCachesButton" class="k-button" value="Update caches"
+                   data-bind="click: updateCaches"/>
+
+        </div>*@
+    </div>
+</div>

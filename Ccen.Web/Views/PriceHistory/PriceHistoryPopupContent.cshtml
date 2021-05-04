@@ -1,0 +1,199 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.HtmlExtend
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Inventory
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Inventory.StyleSizeHistoryViewModel
+@{
+    Layout = null;
+}
+
+
+<script type="text/javascript">
+    var StyleHistoryModel = function(model, settings) {
+        var self = this;
+        ko.BaseViewModel.call(self);
+
+        self.isLoaded = ko.observable(false);
+
+        self.settings = settings;
+        self.model = model;
+
+        self.records = ko.observableArray([]);
+
+        self.styleItemId = ko.observable(model.StyleItemId);
+
+        self.getGridParams = function() {
+            return {
+                styleItemId: self.styleItemId(),
+            }
+        }
+
+        self.prepareRow = function(row) {
+            if (row.ByName == "Admin")
+                row.ByName = null;
+
+            var html = 'n/a';
+            
+            return row;
+        }
+
+        self.search = function(sender) {
+            var params = self.getGridParams();
+
+            self.records.removeAll();
+
+            helper.ui.showLoading(sender, "loading...");
+            $.ajax({
+                url: self.settings.urls.getHistory,
+                data: params,
+                success: function(result) {
+                    helper.ui.hideLoading(sender);
+
+                    if (result.IsSuccess) {
+                        console.log('success');
+                        $.each(result.Data, function(i, n) {
+                            self.records.push(self.prepareRow(n));
+                        });
+                    }
+                }
+            });
+        }
+
+        self.search($("#loadingHolder"));
+    };
+
+
+    var historyVm = null;
+
+    $(document).ready(function() {
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+            gridId: "historyGrid",
+            urls: {
+                getHistory: '@Url.Action("GetAll", "PriceHistory")',
+            },
+        };
+
+        historyVm = new StyleHistoryModel(model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(historyVm, $('#view-style-history-container')[0]);
+    });
+
+    function GetGridParams() {
+        console.log("GetGridParams");
+        if (historyVm != null)
+            return historyVm.getGridParams();
+        return {};
+    }
+</script>
+
+<div id="view-style-history-container">
+    @Html.ValidationSummary(true)
+
+    @Html.HiddenFor(m => m.StyleItemId)
+
+    <div class="inventory-popup">
+        <div class="k-edit-form-container" style="width: auto">
+            <div style="padding-bottom: 15px">
+
+                <div class="k-widget k-grid k-secondary grid-small"
+                     style="padding-right: 15px; background-color: #f5f5f5">
+                    <table style="">
+                        <colgroup>
+                            <col style="width: 120px" />
+                            <col style="width: 120px" />
+                            <col style="width: 80px" />
+                            <col style="width: auto" />
+                            <col style="width: 90px" />
+                            <col style="width: 90px" />
+                            <col style="width: 90px" />
+                        </colgroup>
+                        <thead class="k-grid-header">
+                            <tr>
+                                <th class="k-header">When</th>
+                                <th class="k-header">Reason</th>
+                                <th class="k-header">Type</th>
+                                <th class="k-header">Object</th>
+                                <th class="k-header">From</th>
+                                <th class="k-header">To</th>
+                                <th class="k-header">By</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+                <div style="margin-left: 8px">
+                    <div id="loadingHolder"></div>
+                </div>
+                <div class="k-widget k-grid k-secondary grid-small"
+                     style="height: 350px; overflow-y: scroll">
+                    <table style="width: 100%;">
+                        <colgroup>
+                            <col style="width: 120px" />
+                            <col style="width: 120px" />
+                            <col style="width: 80px" />
+                            <col style="width: auto" />
+                            <col style="width: 90px" />
+                            <col style="width: 90px" />
+                            <col style="width: 90px" />
+                        </colgroup>
+                        <tbody data-bind='foreach: records'>
+                            <tr class="k-master-row" data-bind="css: { 'k-alt': ($index() % 2 == 1) }">
+                                <td>
+                                    <span data-bind="textFormatted: When, ifEmpty: '-', pattern: 'MM.dd.yyyy HH:mm'"></span>
+                                </td>
+                                <td>
+                                    <span data-bind="html: Reason"></span>
+                                </td>
+                                <td>
+                                    <span data-bind="html: EntityType"></span>
+                                </td>
+                                <td>
+                                    <span data-bind="html: EntityName"></span>
+                                </td>
+                                <td>
+                                    <span data-bind="textFormatted: FromValue, ifEmpty: '-'"></span>
+                                </td>
+                                <td>
+                                    <span data-bind="textFormatted: ToValue, ifEmpty: '-'"></span>
+                                </td>
+                                <td>
+                                    <span data-bind="textFormatted: ByName, ifEmpty: 'system'"></span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="clear"></div>
+
+    <div class="k-edit-buttons k-state-default popup-button-panel"
+         style="position: static">
+        <table style="margin-left: auto">
+            <tr>
+                <td>
+                    <button class="k-button k-button-icontext k-grid-cancel"
+                            type="reset"
+                            id="cancel"
+                            tabindex="301"
+                            onclick="popupWindow.close(2)">
+                        <span class="k-icon k-cancel"></span>Close
+                    </button>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>

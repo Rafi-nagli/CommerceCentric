@@ -1,0 +1,43 @@
+﻿
+
+.edit-order {
+    vertical-align: top;
+    padding: 5px 5px 5px 5px;
+}
+
+.edit-order th {
+    padding: 7px 5px;
+    text-align: left;
+}
+
+.edit-order td {
+    padding: 2px;
+}
+
+.edit-order input[type='text'] {
+    width: 250px;
+}
+
+.edit-order .base-address {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 4px;
+}
+
+.edit-order th {
+    vertical-align: bottom;
+}
+
+.edit-order-items {
+    padding-left: 5px;
+    padding-bottom: 5px;
+}
+
+.edit-order-items .caption {
+    font-weight: bold;
+    padding-bottom: 5px;
+}
+
+.edit-order-items table {
+    margin-left: 10px;
+}

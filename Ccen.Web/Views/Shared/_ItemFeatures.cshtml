@@ -1,0 +1,146 @@
+﻿@using Amazon.Core.Entities.Features
+@using Kendo.Mvc.UI
+@model IList<Amazon.Web.ViewModels.Inventory.FeatureViewModel>
+
+<script type="text/javascript">
+    var FeatureListModel = function(features, settings) {
+        var self = this;
+
+        self.settings = settings;
+        self.features = ko.observableArray(features);
+
+
+        self.mainLicenseList = $.grep(self.features(), function(n) {
+            return n.FeatureId == 12;
+        });
+
+        self.getValueByFeatureId = function(featureId) {
+            var features = $.grep(self.features(), function(n) {
+                return n.FeatureId == featureId;
+            });
+            if (features.length > 0) {
+                var feature = features[0];
+
+                if (feature.Type == self.settings.types.text)
+                    return feature.Value();
+                
+                if (feature.Type == self.settings.types.checkbox)
+                    return feature.ValueAsBool;
+
+                if (feature.Type == self.settings.types.dropdown
+                    || feature.Type == self.settings.types.cascade) {
+                    var values = $.grep(feature.Items, function(n) {
+                        return n.Value == feature.Value();
+                    });
+                    if (values.length > 0)
+                        return values[0].Text;
+                }
+                return null;
+            }
+        };
+
+        self.features().forEach(function(entry) {
+            entry.Value = ko.observable(entry.Value);
+        });
+
+        self.features().forEach(function(entry) {
+            entry.FilteredItems = ko.computed(function() {
+                if (self.mainLicenseList.length > 0) {
+                    var mainLicense = self.mainLicenseList[0];
+                    if (mainLicense != null) {
+                        return $.grep(entry.Items, function(n) {
+                            return n.ParentValue == mainLicense.Value();
+                        });
+                    }
+                }
+                return entry.Items;
+            });
+        });
+    }
+
+</script>
+<script type="text/javascript">
+    var featureListVm = null;
+
+    $(document).ready(function() {
+        var featureItems = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        var settings = {
+            types: {
+                dropdown: @((int) FeatureValuesType.DropDown),
+                cascade: @((int) FeatureValuesType.CacadeDropDown),
+                text: @((int)FeatureValuesType.TextBox),
+                checkbox: @((int) FeatureValuesType.CheckBox),
+            },
+        }
+
+        featureListVm = new FeatureListModel(featureItems, settings);
+
+        ko.applyBindings(featureListVm, document.getElementById('styleFeatures'));
+    });
+</script>
+
+<!-- ko stopBinding: true -->
+
+<div id="styleFeatures">
+
+    <div data-bind="foreach: features">
+        <input type="hidden" data-bind="value: FeatureId, attr: { name: 'Features[' + $index() + '].FeatureId' }"/>
+        <input type="hidden" data-bind="value: Type, attr: { name: 'Features[' + $index() + '].Type' }" />
+
+        <div class="editor-label"><span data-bind="text: Name"></span><span class="note" data-bind="text: Notes"></span></div>
+
+        <div data-bind="if: Type == $root.settings.types.dropdown">
+            <div class="editor-field">
+                <input data-bind="attr: { name: 'Features[' + $index() + '].Value', 'id': 'Features_' + FeatureId + '__Value' },kendoDropDownList: { data: Items, value: Value, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+            </div>
+        </div>
+
+        <div data-bind="if: Type == $root.settings.types.text">
+            <div class="editor-field">
+                <input type="text" data-bind="value: Value, attr: { name: 'Features[' + $index() + '].Value' }" class="k-textbox" />
+            </div>
+        </div>
+
+        <div data-bind="if: Type == $root.settings.types.cascade">
+            <div class="editor-field">
+
+                @*<script type="text/javascript">
+                    function filterLicense13_14() {
+                        return {
+                            mainFeatureId: $("input[id='Features_12__Value']").val()
+                        };
+                    }
+                </script>*@
+
+                <input data-bind="attr: { name: 'Features[' + $index() + '].Value', 'id': 'Features_' + FeatureId + '__Value' }, kendoDropDownList: { data: FilteredItems, value: Value, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+
+
+                @*@(Html.Kendo().DropDownListFor(m => m.Value)
+                //.Name("Features[" + Model.FeatureId + "].Value")
+                    .HtmlAttributes(new { id = "Features_" + Model.FeatureId + "__Value" })
+                    .DataTextField("Text")
+                    .DataValueField("Value")
+                    .OptionLabel("Select...")
+                    .DataSource(ds => ds
+                        .Read(r => r.Action("GetFeatureValues", "Item", new { featureId = Model.FeatureId })
+                            .Data("filterLicense13_14"))
+                        .ServerFiltering(true))
+                    .Enable(false)
+                    .AutoBind(false)
+                    .CascadeFrom("Features_12__Value"))*@
+            </div>
+        </div>
+
+        <div data-bind="if: Type == $root.settings.types.checkbox">
+            <div class="editor-field">
+                <input type="checkbox" data-bind="checked: ValueAsBool, attr: { name: 'Features[' + $index() + '].ValueAsBool' }"
+                       class="k-checkbox"
+                       style="vertical-align: bottom" />
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- /ko -->

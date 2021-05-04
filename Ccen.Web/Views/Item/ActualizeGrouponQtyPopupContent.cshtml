@@ -1,0 +1,281 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.ViewModels.Inventory
+@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var ActualizeGrouponQtyModel = function(model, settings) {
+        var self = this;
+
+        self.isLoaded = ko.observable(false);
+
+        self.popupNode = null;
+        self.popup = null;
+
+        self.settings = settings;
+        self.model = model;
+
+        self.messages = ko.observableArray([]);
+
+        self.marketplaceId = ko.observable(model.marketplaceId);
+        //self.submitCallback = settings.submitCallback;
+        self.fileName = ko.observable("");
+        self.resultFileUrl = ko.observable("");
+
+        self.hasResultFileUrl = ko.computed(function () {
+            return !dataUtils.isNullOrEmpty(self.resultFileUrl());
+        });
+
+        self.hasFileName = ko.computed(function () {
+            return !dataUtils.isNullOrEmpty(self.fileName());
+        });
+
+        self.onUpdateQty = function (m, e) {
+            var sender = $(e.target);
+            helper.ui.showLoading(sender);
+
+            self.onSubmit(e).done(function (r) {
+                helper.ui.hideLoading(sender, true);
+                console.log("result file name: " + r.Data);
+                self.resultFileUrl(r.Data);
+            });
+        }
+
+        self.onSubmit = function (e) {
+            console.log("onUpdateQty");
+
+            var defer = $.Deferred();
+            var dataModel = {
+                FileName: self.fileName(),
+                MarketplaceId: self.marketplaceId(),
+            };
+            $.ajax({
+                url: '@Url.Action("Submit", "Groupon")',
+                data: JSON.stringify({ model: dataModel }),
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                type: 'POST',
+                success: function (result) {
+                    console.log("onSuccess");
+                    console.log(result);
+                    if (result.IsSuccess) {
+                        defer.resolve(result);
+                    } else {
+                        defer.reject();
+                        self.messages(result.Messages);
+                    }
+                },
+                error: function (result) {
+                    console.log(result);
+                    self.messages(result.Messages);
+                    defer.reject();
+                }
+            });
+            return defer;
+        }
+
+        self.onUploadSuccess = function (e) {
+            console.log("onUploadSuccess");
+            var data = e.response.Data;
+            console.log(data);
+            if (data != null && data.length > 0 && data[0].length > 0) {
+                console.log(data[0][0]);
+                self.fileName(data[0][0].ServerFileName);
+                //self.attachedFile(data[0][0]);
+            }
+
+            //$.publish("PV_Grid_Access_OnAddNewRecord_Event");
+        }
+
+        self.onUploadError = function (e) {
+            console.log("onUploadError");
+            console.log(e);
+            //self.uploadedFile(null);
+            self.messages.push(new MessageString("Unable to upload attachment", MessageStatus.ERROR));
+        }
+
+
+        self.show = function () {
+            console.log($("#actualizeGrouponQtyPopup").length);
+            $("#actualizeGrouponQtyPopup").each(function (i) {
+                var popup = $(this).data("kendoWindow");
+                if (popup != null) {
+                    console.log("close previous actualizeGrouponQtyPopup popup");
+
+                    ko.cleanNode($(this)[0]);
+                    popup.close();
+                    popup.destroy();
+                }
+                else {
+                    $(this).remove();
+                }
+            });
+
+            console.log("ActualizeGrouponQtyPopup.create");
+
+            $('body').prepend("<div id='actualizeGrouponQtyPopup'></div>");
+            self.popupNode = $('#actualizeGrouponQtyPopup');
+
+            self.popupNode.kendoWindow({
+                modal: true,
+                width: "500px",
+                title: "Actualize Groupon Qty",
+                visible: false,
+                close: self.closeEvent,
+                actions: [
+                    "Close"
+                ],
+            });
+
+            self.popup = self.popupNode.data("kendoWindow");
+            self.popup.content($("#actualize-groupon-qty-container").html());
+            self.popup.center().open();
+
+            ko.applyBindings(self, self.popupNode[0]);
+        };
+
+        self.onClose = function() {
+            console.log('onClose');
+            //self.closeEvent();
+            self.popup.close();
+        }
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function () {
+            return self.errors().length === 0;
+        });
+
+        self.validate = function () { // function(data, e) {
+            if (self.isValid()) { //validator.validate() &&
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                return false;
+            }
+        };
+
+        //self.errors = ko.validation.group(self, { deep: true });
+        //self.isValid = ko.computed(function() {
+        //    return self.errors.length == 0;
+        //});
+        //self.onSubmit = function(e) { // function(data, e) {
+        //    //console.log(data);
+        //    console.log(e);
+        //    console.log("save click");
+
+        //    //var validator = $("#form").kendoValidator().data('kendoValidator');
+
+        //    //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+        //    //http://jsfiddle.net/KHFn8/3238/
+        //    if (self.errors().length == 0) { //validator.validate() &&
+        //        console.log("validate true");
+
+        //        return true;
+        //    } else {
+        //        console.log("validate false");
+        //        self.errors.showAllMessages();
+        //        e.preventDefault();
+        //        return false;
+        //    }
+        //};
+
+        self.isLoaded(true);
+    };
+
+    $(document).ready(function() {
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+    });
+</script>
+
+<style>
+    .actualize-groupon-qty .step {
+        padding: 5px;
+    }
+</style>
+
+<!-- ko stopBinding: true -->
+<div style="display: none">
+    <div id="actualize-groupon-qty-container">
+        @Html.ValidationSummary(true)
+
+
+        <div class="inventory-popup actualize-groupon-qty">
+            <div class="k-edit-form-container" style="width: auto">
+
+                <div class="step">
+                    <div><b>Step 1.</b> Export “Cost & Quantity” file from Groupon <a href="https://www.groupon.com/goods-gateway/files">link</a></div>
+                    <div><img src="~/Images/ActualizeGrouponQty/export.jpg" /></div>
+                </div>
+                <div class="step">
+                    <b>Step 2.</b> Upload Groupon “Cost & Quantity” file to actualize qty
+                    <div class="panel panel-default" style="margin: 10px 0px; padding: 0px">
+                        <div data-bind="visible: !hasResultFileUrl()" class="panel-body" style="padding: 0px 10px">
+                            <table>
+                                <tr>
+                                    <td>Select file:</td>
+                                    <td>
+                                        <input type="file" name="files" data-bind="kendoUpload: {
+                                            async: {
+                                                saveUrl: '@Url.Action("UploadFeed", "Groupon")',
+                                                autoUpload: true,
+                                            },
+                                            showFileList: true,
+                                            multiple: false,
+                                            success: onUploadSuccess,
+                                            error: onUploadError
+                                            }" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <button data-bind="click: onUpdateQty; disable: !hasFileName(), css: { 'k-state-disabled': !hasFileName() }" class="k-button" style="margin: 10px 0px">Process</button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div data-bind="visible: hasResultFileUrl" style="padding: 10px 0px">
+                            <a data-bind="attr: { 'href' : resultFileUrl }">Download</a>
+                        </div>
+                    </div>
+                    <div>
+                        Please wait while the system processes your file. Download and save processed file, and then upload it to Groupon
+                        <div><img src="~/Images/ActualizeGrouponQty/import.jpg" /></div>
+                    </div>
+                </div>
+
+                <messages params="{ messages: messages }"></messages>
+            </div>
+        </div>
+
+
+        <div class="clear"></div>
+
+        <div class="k-edit-buttons k-state-default popup-button-panel"
+             style="position: static">
+            <table style="margin-left: auto">
+                <tr>
+                    <td>
+                        <button class="k-button k-button-icontext k-grid-cancel"
+                                tabindex="301"
+                                data-bind="click: onClose">
+                            <span class="k-icon k-cancel"></span>Cancel
+                        </button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+<!-- /ko -->

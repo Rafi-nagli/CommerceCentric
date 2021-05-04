@@ -1,0 +1,515 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\EntityFramework.6.4.4\build\EntityFramework.props" Condition="Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.props')" />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{4851EDE3-4EAE-4C12-B5AC-19E86915AAD2}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ccen.Model</RootNamespace>
+    <AssemblyName>Ccen.Model</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+    <TargetFrameworkProfile />
+    <AssemblyVersion>2016.5.1553.20</AssemblyVersion>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Amazon.Api, Version=2016.5.1553.17, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Amazon.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="Amazon.ReportsApi, Version=2016.5.1553.15, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Amazon.ReportsApi.dll</HintPath>
+    </Reference>
+    <Reference Include="BarcodeLib, Version=1.3.0.0, Culture=neutral, PublicKeyToken=5f09bda868cc39e7, processorArchitecture=MSIL">
+      <HintPath>..\packages\BarcodeLib.1.3.0.0\lib\net20\BarcodeLib.dll</HintPath>
+    </Reference>
+    <Reference Include="CanadaPost.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\CanadaPost.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="CsvHelper, Version=2.0.0.0, Culture=neutral, PublicKeyToken=8c4959082be5c823, processorArchitecture=MSIL">
+      <HintPath>..\packages\CsvHelper.2.11.0\lib\net40-client\CsvHelper.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Dhl.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Dhl.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="DhlECommerce.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\DhlECommerce.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="DropShipper.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\DropShipper.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="eBay.Api, Version=2016.5.1553.17, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\eBay.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.4.4\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.4.4\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
+    <Reference Include="Fedex.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Fedex.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="FluentFTP, Version=33.0.2.0, Culture=neutral, PublicKeyToken=f4af092b1d8df44f, processorArchitecture=MSIL">
+      <HintPath>..\packages\FluentFTP.33.0.2\lib\net45\FluentFTP.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Geocoding.Api, Version=2016.5.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Google.Geocoding.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="Groupon.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Groupon.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="IBC.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\IBC.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="ICSharpCode.SharpZipLib, Version=0.86.0.518, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
+      <HintPath>..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
+    <Reference Include="itextsharp">
+      <HintPath>..\packages\iTextSharp.5.5.9\lib\itextsharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Jet.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Jet.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="log4net, Version=1.2.15.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+      <HintPath>..\packages\log4net.2.0.5\lib\net45-full\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="Magento.Api">
+      <HintPath>..\Api\Dlls\Magento.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="Magento.Api.Wrapper, Version=2016.5.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Magento.Api.Wrapper.dll</HintPath>
+    </Reference>
+    <Reference Include="Magento.RestApi20, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Magento.RestApi20.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="NPOI, Version=2.2.1.0, Culture=neutral, PublicKeyToken=0df73ec7942b34e1, processorArchitecture=MSIL">
+      <HintPath>..\packages\NPOI.2.2.1\lib\net40\NPOI.dll</HintPath>
+    </Reference>
+    <Reference Include="NPOI.OOXML, Version=2.2.1.0, Culture=neutral, PublicKeyToken=0df73ec7942b34e1, processorArchitecture=MSIL">
+      <HintPath>..\packages\NPOI.2.2.1\lib\net40\NPOI.OOXML.dll</HintPath>
+    </Reference>
+    <Reference Include="NPOI.OpenXml4Net, Version=2.2.1.0, Culture=neutral, PublicKeyToken=0df73ec7942b34e1, processorArchitecture=MSIL">
+      <HintPath>..\packages\NPOI.2.2.1\lib\net40\NPOI.OpenXml4Net.dll</HintPath>
+    </Reference>
+    <Reference Include="NPOI.OpenXmlFormats, Version=2.2.1.0, Culture=neutral, PublicKeyToken=0df73ec7942b34e1, processorArchitecture=MSIL">
+      <HintPath>..\packages\NPOI.2.2.1\lib\net40\NPOI.OpenXmlFormats.dll</HintPath>
+    </Reference>
+    <Reference Include="PdfFileWriter">
+      <HintPath>..\Amazon.PDF.Test\Dll\PdfFileWriter.dll</HintPath>
+    </Reference>
+    <Reference Include="RestSharp, Version=106.11.7.0, Culture=neutral, PublicKeyToken=598062e77f915f75, processorArchitecture=MSIL">
+      <HintPath>..\packages\RestSharp.106.11.7\lib\net452\RestSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="S22.Imap, Version=2016.5.1553.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\S22.Imap.dll</HintPath>
+    </Reference>
+    <Reference Include="ShipFIMS.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\ShipFIMS.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="Shopify.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Shopify.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="SkyPostal.Api">
+      <HintPath>..\Api\Dlls\SkyPostal.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="Stamps.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Stamps.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="Supplieroasis.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Supplieroasis.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.ServiceProcess" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="Usps.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Usps.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="Walmart.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Walmart.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="Walmart.Api.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Walmart.Api.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="WalmartCA.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\WalmartCA.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="WooCommerce.Api">
+      <HintPath>..\Api\Dlls\WooCommerce.Api.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Implementation\AutoCreateListings\AutoCreateAmazonUSPrimeListingService.cs" />
+    <Compile Include="Implementation\AutoCreateListings\AutoCreateNonameListingService.cs" />
+    <Compile Include="Implementation\AutoCreateListings\AutoCreateBaseListingService.cs" />
+    <Compile Include="Implementation\AutoCreateListings\AutoCreateAmazonAUListingService.cs" />
+    <Compile Include="Implementation\AutoCreateListings\AutoCreateEBayListingService.cs" />
+    <Compile Include="Implementation\AutoCreateListings\AutoCreateWalmartCAListingService.cs" />
+    <Compile Include="Implementation\AutoCreateListings\AutoCreateFtpMarketListingService.cs" />
+    <Compile Include="Implementation\AutoCreateListings\AutoCreateWalmartListingService.cs" />
+    <Compile Include="Implementation\BarcodeService.cs" />
+    <Compile Include="Implementation\BargainSearchService.cs" />
+    <Compile Include="Implementation\Charts\ChartHelper.cs" />
+    <Compile Include="Implementation\Charts\ChartService.cs" />
+    <Compile Include="Implementation\Charts\ListingErrorChartMaker.cs" />
+    <Compile Include="Implementation\CompanyService.cs" />
+    <Compile Include="Implementation\CompetitorQuantityCheckerService.cs" />
+    <Compile Include="Implementation\CustomFeedService.cs" />
+    <Compile Include="Implementation\CustomReportService.cs" />
+    <Compile Include="Implementation\DescriptionHelper.cs" />
+    <Compile Include="Implementation\DhlECommerceSwitchService.cs" />
+    <Compile Include="Implementation\DhlInvoiceService.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\AddressNotChangedEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\AutoResponseWalmartEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\ReturnPeriodExpiredEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\GiftEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\OversoldEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\AutoResponseAmazonEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\NotOursEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\ReturnWrongDamagedEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\DhlPickupScheduleErrorToSellerEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\DamagedItemEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\DhlInvoiceEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\ReturnInstructionsEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\ExchangeInstructionsEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\LostPackage2EmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\AlreadyShippedEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\UndeliverableInquiryEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\AddressNotServedByUSPSEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\UndeliverableAsAddressedEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\AddressChangedEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailService.cs" />
+    <Compile Include="Implementation\Emails\Rules\AddCommentEmailRule.cs" />
+    <Compile Include="Implementation\Emails\Rules\AddMatchIdsEmailRule.cs" />
+    <Compile Include="Implementation\Emails\Rules\DhlInvoiceEmailRule.cs" />
+    <Compile Include="Implementation\Emails\Rules\OrderDeliveryInquiryEmailRule.cs" />
+    <Compile Include="Implementation\Emails\Rules\AddressNotChangedEmailRule.cs" />
+    <Compile Include="Implementation\Emails\Rules\PrepareBodyEmailRule.cs" />
+    <Compile Include="Implementation\Emails\Rules\RefundEmailRule.cs" />
+    <Compile Include="Implementation\Emails\Rules\SetAnswerIdEmailRule.cs" />
+    <Compile Include="Implementation\Emails\Rules\SetSentByEmailRule.cs" />
+    <Compile Include="Implementation\Emails\Rules\SetSystemTypesEmailRule.cs" />
+    <Compile Include="Implementation\Listings\ItemAutoFixIssueService.cs" />
+    <Compile Include="Implementation\ItemHistoryService.cs" />
+    <Compile Include="Implementation\KioskBarcodeService.cs" />
+    <Compile Include="Implementation\Listings\Rules\FixBrandIssueRule.cs" />
+    <Compile Include="Implementation\Listings\Rules\FixImageDefectIssueRule.cs" />
+    <Compile Include="Implementation\Listings\Rules\FixColorIssueRule.cs" />
+    <Compile Include="Implementation\Listings\Rules\IItemAutoFixRule.cs" />
+    <Compile Include="Implementation\ManageService.cs" />
+    <Compile Include="Implementation\Markets\Amazon\Feeds\DeleteItemUpdaterByItemStatus.cs" />
+    <Compile Include="Implementation\Markets\Amazon\Feeds\DeleteItemUpdater.cs" />
+    <Compile Include="Implementation\Markets\Amazon\Feeds\ItemImageUpdater.cs" />
+    <Compile Include="Implementation\Markets\Amazon\Feeds\ItemDataUpdater.cs" />
+    <Compile Include="Implementation\Markets\Amazon\Feeds\ItemQuantityUpdaterByAction.cs" />
+    <Compile Include="Implementation\Markets\Amazon\Feeds\ItemRelationshipUpdater.cs" />
+    <Compile Include="Implementation\Markets\Amazon\Feeds\ItemPriceRuleUpdater.cs" />
+    <Compile Include="Implementation\Markets\BaseOrderRefundService.cs" />
+    <Compile Include="Implementation\Markets\DS\DSItemsSync.cs" />
+    <Compile Include="Implementation\Markets\DS\DSMbgWMItemsSync.cs" />
+    <Compile Include="Implementation\Markets\DS\DSOrdersSynchronizer.cs" />
+    <Compile Include="Implementation\Markets\eBay\eBayOrderUpdater.cs" />
+    <Compile Include="Implementation\Markets\eBay\eBayItemsSync.cs" />
+    <Compile Include="Implementation\Emails\Rules\CancellationEmailRule.cs" />
+    <Compile Include="Implementation\Emails\Rules\FeedbackBlackListEmailRule.cs" />
+    <Compile Include="Implementation\Emails\Rules\RemoveSignatureEmailRule.cs" />
+    <Compile Include="Implementation\Emails\Rules\ReturnRequestEmailRule.cs" />
+    <Compile Include="Implementation\Markets\Amazon\Feeds\AdjustmentDataUpdater.cs" />
+    <Compile Include="Implementation\Markets\Amazon\Feeds\AcknowledgementDataUpdater.cs" />
+    <Compile Include="Implementation\ImageManager.cs" />
+    <Compile Include="Implementation\ImageRequestingService.cs" />
+    <Compile Include="Implementation\MarketFactory.cs" />
+    <Compile Include="Implementation\Markets\Groupon\GrouponOrderAcknowledgement.cs" />
+    <Compile Include="Implementation\Markets\Groupon\GrouponOrdersSynchronizer.cs" />
+    <Compile Include="Implementation\Markets\Groupon\GrouponProductFeed.cs" />
+    <Compile Include="Implementation\Markets\Groupon\GrouponUtils.cs" />
+    <Compile Include="Implementation\Markets\Groupon\GrouponOrderCancellation.cs" />
+    <Compile Include="Implementation\Markets\Jet\JetItemsSync.cs" />
+    <Compile Include="Implementation\Markets\Jet\JetOrderAcknowledgement.cs" />
+    <Compile Include="Implementation\Markets\Jet\JetOrdersSynchronizer.cs" />
+    <Compile Include="Implementation\Markets\Jet\JetOrderUpdater.cs" />
+    <Compile Include="Implementation\Markets\Jet\JetOrderCancellation.cs" />
+    <Compile Include="Implementation\Markets\Jet\JetOrderReturn.cs" />
+    <Compile Include="Implementation\Markets\Magento\MagentoOrderUpdater.cs" />
+    <Compile Include="Implementation\Markets\Magento\MagentoItemsSync.cs" />
+    <Compile Include="Implementation\Markets\Magento\PAMagentoFeatures.cs" />
+    <Compile Include="Implementation\Markets\MarketHelper.cs" />
+    <Compile Include="Implementation\Markets\MarketUrlHelper.cs" />
+    <Compile Include="Implementation\Markets\Shopify\ShopifyItemsImporter.cs" />
+    <Compile Include="Implementation\Markets\Shopify\ShopifyItemsSync.cs" />
+    <Compile Include="Implementation\Markets\Shopify\ShopifyOrdersSynchronizer.cs" />
+    <Compile Include="Implementation\Markets\SupplierOasis\SupplierOasisOrdersSynchronizer.cs" />
+    <Compile Include="Implementation\Markets\SupplierOasis\SupplierOasisItemsSync.cs" />
+    <Compile Include="Implementation\Markets\SupplierOasis\SupplierOasisItemsImporter.cs" />
+    <Compile Include="Implementation\Markets\User\UserOrderApi.cs" />
+    <Compile Include="Implementation\Markets\User\UserOrderSynchronizer.cs" />
+    <Compile Include="Implementation\Markets\User\UserOrderUpdater.cs" />
+    <Compile Include="Implementation\Markets\Walmart\Feeds\BaseWalmartFeed.cs" />
+    <Compile Include="Implementation\Markets\Walmart\Feeds\FeedHelper.cs" />
+    <Compile Include="Implementation\Markets\Walmart\Feeds\IFeed.cs" />
+    <Compile Include="Implementation\Markets\Walmart\Feeds\WalmartPriceFeed.cs" />
+    <Compile Include="Implementation\Markets\Walmart\Feeds\WalmartPromotionFeed.cs" />
+    <Compile Include="Implementation\Markets\Walmart\Feeds\WalmartPriceFeedByOne.cs" />
+    <Compile Include="Implementation\Markets\Walmart\Feeds\WalmartInventoryFeed.cs" />
+    <Compile Include="Implementation\Markets\Walmart\Feeds\WalmartItemsFeed.cs" />
+    <Compile Include="Implementation\Markets\Walmart\WalmartReturnInfoReader.cs" />
+    <Compile Include="Implementation\Markets\Walmart\WalmartListingInfoReader.cs" />
+    <Compile Include="Implementation\Markets\Walmart\WalmartListingService.cs" />
+    <Compile Include="Implementation\Markets\Walmart\WalmartOrderRefund.cs" />
+    <Compile Include="Implementation\Markets\Walmart\WalmartOrderCancellation.cs" />
+    <Compile Include="Implementation\Markets\Walmart\WalmartOrderAcknowledgement.cs" />
+    <Compile Include="Implementation\Markets\Walmart\WalmartOrderUpdater.cs" />
+    <Compile Include="Implementation\Markets\Walmart\WalmartOrdersSynchronizer.cs" />
+    <Compile Include="Implementation\Markets\WooCommerce\WooCommerceItemsSync.cs" />
+    <Compile Include="Implementation\Markets\WooCommerce\WooCommerceItemsImporter.cs" />
+    <Compile Include="Implementation\Markets\WooCommerce\WooCommerceOrdersSynchronizer.cs" />
+    <Compile Include="Implementation\Notifications\NotificationHelper.cs" />
+    <Compile Include="Implementation\Notifications\NotificationService.cs" />
+    <Compile Include="Implementation\Notifications\SupportNotifications\ListingCreationIssuesNotification.cs" />
+    <Compile Include="Implementation\Notifications\SupportNotifications\PriceDisparitySupportNotification.cs" />
+    <Compile Include="Implementation\Notifications\SupportNotifications\QtyDisparitySupportNotification.cs" />
+    <Compile Include="Implementation\Notifications\SupportNotifications\UnprocessedRefundSupportNotification.cs" />
+    <Compile Include="Implementation\Notifications\SupportNotifications\SubstractQtySupportNotification.cs" />
+    <Compile Include="Implementation\Notifications\SupportNotifications\RefundStatusSupportNotification.cs" />
+    <Compile Include="Implementation\Notifications\SupportNotifications\QtyDistributionSupportNotification.cs" />
+    <Compile Include="Implementation\OrderHistoryService.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\AddressNotServedByUSPSChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\OnHoldOversoldChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\ReplacePhoneChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\ReplaceFrenchCharsChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\Shippings\LowerItemPriceChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\Shippings\PrimeShippingChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\UpgradeShippingServiceChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\UpgradeOrderChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\DismissFFAddressChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\HasCancellationChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\PhoneNumberChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\ShippingStateChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\ZipCodeChecker.cs" />
+    <Compile Include="Implementation\PaymentService.cs" />
+    <Compile Include="Implementation\QuantityDistributionHelper.cs" />
+    <Compile Include="Implementation\Rates\RateService.cs" />
+    <Compile Include="Implementation\OrderCommentService.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\DhlChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\NoWeightChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\SignConfirmationRemoveBuyerAskedBeforeChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\SignConfirmationSendEmailChecker.cs" />
+    <Compile Include="Implementation\PriceManager.cs" />
+    <Compile Include="Implementation\RecountingService.cs" />
+    <Compile Include="Implementation\RelistService.cs" />
+    <Compile Include="Implementation\RePriceService.cs" />
+    <Compile Include="Implementation\ItemRepublishService.cs" />
+    <Compile Include="Implementation\SaleManager.cs" />
+    <Compile Include="Implementation\Markets\Magento\MagentoOrdersSynchronizer.cs" />
+    <Compile Include="Implementation\AlertChecker.cs" />
+    <Compile Include="Implementation\ShippingService.cs" />
+    <Compile Include="Implementation\SizeMappingService.cs" />
+    <Compile Include="Implementation\StyleItemHistoryService.cs" />
+    <Compile Include="Implementation\StyleHistoryService.cs" />
+    <Compile Include="Implementation\Sync\BaseOrderCancellation.cs" />
+    <Compile Include="Implementation\Sync\BaseOrderUpdater.cs" />
+    <Compile Include="Implementation\Sync\IItemsSync.cs" />
+    <Compile Include="Implementation\Sync\OrderSyncFactory.cs" />
+    <Compile Include="Implementation\SystemMessageService.cs" />
+    <Compile Include="Implementation\Trackings\ComposedUspsAndCanadaPostTrackingProvider.cs" />
+    <Compile Include="Implementation\Trackings\Rules\GetStuckTrackingRule.cs" />
+    <Compile Include="Implementation\Trackings\Rules\ITrackingRule.cs" />
+    <Compile Include="Implementation\Trackings\Rules\NeverShippedTrackingRule.cs" />
+    <Compile Include="Implementation\Trackings\Rules\UndeliverableAsAddressedTrackingRule.cs" />
+    <Compile Include="Implementation\Trackings\Rules\NoticeLeftTrackingRule.cs" />
+    <Compile Include="Implementation\Trackings\CanadaPostTrackingProvider.cs" />
+    <Compile Include="Implementation\Trackings\TrackingNumberService.cs" />
+    <Compile Include="Implementation\Trackings\TrackingProcessing.cs" />
+    <Compile Include="Implementation\Trackings\UspsTrackingProvider.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\AddressChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\BlackListChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\DuplicateChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\Shippings\ExceededShippingCostChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\SameDayChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\InternationalExpressChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\PrimeChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\InsureChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\OrderValidatorService.cs" />
+    <Compile Include="Implementation\Sync\BaseOrdersSynchronizer.cs" />
+    <Compile Include="Implementation\Markets\eBay\eBayOrdersSynchronizer.cs" />
+    <Compile Include="Implementation\QuantityManager.cs" />
+    <Compile Include="Implementation\Markets\Amazon\Readers\AmazonReportService.cs" />
+    <Compile Include="Implementation\BuyBoxService.cs" />
+    <Compile Include="Implementation\CacheService.cs" />
+    <Compile Include="Implementation\Markets\Amazon\Feeds\BaseFeedUpdater.cs" />
+    <Compile Include="Implementation\Markets\Amazon\Feeds\FulfillmentDataUpdater.cs" />
+    <Compile Include="Implementation\Markets\Amazon\Feeds\ItemPriceUpdater.cs" />
+    <Compile Include="Implementation\Markets\Amazon\Feeds\ItemQuantityUpdater.cs" />
+    <Compile Include="Implementation\Markets\Amazon\AmazonOrdersSynchronizer.cs" />
+    <Compile Include="Implementation\PushService.cs" />
+    <Compile Include="Implementation\AddressService.cs" />
+    <Compile Include="Implementation\RatingUpdater.cs" />
+    <Compile Include="Implementation\ServiceFactory.cs" />
+    <Compile Include="Implementation\SettingsService.cs" />
+    <Compile Include="Implementation\StyleManager.cs" />
+    <Compile Include="Implementation\Trackings\TrackingManager.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\OversoldChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\RecipientNameChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\RestockChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\SignConfirmationByOrderCostChecker.cs" />
+    <Compile Include="Implementation\OrderValidation\Checkers\SignConfirmationByServiceTypeChecker.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\RejectOrderCancellationToBuyerEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\RejectRemoveSignConfirmationEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\AcceptOrderCancellationToBuyerEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\AcceptOrderCancellationToSellerEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\AcceptReturnRequestEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\AcceptRemoveSignConfirmationEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\NoticeLeftEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\SignConfirmationRequestEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\LostPackageEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\DuplicateEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\FeedbackEmailInfo.cs" />
+    <Compile Include="Implementation\Emails\EmailInfos\UnverifiedAddressEmailInfo.cs" />
+    <Compile Include="Implementation\UploadOrderFeedService.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Service References\USHolidayService\Reference.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="packages.config" />
+    <None Include="Properties\DataSources\System.Data.DataSet.datasource" />
+    <None Include="Service References\USHolidayService\USHolidayService.wsdl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ccen.Common\Ccen.Common.csproj">
+      <Project>{447f53f9-324d-479e-849a-8af262ef8537}</Project>
+      <Name>Ccen.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Core\Ccen.Core.csproj">
+      <Project>{b852ab63-645f-4f09-b314-29c3d46be832}</Project>
+      <Name>Ccen.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.DAL\Ccen.DAL.csproj">
+      <Project>{64bd5177-22dc-43c8-a8e3-ddd30dc49831}</Project>
+      <Name>Ccen.DAL</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.DTO\Ccen.DTO.csproj">
+      <Project>{8342451d-92ab-4b34-80dc-ed20fbbe6a32}</Project>
+      <Name>Ccen.DTO</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Model.General\Ccen.Model.General.csproj">
+      <Project>{B51F8C91-9759-499E-9E38-5D3EEDF86265}</Project>
+      <Name>Ccen.Model.General</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Utils\Ccen.Utils.csproj">
+      <Project>{05434995-742d-4164-9852-3bd23e7c47dd}</Project>
+      <Name>Ccen.Utils</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadataStorage Include="Service References\USHolidayService\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Service References\USHolidayService\configuration91.svcinfo" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Service References\USHolidayService\configuration.svcinfo" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Service References\USHolidayService\Reference.svcmap">
+      <Generator>WCF Proxy Generator</Generator>
+      <LastGenOutput>Reference.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
+    <Error Condition="!Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\EntityFramework.6.4.4\build\EntityFramework.props'))" />
+    <Error Condition="!Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\EntityFramework.6.4.4\build\EntityFramework.targets'))" />
+  </Target>
+  <Import Project="..\packages\EntityFramework.6.4.4\build\EntityFramework.targets" Condition="Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.targets')" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

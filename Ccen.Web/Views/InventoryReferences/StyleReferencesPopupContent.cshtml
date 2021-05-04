@@ -1,0 +1,285 @@
+﻿@using Amazon.Core.Models
+@using Amazon.Web.HtmlExtend
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Inventory
+@using Kendo.Mvc.UI
+@model StyleReferencesViewModel
+@{
+    Layout = null;
+    bool isNew = ViewBag.IsAdd ?? true;
+}
+
+<script type="text/javascript">
+    var StyleReferencesModel = function(model, settings) {
+        var self = this;
+
+        self.isLoaded = ko.observable(false);
+
+        self.settings = settings;
+        self.model = model;
+        
+        model.LinkedStyles.forEach(function (entry) {
+            entry.price = ko.observable(entry.Price);
+        });
+
+        self.linkedStyles = ko.observableArray(model.LinkedStyles);
+
+        if (model.LinkedStyles.length == 0)
+            model.LinkedStyles.push({ Id: 0, LinkedStyleString: ko.observable(""), price: ko.observable(null) });
+
+        self.id = ko.observable(model.Id);
+        self.isNew = ko.observable(model.Id == 0);
+
+        self.styleId = ko.observable(model.StyleId);
+        self.name = ko.observable(model.Name);
+        self.type = ko.observable(model.Type);
+        self.autoPriceIndex = ko.observable(model.AutoPriceIndex);
+
+        self.styleItems = ko.observableArray(model.StyleItems);
+
+        self.styleItems().forEach(function(entry) {
+            entry.Weight = ko.observable(entry.Weight).extend({
+                format: "0.00"
+            });
+        });
+
+        self.addLinkedStyle = function() {
+            self.linkedStyles.push({
+                Id: 0,
+                LinkedStyleString: ko.observable(""),
+                price: ko.observable(null)
+            });
+        };
+
+        self.removeLinkedStyle = function(linkedStyle) {
+            self.linkedStyles.remove(linkedStyle);
+        };
+
+        self.switchToQty = function() {
+            console.log("switchToQty, id=" + self.id());
+
+            popupWindow.customAction("openStyleQuantity", {
+                id: self.id(),
+                type: self.type(),
+            });
+        };
+
+        self.enableSwitchToQty = ko.computed(function() {
+            return self.isLoaded() && !self.isNew();
+        });
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function () {
+            return self.errors().length === 0;
+        });
+        self.onSubmit = function (data, e) { // function(data, e) {
+            //console.log(data);
+            console.log(e);
+            console.log("save click");
+            //var validator = $("#form").kendoValidator().data('kendoValidator');
+
+            //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+            //http://jsfiddle.net/KHFn8/3238/
+            if (self.isValid()) { //validator.validate() &&
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                e.preventDefault();
+                return false;
+            }
+        };
+
+
+        self.styleIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetStyleIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if(action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.isLoaded(true);
+    };
+
+
+    $(document).ready(function() {
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+            amazonMarket: '@((int)MarketType.Amazon)',
+            amazonUKMarket: '@((int)MarketType.AmazonEU)',
+            amazonAUMarket: '@((int)MarketType.AmazonAU)',
+        };
+
+        var viewModel = new StyleReferencesModel(model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(viewModel, $('#edit-references-container')[0]);
+        //$("#additional-button-panel-holder").prepend($('#edit-references-container #additional-button-panel'));
+        //ko.applyBindings(viewModel, $('#edit-references-container').closest(".k-edit-form-container")[0]);
+
+        //$('#edit-references-container').parent().next().find("#submit").click(viewModel.onSubmit);
+    });
+</script>
+
+<style>
+    .am-style-popup .k-dropdown {
+        width: 13.4em;
+    }
+</style>
+
+<div id="edit-references-container" class="inventory-popup am-style-popup">
+    <div class="k-edit-form-container" style="width: 650px">
+        @Html.ValidationSummary(false)
+
+        <input type="hidden" name="Id" data-bind="value: id" />
+
+        <div class="style-panel style-main-info">
+            <div class="panel panel-default">
+                <div class="panel-heading">General</div>
+                <div class="panel-body">
+
+                    <div class="editor-label">StyleID</div>
+                    <div class="editor-field">
+                        <input type="text" name="StyleId" data-bind="value: styleId" class="k-textbox" tabindex="1" />
+                    </div>
+                    <div class="editor-label">Name</div>
+                    <div class="editor-field">
+                        <input type="text" name="Name" data-bind="value: name" class="k-textbox" tabindex="2" />
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="style-panel">
+            <div class="panel panel-default">
+                <div class="panel-heading">Linked Styles</div>
+                <div class="panel-body">
+                    <div class="editor-label">Linked Styles</div>
+                    <div class="editor-field">
+                        <table style="padding-bottom: 5px; margin-bottom: 5px">
+                            <colgroup>
+                                <col style="width: 120px" />
+                            </colgroup>
+                            <tr>
+                                <th>Style Id</th>
+                                <th>Price</th>
+                                <th></th>
+                            </tr>
+                            <tbody data-bind='foreach: linkedStyles'>
+                                <tr>
+                                    <td>
+                                        <input type="hidden" data-bind='value: Id, attr: { name: "LinkedStyles[" + $index() + "].Id" }' />
+                                        <input style='width: 180px' class="k-textbox" data-bind='attr: { name: "LinkedStyles[" + $index() + "].LinkedStyleString" },
+                                            kendoAutoComplete: {
+                                               value: LinkedStyleString,
+                                               data: {},
+                                               minLenght: 3,
+                                               dataSource: $root.styleIdSource }' />
+                                    </td>
+                                    <td>
+                                        <input type="text" class="k-textbox" style="width: 60px" data-bind='value: price, enable: $index() != $root.autoPriceIndex(), attr: { name: "LinkedStyles[" + $index() + "].Price" }' />
+                                        <input type="radio" style="margin-left: 3px" data-bind="value: $index(), checked: $root.autoPriceIndex" /><span style="margin-bottom: 2px">auto</span>
+                                    </td>
+                                    <td style="padding-left: 10px"><a href="#" data-bind='click: $root.removeLinkedStyle' style="width: 27px" class="k-button"><span class='glyphicon glyphicon-remove am-icon'></span></a></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <button type="button" class="k-button" style="width: 80px; margin-bottom: 15px" data-bind='click: addLinkedStyle'>Add</button>
+                    </div>
+
+                    <div class="editor-label">Linked Sizes</div>
+                    <div class="editor-field">
+                        <table style="padding-bottom: 5px; padding-top: 10px">
+                            <colgroup>
+                                <col style="width: 80px" />
+                                <col style="width: 80px" />
+                            </colgroup>
+                            <tr>
+                                <th>Size</th>
+                                <th>Weight</th>
+                                <th>Quantity</th>
+                            </tr>
+                            <tbody data-bind='foreach: styleItems'>
+                                <tr>
+                                    <td><span data-bind="text: Size"></span></td>
+                                    <td><span data-bind="text: Weight"></span> oz</td>
+                                    <td><span data-bind="text: Quantity"></span> [auto]</td>
+                                </tr>
+                        </table>
+                    </div>
+
+                    <div class="clear"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="style-panel">
+            @Html.Partial("_ItemImages", Model)
+        </div>
+    </div>
+
+    <div class="k-edit-buttons k-state-default popup-button-panel" style="position: static">
+        <table style="width: 100%; margin: 0px">
+            <tr>
+                <td>
+                    <table style="margin-left: auto">
+                        <tr>
+                            @*<td style="display: none; padding-right: 25px;"
+                                data-bind="visible: enableSwitchToQty">
+                                <button class="k-button"
+                                        data-bind="click: switchToQty">
+                                    <span class="glyphicon glyphicon-list am-icon"></span>Switch to Quantity
+                                </button>
+                            </td>*@
+
+                            <td>
+                                <button tabindex="-1"
+                                        type="submit"
+                                        id="submit"
+                                        data-bind="click: onSubmit"
+                                        class="k-button k-button-icontext k-grid-update">
+                                    <span class="k-icon k-update"></span>Save
+                                </button>
+                            </td>
+                            <td style="padding-left: 4px">
+                                <button class="k-button k-button-icontext k-grid-cancel"
+                                        type="reset"
+                                        id="cancel"
+                                        onclick="popupWindow.close()">
+                                    <span class="k-icon k-cancel"></span>Cancel
+                                </button>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>

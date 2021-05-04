@@ -1,0 +1,306 @@
+﻿@using Amazon.Web.HtmlExtend
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Vendors.VendorOrderItemViewModel
+@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var VendorOrderModel = function(model) {
+        var self = this;
+        self.isLoaded = ko.observable(false);
+
+        self.id = model.Id;
+
+        self.styleString = ko.observable(model.StyleString);
+
+        self.name = ko.observable(model.Name);
+
+        self.price = ko.observable(model.Price);
+
+        self.quantity = ko.observable(model.Quantity);
+
+        self.quantityDate1 = ko.observable(model.QuantityDate1);
+        self.quantityDate2 = ko.computed(function() {
+            return self.quantity() - self.quantityDate1();
+        });
+
+        self.subtotalDate1 = ko.computed(function() {
+            return self.quantityDate1() * self.price();
+        });
+        self.lineTotal = ko.computed(function() {
+            return self.quantity() * self.price();
+        });
+
+        self.targetSaleDate = ko.observable(kendo.parseDate(model.TargetSaleDate)).extend({
+            format: "MM/dd/yyyy"
+        });
+
+        self.comment = ko.observable(model.Comment);
+        self.reason = ko.observable(model.Reason);
+        self.availableQuantity = ko.observable(model.AvailableQuantity);
+
+        //Sizes
+        self.sizes = ko.observableArray(model.Sizes);
+        self.addSize = function() {
+            console.log('addSize');
+            self.sizes.push({
+                Id: 0,
+                Size: null,
+                Breakdown: null,
+                ASIN: null
+            });
+        };
+        
+        if (self.sizes.length == 0)
+            self.addSize();
+        
+        self.removeSize = function(size) {
+            if (self.sizes.length > 1)
+                self.sizes.remove(size);
+        };
+
+        self.sizeSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetSizeList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if(action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.isLoaded(true);
+    };
+
+
+    $(document).ready(function() {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var vendorOrderModel = new VendorOrderModel(model);
+
+        ko.applyBindings(vendorOrderModel, document.getElementById('edit-container'));
+    });
+    
+    var onImageSelect = function (e) {
+        $.each(e.files, function (index, value) {
+            var ext = value.extension.toLowerCase();
+            var ok = ext == ".jpg"
+                || ext == ".jpeg"
+                || ext == ".png"
+                || ext == ".bmp";
+
+            if (!ok) {
+                e.preventDefault();
+                alert("Please upload image files");
+            }
+        });
+    };
+</script>
+
+
+<div id="edit-container" class="inventory-popup" style="margin-bottom: 10px">
+    @Html.ValidationSummary(true)
+
+    @Html.HiddenFor(m => m.Id)
+    @Html.HiddenFor(m => m.VendorOrderId)
+
+
+    <table class="noborder">
+        <tr>
+            <td>
+                <div class="k-edit-form-container">
+                    <div class="style-panel">
+                        <div class="title">Name</div>
+                        <div class="editor-label">Style</div>
+                        <div class="editor-field">
+                            <input name="StyleString"
+                                   type="text"
+                                   style="width: 200px"
+                                   class="k-textbox"
+                                   data-bind="value: styleString" />
+                        </div>
+
+                        <div class="editor-label">Name</div>
+                        <div class="editor-field">
+                            <input name="Name"
+                                   type="text"
+                                   style="width: 200px"
+                                   class="k-textbox"
+                                   data-bind="value: name" />
+                        </div>
+                        
+                        <div class="clear"></div>
+                    </div>
+
+                    <div class="style-panel">
+                        <div class="title">Sizes</div>
+                        <div style="padding-left: 30px">
+                            <table style="margin-bottom: 4px">
+                                <thead>
+                                    <tr>
+                                        <th>Size</th>
+                                        <th>Breakdown</th>
+                                        <th>ASIN</th>
+                                    </tr>
+                                </thead>
+                                <tbody data-bind="foreach: sizes">
+                                    <tr>
+                                        <td>
+                                            <input type="hidden"
+                                                    data-bind="value: Id, attr: { name: 'Sizes[' + $index() + '].Id' }" />
+                                            
+                                            <input type="hidden"
+                                                   data-bind="value: $index(), attr: { name: 'Sizes[' + $index() + '].Order' }" />
+
+                                            <input style='width: 100px'
+                                                    class="k-textbox"
+                                                    data-bind="kendoAutoComplete: {
+                                                value: Size,
+                                                data: {},
+                                                minLenght: 3,
+                                                dataSource: $root.sizeSource },
+                                            attr: { name: 'Sizes[' + $index() + '].Size' }" />
+                                        </td>
+                                        <td>
+                                            <input type="text"
+                                                    style='width: 60px'
+                                                    class="k-textbox"
+                                                    data-bind="value: Breakdown, attr: { name: 'Sizes[' + $index() + '].Breakdown' }" />
+                                        </td>
+                                        <td>
+                                            <input type="text"
+                                                    style='width: 80px'
+                                                    class="k-textbox"
+                                                    data-bind="value: ASIN, attr: { name: 'Sizes[' + $index() + '].ASIN' }" />
+                                        </td>
+                                        <td>
+                                            <a href="#" data-bind='click: $root.removeSize' style="width: 27px" class="k-button"><span class='glyphicon glyphicon-remove am-icon'></span></a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+
+                            </table>
+
+                            <button type="button" class="k-button" style="width: 80px" data-bind='click: addSize'>Add</button>
+                        </div>
+                    </div>
+
+                    <div class="style-panel">
+                        <div class="title">General</div>
+                        <div class="editor-label">Quantity</div>
+                        <div class="editor-field">
+                            <input name="Quantity"
+                                    type="number"
+                                    class="k-textbox"
+                                    data-bind="value: quantity" />
+                        </div>
+
+                        <div class="editor-label">Price, $</div>
+                        <div class="editor-field">
+                            <input name="Price"
+                                    type="text"
+                                    class="k-textbox"
+                                    data-bind="value: price" />
+                        </div>
+
+                        <div class="editor-label">Qty Date1</div>
+                        <div class="editor-field">
+                            <input name="QuantityDate1"
+                                    type="number"
+                                    class="k-textbox"
+                                    data-bind="value: quantityDate1" />
+                        </div>
+
+                        <div class="editor-label">Qty Date2</div>
+                        <div class="editor-field">
+                            <input name="QuantityDate2"
+                                   type="number"
+                                   class="k-textbox"
+                                   data-bind="value: quantityDate2, enable: false" />
+                        </div>
+
+                        <div class="editor-label">Subtotal Date1, $</div>
+                        <div class="editor-field">
+                            <input name="SubtotalDate1"
+                                   type="text"
+                                   class="k-textbox"
+                                   data-bind="value: subtotalDate1, enable: false" />
+                        </div>
+
+                        <div class="editor-label">Line Total, $</div>
+                        <div class="editor-field">
+                            <input name="LineTotal"
+                                   type="text"
+                                   class="k-textbox"
+                                   data-bind="value: lineTotal, enable: false" />
+                        </div>
+
+                        <div class="editor-label">Target sale date</div>
+                        <div class="editor-field">
+                            <input type="text"
+                                    name="TargetSaleDate"
+                                    data-bind='kendoDatePicker:
+                                    { value: targetSaleDate,
+                                        format: "MM/dd/yyyy" }' />
+                        </div>
+
+                        <div class="editor-label">Available Qty</div>
+                        <div class="editor-field">
+                            <input name="AvailableQuantity"
+                                   type="number"
+                                   class="k-textbox"
+                                   data-bind="value: availableQuantity" />
+                        </div>
+                        
+                        <div class="clear"></div>
+                    </div>
+                </div>
+            </td>
+            <td style="vertical-align: top">
+                <div class="k-edit-form-container">
+                    <div class="style-panel">
+                        <div class="title">Images</div>
+                        <div style="padding-left: 30px">
+                            @Html.Partial("_ItemImages", Model)
+                        </div>
+                    </div>
+
+                    <div class="style-panel">
+                        <div class="title">Comment</div>
+                        <div style="padding-left: 30px">
+                            <textarea name="Comment"
+                                      class="k-textbox"
+                                      style="width: 220px"
+                                      rows="3"
+                                      data-bind="value: comment" />
+                        </div>
+                    </div>
+
+                    <div class="style-panel">
+                        <div class="title">Reason</div>
+                        <div style="padding-left: 30px">
+                            <textarea name="Reason"
+                                      class="k-textbox"
+                                      style="width: 220px"
+                                      rows="3"
+                                      data-bind="value: reason" />
+                        </div>
+                    </div>
+                </div>
+             </td>
+        </tr>
+    </table>
+</div>

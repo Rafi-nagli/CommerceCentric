@@ -1,0 +1,218 @@
+﻿@using Amazon.Core.Models
+<script>
+    var AddStyleVariationsPopupModel = function(model, settings) {
+        var self = this;
+        self.settings = settings;
+
+        console.log("market=" + model.Market);
+        console.log("marketplaceId=" + model.MarketplaceId);
+
+        self.styleString = ko.observable();
+        self.market = ko.observable(model.Market),
+        self.marketplaceId = ko.observable(model.MarketplaceId),
+
+        self.data = ko.observable(null);
+
+        self.color = ko.observable();
+        self.price = ko.observable();
+        self.walmartUrl = ko.observable();
+
+        self.isWalmart = ko.computed(function () {
+            return self.market() == self.settings.markets.walmart;
+        });
+
+        self.popupTask = null;
+
+        self.generateContentPopup = null;
+        self.open = function (data) {
+            self.popupTask = $.Deferred();
+            self.data(data);
+            self.styleString(null);
+            self.color(null);
+            self.price(null);
+            self.walmartUrl(null);
+
+            if (self.generateContentPopup == null) { //Create new when first open for style
+                console.log($(".addStyleContent").length);
+                $(".addStyleContent").each(function (i, n) {
+                    var popup = $(this).data("kendoWindow");
+                    if (popup != null) {
+                        console.log("close previous generate popup");
+
+                        popup.close();
+                        popup.destroy();
+                    }
+                });
+
+                console.log("create new generate popup");
+                $("#addStyleContent").kendoWindow({
+                    modal: true,
+                    width: "500px",
+                    title: "Add Style Variations",
+                    visible: false,
+                    actions: [
+                        "Close"
+                    ],
+                });
+
+                ko.applyBindings(this, $('#addStyleVariationsPopupContent')[0]);
+            }
+
+            var popup = $("#addStyleContent").data("kendoWindow");
+            popup.center().open();
+
+            self.generateContentPopup = popup;
+
+            return self.popupTask;
+        }
+
+        self.styleIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetStyleIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if (action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.onClose= function (data, e) {
+            console.log('AddStyleVariationsPopupModel.onClose');
+            $("#addStyleContent").data("kendoWindow").close();
+            self.popupTask.reject();
+        }
+
+        self.onSave = function(data, e) {
+            console.log('AddStyleVariationsPopupModel.onSave');
+
+            console.log("existSizes");
+            console.log(self.data().existSizes);
+
+            var dataModel = {
+                StyleString: self.styleString(),
+                ExistSizes: self.data().existSizes,
+                Market: self.market(),
+                MarketplaceId: self.marketplaceId(),
+                WalmartUrl: self.walmartUrl(),
+            };
+
+            var ajaxTask = $.ajax({
+                url: self.settings.urls.createStyleVariations,
+                cache: false,
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                type: 'POST',
+                data: JSON.stringify(dataModel)
+            }).done(function(result) {
+                if (result.IsSuccess) {
+                    for (var i = 0; i < result.Data.Variations.length; i++) {
+                        result.Data.Variations[i].Color = self.color();
+                        result.Data.Variations[i].Price = self.price();
+                    }
+
+                    if (!dataUtils.isEmpty(result.Data.WalmartLookupSummary)) {
+                        Message.popupEx({
+                            type: Message.YES_NO,
+                            title: 'Confirm',
+                            html: "Notification of Walmart lookup results:<br/><span style='margin: 10px'>" + result.Data.WalmartLookupSummary + ",</span> <br/>continue adding the style?",
+                            yesCallback: function() {
+                                self.popupTask.resolve(result.Data);
+                                $("#addStyleContent").data("kendoWindow").close();
+                            },
+                            noCallback: function() {
+                                //Nothing
+                            }
+                        });
+                    } else {
+                        self.popupTask.resolve(result.Data);
+                        $("#addStyleContent").data("kendoWindow").close();
+                    }
+
+                }
+            }).fail(function (ex) {
+                console.log("fail");
+                console.log(ex);
+                self.popupTask.reject();
+                $("#addStyleContent").data("kendoWindow").close();
+            }).always(function() {
+                
+            });
+        }
+    }
+</script>
+
+<!-- ko stopBinding: true -->
+<div id="addStyleContent" class="addStyleContent" style="display: none">
+    <div id="addStyleVariationsPopupContent">
+        <div class="k-edit-form-container" style="width: auto; font-size: 13px">
+            <div class="inventory-popup">
+                <table style="width: 100%">
+                    <tr>
+                        <td style="vertical-align: top">
+                            <div class="panel panel-default">
+                                <div class="panel-heading">General</div>
+                                <div class="panel-body">
+                                    <div class="editor-label">Style Id:</div>
+                                    <div class="editor-field">
+                                        <input style='width: 160px' class="k-textbox" data-bind="kendoAutoComplete: {
+                                           value: styleString,
+                                           data: {},
+                                           minLenght: 3,
+                                           dataSource: styleIdSource }"/>
+                                    </div>
+                                    <div class="editor-label">Price, $:</div>
+                                    <div class="editor-field">
+                                        <input type="text" class="k-textbox" data-bind="value: price" />
+                                    </div>
+                                    <div class="editor-label">Color:</div>
+                                    <div class="editor-field">
+                                        <input type="text" class="k-textbox" data-bind="value: color"/>
+                                    </div>
+                                    <div class="editor-label" data-bind="visible: isWalmart">Attach to Walmart Url:</div>
+                                    <div class="editor-field" data-bind="visible: isWalmart">
+                                        <textarea rows="3" style="width: 270px" class="k-textbox" data-bind="value: walmartUrl"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+
+            <div class="k-edit-buttons k-state-default popup-button-panel" style="position: static">
+                <table style="margin-left: auto">
+                    <tr>
+                        <td style="margin-right: 5px">
+                            <button tabindex="-1"
+                                    data-bind="click: onSave"
+                                    class="k-button">
+                                <span class="k-icon k-update"></span>Save
+                            </button>
+                        </td>
+                        <td style="vertical-align: bottom">
+                            <button class="k-button k-button-icontext k-grid-cancel"
+                                    data-bind="click: onClose">
+                                <span class="k-icon k-cancel"></span>Cancel
+                            </button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- /ko -->

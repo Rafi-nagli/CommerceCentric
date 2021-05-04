@@ -1,0 +1,382 @@
+﻿@using Amazon.Core.Models
+@using Amazon.Web.Models.SearchFilters
+@using Amazon.Web.ViewModels
+@using Kendo.Mvc.UI
+
+@model FeedbackFilterViewModel
+
+@{
+    ViewBag.Title = "Feedback request";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/feedback.ico" />
+}
+
+<script type="text/javascript">
+
+    var FeedbackModel = function(model, settings) {
+        var self = this;
+        ko.BaseViewModel.call(self);
+
+        self.settings = settings;
+        self.model = model;
+
+        //Search
+        self.buyerName = ko.observable('');
+        self.orderNumber = ko.observable('');
+
+        self.minDate = new Date(2000, 1, 1);
+        self.maxDate = new Date();
+        self.maxDate.setHours(23);
+        self.maxDate.setMinutes(59);
+
+        self.dateFrom = ko.observable('');
+        self.dateTo = ko.observable('');
+
+        self.feedbackStatus = ko.observable('');
+        self.feedbackStatusList = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(FeedbackFilterViewModel.FeedbackStatusList));
+        //self.feedbackStatus.subscribe(function() { self.search(); });
+
+
+        //Grid
+        self.gridId = settings.gridId;
+        self.gridNode = $("#" + self.gridId);
+        self.grid = self.gridNode.data("kendoGrid");
+
+        self.checkAll = function(data, e) {
+            var checked = $(e.target).is(":checked");
+            $("#" + self.gridId + " tbody input:checkbox").prop("checked", checked);
+            return true;
+        };
+
+        self.requestFeedback = function(orderId) {
+            $.ajax({
+                url: '@Url.Action("RequestFeedback", "Feedback")',
+                data: { orderId: orderId },
+                async: false,
+                success: function() {
+                    self.grid.dataSource.read();
+                }
+            });
+        };
+
+        //self.sendMessage = ko.observable('');
+
+        self.onSendSelected = function() {
+            Message.success("Send emails...");
+            var data = { orderIds: self.getAllChecked() };
+            if (data.orderIds == '') {
+                Message.error("No selected orders");
+                return;
+            }
+
+
+            $.ajax({
+                url: '@Url.Action("RequestFeedbacks", "Feedback")',
+                async: true,
+                cache: false,
+                data: data,
+                success: function(result) {
+                    var requestSendCount = data.orderIds.split(',').length - 1;
+                    if (requestSendCount != result.Data.length) {
+                        Message.error("Successfully sent only " + result.Data.length + " / " + requestSendCount);
+                    } else {
+                        Message.success("All messages have been successfully sent");
+                    }
+                    self.grid.dataSource.read();
+                }
+            });
+        };
+
+        self.getAllChecked = function() {
+            var list = "";
+
+            var grid = self.grid;
+            var data = grid.dataSource.data();
+
+            //Go Through Each visible row and add a data property with the unique ID from the dataset
+            $("#" + self.gridId + " tbody tr").each(function() {
+                var $tr = $(this);
+                var checked = $tr.find("input:checked");
+                if (checked.length > 0) {
+                    var uid = $tr.attr("data-uid");
+                    //alert(uid);
+                    var data_entry = $.grep(data, function(item) {
+                        return item.uid == uid;
+                    });
+                    list += data_entry[0].OrderNumber + ",";
+                }
+            });
+            return list;
+        };
+
+        //Search
+
+        self.search = function (isSearch) {
+            var params = self.getGridParams();
+
+            self.resetRowNumber(0);
+
+            if (self.grid.dataSource.page() != 1) {
+                self.grid.dataSource.page(1); //May call read
+            }
+            self.grid.dataSource.read(params);
+        };
+
+        self.searchByKeyCmd = function (data, event) {
+            if (event.keyCode == 13)
+                self.search(true);
+            return true;
+        };
+
+        self.getGridParams = function () {
+            console.log("getGridParams");
+
+            var feedbackStatus = self.feedbackStatus();
+            var from = kendo.toString(self.dateFrom(), 'MM/dd/yyyy');
+            var to = kendo.toString(self.dateTo(), 'MM/dd/yyyy');
+            var orderNumber = self.orderNumber();
+            var buyerName = self.buyerName();
+
+            var params = {
+                feedbackStatus: feedbackStatus,
+                dateFrom: from,
+                dateTo: to,
+                buyerName: buyerName,
+                orderNumber: orderNumber
+            };
+            console.log(params);
+            return params;
+        };
+
+        self.orderIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetOrderIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if(action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.clear = function () {
+            self.feedbackStatus(self.model.FeedbackStatus);
+            self.dateFrom('');
+            self.dateTo('');
+            self.buyerName('');
+            self.orderNumber('');
+        };
+
+        self.clearAndSearch = function () {
+            self.clear();
+            self.search(false);
+        };
+
+        self.searchByButton = function () {
+            self.search(true);
+        };
+
+        helper.ui.addTopPager(self.grid);
+
+        self.clear();
+        self.search(false);
+    };
+
+</script>
+
+<div id="page-content">
+
+    <ol class="breadcrumb">
+        <li><a href="#">Emails</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <div class="messages-block">
+                <div><span id="infoMessage" class="text-info"></span></div>
+                <div><span id="errorMessage" class="label label-danger"></span></div>
+                <div><span id="successMessage" class="label label-success"></span></div>
+            </div>
+
+            <table>
+                <colgroup>
+                    <col style="width: 100px" />
+                    <col style="width: 210px" />
+                    <col style="width: 100px" />
+                    <col style="width: 450px" />
+                </colgroup>
+                <tr>
+                    <th class="right-content">Order Date: </th>
+                    <td>
+                        <table>
+                            <tr>
+                                <th>From</th>
+                                <td>
+                                    <input data-bind="kendoDatePicker: { value: dateFrom, format: 'MM/dd/yyyy', min: minDate, max: maxDate }" />
+                                </td>
+                                <th>To</th>
+                                <td>
+                                    <input data-bind="kendoDatePicker: { value: dateTo, format: 'MM/dd/yyyy', min: minDate, max: maxDate }" />
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            <table>
+                <colgroup>
+                    <col style="width: 100px" />
+                    <col style="width: 210px" />
+                    <col style="width: 100px" />
+                    <col style="width: 210px" />
+                    <col style="width: 100px" />
+                    <col style="width: 210px" />
+                </colgroup>
+                <tr>
+                    <th class="right-block">Filter: </th>
+                    <td>
+                        <input style="width: 180px" data-bind="kendoDropDownList: { data: feedbackStatusList, value: feedbackStatus, dataTextField: 'Text', dataValueField: 'Value' }" />
+                    </td>
+                    <th>Buyer Name:</th>
+                    <td>
+                        <input type="text" data-bind="value: buyerName, valueUpdate: 'afterkeydown', event: { keypress: searchByKeyCmd }" class="k-textbox" />
+                    </td>
+                    <th class="right-block">Order #:</th>
+                    <td>
+                        <input type="text"
+                               style="width: 200px"
+                               data-bind="kendoAutoComplete: {
+                           value: orderNumber,
+                           data: {},
+                           minLenght: 3,
+                           dataSource: orderIdSource },
+                        valueUpdate: 'afterkeydown',
+                        event: { keypress: searchByKeyCmd }" class="k-textbox" />
+                    </td>
+
+                </tr>
+            </table>
+            <button class="k-button"
+                    style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                    data-bind="click: searchByButton">
+                <span class='glyphicon glyphicon-search am-icon'></span>Search
+            </button>
+            <button class="k-button"
+                    style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                    data-bind="click: clearAndSearch">
+                <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+            </button>
+        </div>
+    </div>
+
+    <div class="k-toolbar k-grid-toolbar">
+        <button class="btn btn-default" data-bind="click: onSendSelected">
+            <span class="glyphicon glyphicon-envelope am-icon" aria-hidden="true"></span>Send selected
+        </button>
+    </div>
+
+    <div>
+        @(Html.Kendo().Grid<OrderFeedbackViewModel>()
+          .Name("grid")
+          .Columns(columns =>
+          {
+              columns.Bound(c => c.Id)
+                  .Encoded(false)
+                  .Title(@"<input type='checkbox' data-bind='click: checkAll' class='check-box'></input>")
+                  .ClientTemplate("#if (!IsSent) {# <input class='check_row' type='checkbox' /> #}#")
+                  .Width(25);
+              columns.Bound(c => c.OrderDate)
+                  .Format("{0:ddd, MM.dd.yyyy}")
+                  .Width(125);
+              columns.Bound(c => c.BuyerName)
+                  .Title("Buyer name")
+                  .ClientTemplate("<div>#=BuyerName #</div>");
+
+              columns.Bound(c => c.OrderNumber)
+                  .Width(180)
+                  .ClientTemplate("<div><a class='order-num' target='_blank' href='#=SellerOrderUrl#'>#=OrderNumber#</a></div>");
+              columns.Bound(c => c.ShippingDate)
+                  .ClientTemplate("<div>#= tmpl.f(ShippingDate, 'ddd, MM.dd.yyyy')#</div>"
+                                  + "<div>#=FormattedShippingService# #if(IsInternational){# <span class='gray'>(International)</span> #} else {# <span class='gray'>(Domestic)</span> #}#")
+                  .Title("Shipped")
+                  .Width(180);
+              columns.Bound(c => c.PackageDeliveryDate)
+                  .Format("{0:ddd, MM.dd.yyyy}")
+                  .ClientTemplate("#=tmpl.isNullFormat(PackageDeliveryDate, 'ddd, MM.dd.yyyy HH:mm', '-')#"
+                          + "<div class='gray remark'>#=tmpl.isNull(TrackingStateEvent, '-')#</div>"
+                          + "<div><a class='order-num' target='_blank' href='#=TrackingUrl#'>#=TrackingNumber#</a></div>")
+                  .Title("Delivered")
+                  .Width(200);
+              columns.Bound(c => c.Timezone)
+                  .Width(80);
+              columns.Bound(o => o.OrderNumber)
+                  .ClientTemplate("#= tmpl.t('actions-column-template', data)#")
+                  .Title("Request Feedback")
+                  .Width(160);
+          })
+          .Pageable(conf => conf.Enabled(true).Refresh(true))
+          .AutoBind(false)
+          .DataSource(dataSource => dataSource
+              .Ajax()
+              .Model(conf => conf.Id(m => m.Id))
+              .Sort(conf => conf.Add(o => o.OrderDate).Descending())
+              .PageSize(100)
+              .Read(read => read.Action("GetAll", "Feedback").Data("GetGridParams")))
+        )
+    </div>
+</div>
+
+
+<script type="text/kendo-tmpl" id="actions-column-template">
+    #if (BuyerName != null && BuyerName != "") {#
+        #if(IsSent){#
+            <div>#=FeedbackRequestDateString#</div> 
+        #} else {#
+            <a class='k-button k-button-icontext' onclick="feedbackVm.requestFeedback('#=OrderNumber#')">Send</a>
+            <a target='_blank' class='k-button k-button-icontext' href='@Url.Action("ComposeEmailFromTemplate", "Email")?orderId=#=OrderNumber#&type=@EmailTypes.RequestFeedback'>Preview</a>
+        #}#
+    #} else {#
+        <div>[no contact info]</div>
+    #}#
+</script>
+
+<script>
+    var feedbackVm = null;
+
+    $(document).ready(function () {
+        console.log("begin ready");
+
+        var settings = {
+            gridId: "grid"
+        };
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        feedbackVm = new FeedbackModel(model, settings);
+        ko.applyBindings(feedbackVm, document.getElementById("page-content"));
+    });
+
+
+    function GetGridParams() {
+        console.log("GetGridParams");
+        if (feedbackVm != null)
+            return feedbackVm.getGridParams();
+        return {};
+    }
+</script>

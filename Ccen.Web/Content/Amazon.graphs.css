@@ -1,0 +1,78 @@
+﻿body {
+    background-color: rgb(77, 77, 77);
+    color: white;
+    font-size: 75%;
+    font-family: Verdana, Tahoma, Arial, "Helvetica Neue", Helvetica, Sans-Serif;
+    margin: 0;
+    padding: 0;
+}
+
+.content {
+    color: #333;
+}
+
+.graph {
+    background-color: white;
+    text-align: center;
+}
+
+.graph .info {
+    color: #333;
+}
+
+.filter-panel {
+    margin-top: 10px;
+    background-color: white;
+    color: #333;
+}
+
+.filter-panel .filters {
+    padding: 10px 10px 10px 25px;
+    margin: 10px;
+    float: left;
+    border-left: 1px #bbb solid;
+}
+
+.filter-panel .info {
+    padding: 10px 10px 10px 25px;
+    float: left;
+    width: 200px;
+}
+
+.filter-panel .info .caption {
+    padding-bottom: 2px;
+    padding-top: 5px;
+}
+
+.filter-panel .info .value {
+    font-weight: bold;
+}
+
+.filter-panel .button-panel {
+    padding: 10px 0px;
+}
+
+.filter-panel .child-items {
+    padding-top: 10px;
+
+}
+
+.filter-panel .sku-list {
+    height: 90px;
+    padding-right: 10px;
+    overflow-y: scroll;
+}
+
+.empty-data-message {
+    font-weight: bold;
+    text-align: center;
+    width: 100%;
+    padding: 20px 0px;
+    background-color: white;
+    display: none;
+    color: black;
+}
+
+.clear {
+    clear: both;
+}

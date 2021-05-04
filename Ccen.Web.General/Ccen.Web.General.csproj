@@ -1,0 +1,134 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{A7351BED-4F7D-468D-9C4E-4497BFEC3E1D}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ccen.Web.General</RootNamespace>
+    <AssemblyName>Ccen.Web.General</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Amazon.Api, Version=2016.5.1553.17, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Amazon.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\MarketsBrandNamesWatches\DropShipper.Api\bin\Release\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Web.ApplicationServices" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Models\AccessManager.cs" />
+    <Compile Include="Models\IUrlService.cs" />
+    <Compile Include="Models\SearchFilters\StyleSearchFilterViewModel.cs" />
+    <Compile Include="Models\SessionHelper.cs" />
+    <Compile Include="Models\UrlManager.cs" />
+    <Compile Include="ViewModels\Exports\Types\ExcelFBAPlanViewModel.cs" />
+    <Compile Include="ViewModels\Exports\Types\ExcelOrderVendorViewModel.cs" />
+    <Compile Include="ViewModels\Exports\Types\ExcelProductCAViewModel.cs" />
+    <Compile Include="ViewModels\Exports\Types\ExcelProductUKViewModel.cs" />
+    <Compile Include="ViewModels\Exports\Types\ExcelProductUSViewModel.cs" />
+    <Compile Include="ViewModels\Exports\Types\ExcelProductViewModel.cs" />
+    <Compile Include="ViewModels\Exports\Types\ExcelProductWalmartViewModel.cs" />
+    <Compile Include="ViewModels\Exports\Types\ExcelWFSLocationViewModel.cs" />
+    <Compile Include="ViewModels\Exports\Types\ExcelWFSPlanViewModel.cs" />
+    <Compile Include="ViewModels\Exports\Types\ExcelWFSProductUSViewModel.cs" />
+    <Compile Include="ViewModels\Exports\Types\PreservedHeaders.cs" />
+    <Compile Include="ViewModels\Exports\VendorExport.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ViewModels\Html\SelectListItemEx.cs" />
+    <Compile Include="ViewModels\Html\SelectListItemTag.cs" />
+    <Compile Include="ViewModels\Html\SelectListShippingOption.cs" />
+    <Compile Include="ViewModels\IImagesContainer.cs" />
+    <Compile Include="ViewModels\Inventory\FeatureViewModel.cs" />
+    <Compile Include="ViewModels\Inventory\ImageCollectionViewModel.cs" />
+    <Compile Include="ViewModels\Inventory\ImageViewModel.cs" />
+    <Compile Include="ViewModels\Inventory\LocationViewModel.cs" />
+    <Compile Include="ViewModels\Inventory\StyleItemCollection.cs" />
+    <Compile Include="ViewModels\Inventory\StyleItemDisplayMode.cs" />
+    <Compile Include="ViewModels\Inventory\StyleItemPublishViewModel.cs" />
+    <Compile Include="ViewModels\Inventory\StyleItemShowViewModel.cs" />
+    <Compile Include="ViewModels\Inventory\StyleItemViewModel.cs" />
+    <Compile Include="ViewModels\Inventory\StyleViewModel.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ccen.Common\Ccen.Common.csproj">
+      <Project>{447f53f9-324d-479e-849a-8af262ef8537}</Project>
+      <Name>Ccen.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Core\Ccen.Core.csproj">
+      <Project>{b852ab63-645f-4f09-b314-29c3d46be832}</Project>
+      <Name>Ccen.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.DAL\Ccen.DAL.csproj">
+      <Project>{64BD5177-22DC-43C8-A8E3-DDD30DC49831}</Project>
+      <Name>Ccen.DAL</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.DTO\Ccen.DTO.csproj">
+      <Project>{8342451d-92ab-4b34-80dc-ed20fbbe6a32}</Project>
+      <Name>Ccen.DTO</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Model.General\Ccen.Model.General.csproj">
+      <Project>{b51f8c91-9759-499e-9e38-5d3eedf86265}</Project>
+      <Name>Ccen.Model.General</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Model\Ccen.Model.csproj">
+      <Project>{4851EDE3-4EAE-4C12-B5AC-19E86915AAD2}</Project>
+      <Name>Ccen.Model</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Utils\Ccen.Utils.csproj">
+      <Project>{05434995-742D-4164-9852-3BD23E7C47DD}</Project>
+      <Name>Ccen.Utils</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

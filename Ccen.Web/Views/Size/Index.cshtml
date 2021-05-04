@@ -1,0 +1,410 @@
+﻿@using Amazon.Web.Models
+
+@{
+    ViewBag.Title = "Sizes";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<div id="page-content">
+    <ol class="breadcrumb">
+        <li><a href="#">System</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div>
+        <div id="grid"></div>
+    </div>
+</div>
+
+
+@*
+    //NOTE: Below javascript realization of Grid, keeps for comparing of realizations
+    @(Html.Kendo().Grid<SizeGroupViewModel>()
+    .Name("grid")
+    .Editable(e => e.Mode(GridEditMode.PopUp).CreateAt(GridInsertRowPosition.Bottom))
+    .ToolBar(t => t.Create())
+    .Columns(c =>
+    {
+        c.Bound(s => s.Id).Title("#").Width(25);
+        c.Bound(s => s.Name).Title("Name");
+        //c.Bound(s => s.TypeId).ClientTemplate("#if (TypeName == null) {# - #} else {# #=TypeName# #}#").Title("Linked to Type");
+        c.Bound(s => s.SortOrder).Title("Display Order");
+        c.Command(com =>
+        {
+            com.Edit();
+            com.Destroy();
+        }).Width(200);
+    })
+    .Pageable(conf => conf.Enabled(true))
+    .Events(ev => {
+          ev.Save("onSaveSizeGroup");
+          ev.Edit("onEdit");
+    })
+    .ClientDetailTemplateId("itemsTemplate")
+    .DataSource(dataSource => dataSource
+        .Ajax()
+        .Model(conf =>
+        {
+            conf.Id(m => m.Id);
+            conf.Field(m => m.Id).Editable(false);
+            conf.Field(m => m.TypeName).Editable(false);
+            //conf.Field(m => m.ItemTypes).Editable(true);
+        })
+        .Events(e => e.Change("onDataSourceChange"))
+        .PageSize(20)
+        .Read(read => read.Action("GetAllGroups", "Size"))
+            .Destroy(delete => delete.Action("RemoveSizeGroup", "Size"))
+            .Update(update => update.Action("UpdateSizeGroup", "Size"))
+            .Create(create => create.Action("AddSizeGroup", "Size"))))
+*@
+
+<script id="itemsTemplate" type="text/kendo-tmpl">
+    <div id="Sizes_#=Id#"></div>
+    
+    @*@(Html.Kendo().Grid<>()
+    .Name("Sizes_#=Id#")
+    .Editable(e => e.Mode(GridEditMode.InLine).CreateAt(GridInsertRowPosition.Bottom))
+    .ToolBar(t => t.Create())
+    .Columns(c =>
+    {
+        c.Bound("GroupId").Hidden(true);
+        c.Bound("Id").ClientTemplate("").Title("\\#").Width(35);
+        c.Bound("Name").Title("Name");
+        c.Bound("SortOrder").Title("Display Order");
+        c.Bound("DefaultIsChecked").ClientTemplate("\\# if (DefaultIsChecked) {\\# yes \\#} else {\\# no \\#}\\#").Title("Selected by default");
+        c.Command(l =>
+        {
+            l.Edit();
+            l.Destroy();
+        }).Width(200);
+    })
+    .DataSource(dataSource => dataSource
+        .Ajax()
+        .Model(conf =>
+        {
+            conf.Id("Id");
+            conf.Field("Id", typeof(long)).Editable(false);
+            conf.Field("GroupId", typeof(long)).Editable(false);
+        })
+        .Read(read => read.Action("GetSizes", "Size", new { groupId = "#=Id#" }))
+        .Update(update => update.Action("UpdateSize", "Size"))
+        .Destroy(delete => delete.Action("RemoveSize", "Size"))
+        .Create(create => create.Action("AddSize", "Size", new { groupId = "#=Id#" })))
+    .ToClientTemplate()
+    )
+    *@
+</script>
+
+<script id="itemtype-row-template" type="text/x-kendo-template">
+    <div>
+        <input type="hidden" data-bind='value: Id' />
+        <input type="checkbox" name="ItemTypes[#=(Id - 1)#].IsChecked" data-bind='checked: IsChecked' /> @*name="ItemTypes[#=(Id - 1)#]"*@
+        <span> </span>
+        <span data-bind="text: Name"></span>
+    </div>
+</script>
+
+<script id="sizeGroupPopupTemplate" type="text/x-kendo-template">
+    <div class="k-edit-form-container">
+        <div class="inventory-popup">
+            <input type="hidden" data-bind="value: Id" name="Id" />
+
+            <div class="editor-label">Name</div>
+            <div class="editor-field">
+                <input type="text" name="Name" class="k-textbox" data-bind="value: Name" required="required"
+                    @*data-val-required="field is required" data-val="true"*@ 
+                       />
+                <div data-val-msg-for="item.Name"></div>
+            </div>
+            <div class="editor-label">Departments <span class="remark gray">separator: ;</span></div>
+            <div class="editor-field">
+                <input type="text" name="Departments" class="k-textbox" data-bind="value: Departments" 
+                       @*data-val-required="field is required" data-val="true"*@ />
+                <div data-val-msg-for="item.Departments"></div>
+            </div>
+            <div class="editor-label">Item Types</div>
+            <div class="editor-field">
+                <div data-template="itemtype-row-template" data-bind="source: ItemTypes">
+                </div>
+            </div>
+
+            <div class="editor-label">Order</div>
+            <div class="editor-field">
+                <input type="text" name="SortOrder" data-decimals="0" required="required" min="0" data-format="n0" data-type="number" data-bind="value:SortOrder" data-role="numerictextbox" />
+            </div>
+
+            <div class="clear"></div>
+        </div>
+    </div>
+</script>
+
+
+
+<script>
+    var itemTypes = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.ItemTypesAsArray));
+
+    function onSaveSizeGroup(e) {
+        console.log(e.model);
+        e.model.dirty = true;
+    }
+
+    function onDataSourceChange(e) {
+        console.log("onDataSourceChange");
+        console.log(e);
+        if (e.action == "add") {
+            e.items.forEach(function(item) {
+                item.ItemTypes = new kendo.data.ObservableArray(jQuery.map(itemTypes, function(n, i) {
+                    return {
+                        Name: n.Name,
+                        Id: n.Id,
+                        IsChecked: false
+                    };
+                }));
+            });
+        }
+    }
+    
+    function detailInit(e) {
+        var detailRow = e.detailRow;
+        console.log("detailInit");
+        var id = e.data.Id;
+        console.log(id);
+
+        var dataSource = {
+            transport: {
+                read: {
+                    url: '@Url.Action("GetSizes", "Size")?groupId=' + id,
+                    //dataType: "json",
+                },
+                update: {
+                    url: '@Url.Action("UpdateSize", "Size")',
+                    dataType: "json",
+                    contentType: "application/json",
+                    type: "POST"
+                },
+                destroy: {
+                    url: '@Url.Action("RemoveSize", "Size")',
+                    dataType: "json",
+                    contentType: "application/json",
+                    type: "POST"
+                },
+                create: {
+                    url: '@Url.Action("AddSize", "Size")?groupId=' + id,
+                    dataType: "json",
+                    contentType: "application/json",
+                    type: "POST"
+                },
+                parameterMap: function(options, operation) { //data
+                    console.log("parameterMap");
+                    console.log(options);
+                    if (operation !== "read") { // && options.models
+                        //    //if (operation === "update" || operation === "create") {
+                        return JSON.stringify({ item: options });
+                        //    return {item: kendo.stringify(options.models)};
+                    }
+                    return options;
+                }
+            },
+
+            serverPaging: false,
+            serverSorting: true,
+            serverFiltering: true,
+            serverGrouping: true,
+            serverAggregates: true,
+            type: "aspnetmvc-ajax",
+
+            filter: [],
+
+            //change: onDataSourceChange,
+            error: error,
+            //batch: true,
+
+            //pageSize: 20,
+            //page: 1,
+            //total: 0,
+
+            schema: {
+                data: "Data",
+                total: "Total",
+                errors: "Errors",
+                model: {
+                    id: "Id",
+                    fields: {
+                        Id: { "editable": false, "type": "number" }, // { editable: false, nullable: true },
+                        GroupId: { editable: false, defaultValue: id },
+                        DefaultIsChecked: { "type": "boolean" }
+                    }
+                }
+            }
+        };
+
+
+        detailRow.find("#Sizes_" + id).kendoGrid({            
+            dataSource: dataSource,
+            pageable: false,
+            //height: 550,
+            
+            toolbar: ["create"],
+
+            save:onSaveSizeGroup,
+
+            columns: [
+                { field: "Id", title: "#", width: '35px' },
+                { field: "Name", title: "Name", encoded: true },
+                { field: "SortOrder", title: "Display Order" }, 
+                { field: "Departments", title: "Departments", encoded: true },
+                { field: "DefaultIsChecked", title: "Checked by default", "template":"# if (DefaultIsChecked) {# yes #} else {# no #}#" },
+                { command: ["edit", "destroy"], title: "&nbsp;", width: "180px" }],
+            editable: {
+                mode: "inline",
+                //template: kendo.template($("#sizeGroupPopupTemplate").html())
+            }
+        });
+    }
+
+
+    $(document).ready(function() {
+        console.log("onready");
+
+        //Custom validation
+        //http://demos.telerik.com/kendo-ui/grid/editing-custom-validation
+
+
+        var dataSource = new kendo.data.DataSource({
+            //type: "json",
+
+            transport: {
+                read: {
+                    url: '@Url.Action("GetAllGroups", "Size")',
+                    //dataType: "json",
+                },
+                update: {
+                    url: '@Url.Action("UpdateSizeGroup", "Size")',
+                    dataType: "json",
+                    contentType: "application/json",
+                    type: "POST"
+                },
+                destroy: {
+                    url: '@Url.Action("RemoveSizeGroup", "Size")',
+                    dataType: "json",
+                    contentType: "application/json",
+                    type: "POST"
+                },
+                create: {
+                    url: '@Url.Action("AddSizeGroup", "Size")',
+                    dataType: "json",
+                    contentType: "application/json",
+                    type: "POST"
+                },
+                parameterMap: function(options, operation) { //data
+                    console.log("parameterMap");
+                    console.log(options);
+                    if (operation !== "read") { // && options.models
+                    //    //if (operation === "update" || operation === "create") {
+                        return JSON.stringify({ item: options }); 
+                    //    return {item: kendo.stringify(options.models)};
+                    }
+                    return options;
+                }
+            },
+
+            serverPaging: true,
+            serverSorting: true,
+            serverFiltering: true,
+            serverGrouping:true,
+            serverAggregates:true,
+            type: "aspnetmvc-ajax",
+
+            filter: [],
+
+            change: onDataSourceChange,
+            error: error,
+            //batch: true,
+            
+            pageSize: 20,
+            page: 1,
+            total: 0,
+
+            schema: {
+                data:"Data",
+                total:"Total",
+                errors:"Errors",
+                model: {
+                    id: "Id",
+                    fields: {
+                        Id: { "editable":false,"type":"number" }, // { editable: false, nullable: true },
+                        TypeName: { editable: false },
+                        Name: {}, // { validation: { required: true } }, 
+                        SortOrder: { type: "number" }//, validation: { required: true, min: 0 } },
+                    }
+                }
+            }
+        });
+
+
+        $("#grid").kendoGrid({
+            dataSource: dataSource,
+            pageable: true,
+            //height: 550,
+            detailTemplate: kendo.template($("#itemsTemplate").html()),
+            detailInit: detailInit,
+            toolbar: ["create"],
+
+            save:onSaveSizeGroup,
+
+            columns: [
+                { field: "Id", title: "#", width: '45px' },
+                { field: "Name", title: "Name", encoded: true },
+                { field: "Departments", title: "Departments" },
+                { field: "SortOrder", title: "Display Order" }, //"template":"\\# if (DefaultIsChecked) {\\# yes \\#} else {\\# no \\#}\\#"
+                { command: ["edit", "destroy"], title: "&nbsp;", width: "180px" }],
+            editable: {
+                mode: "popup",
+                template: kendo.template($("#sizeGroupPopupTemplate").html())
+            }
+        });
+    });
+
+
+    
+    //grid.dataSource.transport.parameterMap = function(data, operation) {
+    //    if (operation === "update" || operation === "create") {
+    //        return JSON.stringify({ item: data });
+    //    }
+    //    return data;
+    //};
+    //});
+</script>
+
+
+<script type="text/kendo-template" id="message">
+    <div class="k-widget k-tooltip k-tooltip-validation k-invalid-msg field-validation-error" style="margin: 0.5em; display: block; " data-for="#=field#" data-valmsg-for="#=field#" id="#=field#_validationMessage">
+        <span class="k-icon k-warning"> </span>#=message#<div class="k-callout k-callout-n"></div>
+    </div>
+</script>
+
+<script type="text/javascript">
+    var validationMessageTmpl = kendo.template($("#message").html());
+
+    function error(args) {
+        if (args.errors) {
+            var grid = $("#grid").data("kendoGrid");
+            grid.one("dataBinding", function (e) {
+                e.preventDefault();   // cancel grid rebind if error occurs
+
+                for (var error in args.errors) {
+                    console.log("error=" + error);
+                    console.log(args.errors);
+                    showMessage(grid.editable.element, error, args.errors[error].errors);
+                }
+            });
+        }
+    }
+
+    function showMessage(container, name, errors) {
+        //add the validation message to the form
+        container.find("[data-valmsg-for='" + name + "'],[data-val-msg-for='" + name + "']")
+        .replaceWith(validationMessageTmpl({ field: name, message: errors[0] }))
+    }
+</script>

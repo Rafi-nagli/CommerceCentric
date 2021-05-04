@@ -1,0 +1,374 @@
+﻿@using Amazon.Web.ViewModels
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Reports
+@using Kendo.Mvc.UI
+@model SalesExtReportPageViewModel
+@{
+    ViewBag.Title = "Sales Extended Report";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+
+}
+
+<style>
+    .k-master-row .k-hierarchy-cell {
+        visibility: hidden;
+    }
+
+    .k-grid tbody a.k-button {
+        min-width: 78px;
+    }
+</style>
+
+<script>
+    Date.prototype.addDays = function (days) {
+        var date = new Date(this.valueOf());
+        date.setDate(date.getDate() + days);
+        return date;
+    }
+
+
+    var SalesExtReportViewModel = function (model, settings) {
+        var self = this;
+
+        self.settings = settings;
+        self.gridName = settings.gridName;
+
+        //self.grid = $("#" + settings.gridId).data("kendoGrid");
+
+        ko.BaseViewModel.call(self);
+
+        var fromDate = new Date().addDays(-30);
+        self.searchFilters = {
+            dateTo: ko.observable(),
+            dateFrom: ko.observable(fromDate),
+            keywords: ko.observable(),
+            marketplaceCode: ko.observable(),            
+            gender: ko.observable(),
+            mainLicense: ko.observable(),
+            subLicense: ko.observable(),
+            itemStyles: ko.observable(),
+        };
+
+        self.searchFilters.market = ko.computed(function () {
+            if (dataUtils.isNullOrEmpty(self.searchFilters.marketplaceCode()))
+                return null;
+            return self.searchFilters.marketplaceCode().split('_')[0];
+        });
+
+        self.searchFilters.marketplaceId = ko.computed(function () {
+            if (dataUtils.isNullOrEmpty(self.searchFilters.marketplaceCode()))
+                return null;
+            return self.searchFilters.marketplaceCode().split('_')[1];
+        });
+
+        self.searchFilters.genderList = model.GenderList;
+        self.searchFilters.mainLicenseList = model.MainLicenseList;
+        self.searchFilters.allSubLicenseList = model.SubLicenseList;
+        self.searchFilters.itemStyleList = model.ItemStyleList;
+        self.searchFilters.marketplaceList = model.MarketplaceList;
+
+        self.searchFilters.subLicenseList = ko.computed(function () {
+            var selectedLicense = self.searchFilters.mainLicense();
+            return ko.utils.arrayFilter(self.searchFilters.allSubLicenseList, function (l) {
+                return selectedLicense == l.ParentValue;
+            });
+        });
+        self.searchFilters.enableSubLicense = ko.computed(function () {
+            return self.searchFilters.mainLicense() != null && self.searchFilters.mainLicense() != '';
+        });
+        self.searchFilters.mainLicense.subscribe(function () { self.searchFilters.subLicense(""); });
+
+        self.getSearchParams = function () {
+            return {
+                fromDate: self.searchFilters.dateFrom(),
+                toDate: self.searchFilters.dateTo(),
+                keywords: self.searchFilters.keywords(),
+                gender: self.searchFilters.gender(),
+                itemStyles: self.searchFilters.itemStyles(),
+                mainLicense: self.searchFilters.mainLicense(),
+                subLicense: self.searchFilters.subLicense(),
+                market: self.searchFilters.market(),
+                marketplaceId: self.searchFilters.marketplaceId()
+            };
+        }
+
+        self.clear = function () {
+            self.searchFilters.keywords('');
+            self.searchFilters.dateTo('');
+            self.searchFilters.dateFrom('');
+
+
+            self.searchFilters.gender("");
+            self.searchFilters.mainLicense("");
+            self.searchFilters.subLicense("");
+            self.searchFilters.itemStyles("");
+
+            self.searchFilters.market("");
+            self.searchFilters.marketplaceId("");
+
+            self.search();
+        };
+
+
+        //Actions
+        self.onShowSales = function (styleId) {
+            console.log('onShowSales, styleId=' + styleId);
+
+            popupWindow.initAndOpenWithSettings({
+                content: self.settings.urls.salesPopup + "?styleId=" + styleId,
+                level: 2,
+                title: "Sales",
+                width: 1000,
+                resize: function (e) {
+
+                }
+            });
+        }
+
+        //Grid
+        self.prepareRow = function (rowData) {
+        }
+
+        self.getItemsAsync = function (params) {
+            var defer = $.Deferred();
+
+            var searchParams = self.getSearchParams();
+            $.extend(params, searchParams);
+
+            $.ajax({
+                cache: false,
+                data: params,
+                url: self.settings.urls.getAll,
+                success: function (result) {
+                    for (var i = 0; i < result.Items.length; i++) {
+                        var item = result.Items[i];
+                        self.prepareRow(item);
+                    }
+
+                    console.log("getAllAsync end: " + result.Items.length);
+                    defer.resolve(result);
+                }
+            });
+            return defer;
+        };
+
+        self.grid = new FastGridViewModel({
+            gridId: self.gridName,
+            rowTemplate: 'sales-ext-row-template',
+            getItemsAsync: self.getItemsAsync,
+            //filterCallback: self.filterCallback,
+            //onRedraw: self.onRedraw,
+            itemsPerPage: 50,
+            isLocalMode: true,
+            sortField: 'SoldUnits',
+            sortMode: 'desc',
+            fields: [
+                { name: "StyleString", type: 'string' },
+                { name: "SoldUnits", type: 'int' },
+                { name: "RemainingUnits", type: 'int' },                
+            ],
+        });
+
+        self.getGridColumns = function () {
+            var columns = [
+                { title: "Image", width: "150px", sortable: false },
+                { title: "Style ID", width: "auto", field: "StyleString", sortable: true },
+                { title: "Sold Units", width: "200px", field: "SoldUnits", sortable: true },
+                { title: "Remaining Units", width: "200px", field: "RemainingUnits", sortable: true },
+                { title: "", width: "100px" },
+            ];
+
+            return columns;
+        }
+
+        self.fastGridSettings = {
+            gridId: self.grid.gridId,
+            hierarchy: { enable: false },
+            isLocalMode: true,
+            sort: { field: self.grid.sortField, mode: self.grid.sortMode },
+            columns: self.getGridColumns(),
+            loadingStatus: self.grid.loadingStatus,
+            itemCount: self.grid.itemCount,
+        };
+
+        self.searchByKeyCmd = function (data, event) {
+            console.log('searchByKeyCmd');
+            if (event.keyCode == 13)
+                self.search(true);
+            return true;
+        };
+
+        self.searchInProgress = ko.observable(false);
+        self.search = function () {
+            self.searchInProgress(true);
+
+            self.grid.read({ Page: 1 }).done(function () {
+                self.searchInProgress(false);
+            });
+        };
+
+        self.errors = ko.validation.group(self, { observable: true, live: true });
+        self.isValid = ko.computed(function () { return self.errors().length === 0; });
+
+        self.search();
+    };
+</script>
+
+<style>
+    .filter .input-validation-error {
+        border: 1px solid #ff0000;
+        background-color: #ffeeee;
+    }
+</style>
+
+<div id="page-content">
+    <ol class="breadcrumb">
+        <li><a href="#">Reports</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <div class="messages-block">
+                <div><span id="infoMessage" class="text-info"></span></div>
+                <div><span id="errorMessage" class="label label-danger"></span></div>
+                <div><span id="successMessage" class="label label-success"></span></div>
+            </div>
+
+            <table>
+                <tr>
+                    <th>Date: </th>
+                    <td>
+                        <table>
+                            <tr>
+                                <th>From</th>
+                                <td>
+                                    <input data-bind="kendoDatePicker: { value: searchFilters.dateFrom, format: 'MM/dd/yyyy' }" />
+                                </td>
+                                <th>To</th>
+                                <td>
+                                    <input data-bind="kendoDatePicker: { value: searchFilters.dateTo, format: 'MM/dd/yyyy' }" />
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                    <th>Item Style:</th>
+                    <td>
+                        <input style="width: 280px"
+                               data-bind="kendoMultiSelect: { data: searchFilters.itemStyleList, value: searchFilters.itemStyles, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+                    </td>
+                    <th>Gender:</th>
+                    <td style="padding-right: 10px">
+                        <input data-bind="kendoDropDownList: { data: searchFilters.genderList, value: searchFilters.gender, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+                    </td>
+                </tr>
+                <tr>
+                    <th>Marketplace:</th>
+                    <td>
+                        <input data-bind="kendoDropDownList: { data: searchFilters.marketplaceList, value: searchFilters.marketplaceCode, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+                    </td>
+                    <th>Main License:</th>
+                    <td>
+                        <input style="width: 180px" data-bind="kendoDropDownList: { data: searchFilters.mainLicenseList, value: searchFilters.mainLicense, dataTextField: 'Text', dataValueField: 'ParentValue', optionLabel: 'Select...' }" />
+                    </td>
+                </tr>
+                <tr>
+                    <th>Keywords:</th>
+                    <td>
+                        <input type="text"
+                               style="width: 240px; border-color: #2d2d2d"
+                               class="k-textbox"
+                               data-bind="value: searchFilters.keywords, valueUpdate:'afterkeydown', event: { keypress: searchByKeyCmd }" />
+                    </td>
+                    <th>Sub License:</th>
+                    <td>
+                        <input id="SubLicense" style="width: 180px" data-bind="kendoDropDownList: {data: searchFilters.subLicenseList, value: searchFilters.subLicense, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...', enabled: searchFilters.enableSubLicense }" />
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="text-align: left; padding-top: 5px">
+                        <button class="k-button"
+                                style="width: 110px; margin: 0px 0px 0px 0px; padding: 3px 20px 3px 20px"
+                                data-bind="click: search">
+                            <span class='glyphicon glyphicon-search am-icon'></span>Search
+                        </button>
+                        <button class="k-button"
+                                style="width: 100px; margin: 0px 0px 0px 10px; padding: 3px 20px 3px 20px"
+                                data-bind="click: clear">
+                            <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+                        </button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div>
+        <div class="grid-small">
+            <div data-bind='component: {
+                name: "grid-pager",
+                params: { itemCount: grid.itemCount, pageIndex: grid.pageIndex, itemsPerPage: grid.itemsPerPage, refreshCallback: grid.reload }
+                }'></div>
+
+            <div data-bind='component: {
+                 name: "fast-grid",
+                 params: fastGridSettings }'></div>
+
+            <div data-bind='component: {
+                name: "grid-pager",
+                params: { itemCount: grid.itemCount, pageIndex: grid.pageIndex, itemsPerPage: grid.itemsPerPage, refreshCallback: grid.reload }
+                }'></div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("_TemplateGridPager")
+@Html.Partial("_TemplateFastGrid")
+
+
+<script type="text/kendo-tmpl" id="sales-ext-row-template">
+    <tr class="k-master-row #=data._isAlt ? 'k-alt': ''#" row-uid="#=data.Id#">
+        <td><img src='#=data.Thumbnail#' style="max-height: 75px; max-width: 75px" /></td>
+        <td><a href='#=data.StyleUrl#' target='_blank'>#=data.StyleString#</a></td>
+        <td>#=tmpl.isNullFormat(data.SoldUnits, '\\#,\\#\\#\\#', '-')#</td>
+        <td>#if (data.RemainingUnits == null || data.RemainingUnits < 0) {# 0 #} else {# #=tmpl.isNullFormat(data.RemainingUnits, '\\#,\\#\\#\\#', '-')# #}#</td>
+        <td>
+            <a class="k-button"
+               style="min-width: 30px"
+               onclick="javascript: salesExtVm.onShowSales(#=data.StyleId#)"
+               ><span class='glyphicon glyphicon-stats am-icon'></span></a>
+        </td>
+    </tr>
+</script>
+
+
+    <script>
+        var salesExtVm = null;
+
+        $(document).ready(function () {
+            var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+            var settings = {
+                gridName: "salesExtGrid",
+                urls: {
+                    getAll: '@Url.Action("GetAll", "SalesExtReport")',
+                    salesPopup: '@Url.Action(MVC.Item.SalesPopupByStyleId())',
+                }
+            };
+
+            salesExtVm = new SalesExtReportViewModel(model, settings);
+
+            ko.validation.init({
+                errorElementClass: "input-validation-error",
+                errorMessageClass: "field-validation-error",
+                decorateElement: true,
+                decorateInputElement: true,
+                decorateElementOnModified: true
+            });
+            ko.applyBindings(salesExtVm, document.getElementById('page-content'));
+        });
+    </script>

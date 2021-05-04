@@ -1,0 +1,331 @@
+﻿@using Amazon.Web.HtmlExtend
+@using Kendo.Mvc.UI
+@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var photoshootEntryStatus = {
+        onHold: 0,
+        returned: 1,
+        missed: 2,
+    };
+
+    var PhotoshootPickListEditModel = function(model, settings) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+
+        self.id = ko.observable(model.Id);
+        self.photoshootDate = ko.observable(kendo.parseDate(model.PhotoshootDate)); 
+
+        self.prepareRow = function(n) {
+            n.styleItemId = ko.observable(null);
+            n.sizeList = ko.observable([]);
+            n.sizeName = ko.observable("");
+
+            n.status = ko.observable(n.Status);
+            n.formattedStatus = ko.computed(function () {
+                if (n.status() == photoshootEntryStatus.onHold)
+                    return "on hold";
+                if (n.status() == photoshootEntryStatus.returned)
+                    return "returned";
+                if (n.status() == photoshootEntryStatus.missed)
+                    return "missed";
+                return "n/a";
+            });
+            n.isProcessed = ko.computed(function () {
+                return n.status() != photoshootEntryStatus.onHold;
+            });
+            
+            n.styleErrorMessage = ko.observable('');
+            n.styleString = ko.observable("");
+            n.styleStringLoading = ko.observable(false);
+            n.styleString.subscribe(function() {
+                n.styleErrorMessage('');
+                n.styleStringLoading(true);
+                n.styleItemId(null);
+                $.ajax({
+                    url: '@Url.Action("GetStyleSizes", "AutoComplete")',
+                    data: { styleString: n.styleString(), onlyWithQty: false },
+                    cache: false,
+                    success: function(data) {
+                        n.styleStringLoading(false);
+                        if (data.Data != null && data.Data.length > 0) {
+                            n.sizeList(data.Data);
+                            if (n.styleItemId() == null) {
+                                n.styleItemId(data.Data[0].Value);
+                            }
+                        } else {
+                            n.styleErrorMessage('StyleId is not found');
+                            n.sizeList([]);
+                            n.styleItemId(null);
+                        }
+                    }
+                });
+            });
+
+            if (n.StyleString != null)
+                n.styleString(n.StyleString);
+            
+            n.styleItemId.subscribe(function() {
+                var selectedSize = $.grep(n.sizeList(), function(s) {
+                    return s.Value == n.styleItemId();
+                });
+                if (selectedSize.length > 0)
+                    n.sizeName(selectedSize[0].Text);
+            });
+
+            if (n.StyleItemId != null)
+                n.styleItemId(n.StyleItemId);
+        }
+
+        model.Entries.forEach(function(n) {
+            self.prepareRow(n);
+        });
+
+        self.entries = ko.observableArray(model.Entries);
+
+        self.addEntry = function() {
+            var newRow = {
+                Id: 0,
+                StyleString: null,
+                StyleId: null,
+                StyleItemId: null,
+                Status: photoshootEntryStatus.onHold,
+            };
+            self.prepareRow(newRow);
+            self.entries.push(newRow);
+        }
+
+        self.removeEntry = function(row) {
+            self.entries.remove(row);
+        }
+
+        self.markAsReturned = function (row) {
+            console.log("markAsReturned");
+            row.status(photoshootEntryStatus.returned);
+        }
+
+        self.markAsMissed = function (row) {
+            console.log("markAsMissed");
+            row.status(photoshootEntryStatus.missed);
+        }
+
+        self.styleIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetStyleIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if(action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function() {
+            return self.errors.length == 0;
+        });
+
+        
+        self.customValidationAsync = function() {
+            var defer = $.Deferred();
+
+            var duplicateList = [];
+            for (var i = 0; i < self.entries().length; i++) {
+                var item = self.entries()[i];
+                for (var j = i + 1; j < self.entries().length; j++) {
+                    if (self.entries()[j].styleItemId() == item.styleItemId()) {
+                        duplicateList.push(item);
+                        break;
+                    }
+                }
+            }
+            if (duplicateList.length > 0) {
+                var message = "";
+                for (var i = 0; i < duplicateList.length; i++) {
+                    message += "<br/>" + duplicateList[i].styleString() + " - " + duplicateList[i].sizeName();
+                }
+                
+                Message.popupAsync({
+                    title: 'Confirm',
+                    message: 'Are you sure you want save duplicate records for the following style/size combinations: ' + message,
+                    type: Message.YES_NO
+                }).done(function() {
+                    defer.resolve();
+                }).fail(function() {
+                    defer.reject();
+                });
+            } else {
+                defer.resolve();
+            }
+
+            return defer;
+        }
+
+        self.canSubmit = ko.computed(function() {
+            var loadingInProgressList = $.grep(self.entries(), function(n) {
+                return n.styleStringLoading();
+            });
+
+            return loadingInProgressList.length == 0;
+        });    
+
+        self.onSave = function(e) {
+            self.customValidationAsync().done(function() {
+                if (self.onSubmit()) {
+                    $('#submit').click();
+                }
+            });
+        }
+
+        self.onSubmit = function() { 
+            if (self.errors().length == 0) { 
+                console.log("validate true");
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                return false;
+            }
+        };
+
+        self.close = function() {
+            popupWindow.close();
+        }
+    };
+
+
+    $(document).ready(function() {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+
+        };
+        var photoshootPickListEditModel = new PhotoshootPickListEditModel(model, settings);
+
+        ko.applyBindings(photoshootPickListEditModel, document.getElementById('edit-container'));
+    });
+</script>
+
+
+<div id="edit-container" class="inventory-popup">
+    @Html.ValidationSummary(true)
+
+    <input type="hidden" name="Id" data-bind="value: id" />
+
+    <div class="k-edit-form-container grid-small"
+         style="width: 100%; margin-bottom: 15px; height: 545px; font-size: 13px">
+        <div>
+            <div>
+                <table>
+                    <tr>
+                        <td>Photoshoot Date</td>
+                        <td><input name="PhotoshootDate" data-bind="kendoDatePicker: { value: photoshootDate, format: 'MM/dd/yyyy' }" /></td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="k-widget k-grid k-secondary grid-small"
+                 style="overflow-y: scroll; height: 510px">
+
+                <table style="width: 100%">
+                    <colgroup>
+                        <col style="width: 180px" />
+                        <col style="width: 90px" />
+                        <col style="width: auto" />                        
+                        <col style="width: 20px" />
+                    </colgroup>
+                    <thead class="k-grid-header">
+                        <tr>
+                            <th class="k-header">Style</th>
+                            <th class="k-header">Size</th>
+                            <th class="k-header">Status</th>
+                            <th class="k-header"></th>
+                        </tr>
+                    </thead>
+                    <tbody data-bind="foreach: entries">
+                        <tr class="k-master-row" data-bind="css: { 'k-alt': $index() % 2 == 1 }">
+                            <td>
+                                <input type="hidden" data-bind="value: Id, attr: { name: 'Entries[' + $index() + '].Id' } " />
+
+                                <input type="text"
+                                       style="width: 180px"
+                                       data-bind="kendoAutoComplete: {
+                                                   value: styleString,
+                                                   data: {},
+                                                   minLenght: 3,
+                                                    highlightFirst: true,
+                                                   dataSource: $root.styleIdSource },
+                                                    valueUpdate: 'afterkeydown',
+                                                    event: {  },
+                                                attr: { name: 'Entries[' + $index() + '].StyleString' }"
+                                       class="k-textbox" />
+                            </td>
+                            <td>
+                                <input id="StyleItemId"
+                                       name="StyleItemId"
+                                       style="width: 100px"
+                                       data-bind="kendoDropDownList: {data: sizeList, value: styleItemId, dataTextField: 'Text', dataValueField: 'Value' },
+                                        attr: { name: 'Entries[' + $index() + '].StyleItemId' }" />
+                            </td>
+                            <td>
+                                <input type="hidden" data-bind="value: status, attr: { name: 'Entries[' + $index() + '].Status' }" />
+                                <span data-bind="text: formattedStatus" />
+                                <button class="k-button" data-bind="visible: !isProcessed(), click: $parent.markAsReturned">Returned</button>
+                                <button class="k-button" data-bind="visible: !isProcessed(), click: $parent.markAsMissed">Missed</button>
+                            </td>
+                            <td>
+                                <a href="#" data-bind='click: $parent.removeEntry'><span class="k-icon k-delete"></span></a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="padding: 5px">
+                <button type="button" style="width: 80px; font-size: 13px" class="k-button" data-bind='click: addEntry'>
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="k-edit-buttons k-state-default popup-button-panel" style="position: static">
+        <table style="margin-left: auto">
+            <tr>
+                <td>
+                    <button tabindex="-1"
+                            data-bind="click: onSave, enable: canSubmit, css: {'k-state-disabled': !canSubmit() }"
+                            class="k-button k-button-icontext k-grid-update">
+                        <span class="k-icon k-update"></span> Save
+                    </button>
+                </td>
+                <td style="padding-left: 4px">
+                    <button class="k-button k-button-icontext k-grid-cancel"
+                            type="reset"
+                            id="cancel"
+                            onclick="popupWindow.close()">
+                        <span class="k-icon k-cancel"></span> Cancel
+                    </button>
+                    <button type="submit"
+                            id="submit"
+                            style="display: none">
+                        Save
+                    </button>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>

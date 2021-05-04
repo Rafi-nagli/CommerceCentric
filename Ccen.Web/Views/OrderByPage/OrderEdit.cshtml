@@ -1,0 +1,1422 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Core.Models.Settings
+@using Amazon.Web.Models
+@model Amazon.Web.ViewModels.OrderEditViewModel
+@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var CommentModel = function(comments, settings) {
+        var self = this;
+
+        self.settings = settings;
+        self.commentTypeList = ko.observableArray(settings.commentTypeList);
+
+        if (comments == null)
+            comments = [];
+        
+        if (comments.length == 0)
+            comments.push({
+                Id: 0,
+                Comment: '',
+                Type: self.settings.defaultCommentType || 0,
+                TypeName: '-',
+                HasEmailLink: false,
+                EmailUrl: null,
+                CommentDate: new Date(),
+                CommentByName: '',
+            });
+
+        self.prepareRow = function(row) {
+            row.CommentDate = ko.observable(kendo.parseDate(row.CommentDate)).extend({ format: 'MM.dd.yyyy HH:mm' });
+            row.TypeName = ko.observable(row.TypeName);
+            row.Type = ko.observable(row.Type);
+            row.Type.subscribe(function() {
+                console.log('Type changed');
+                var typeEntry = $.grep(self.commentTypeList(), function(n, i) { return n.Value == row.Type(); });
+                if (typeEntry.length > 0)
+                {
+                    console.log(typeEntry[0]);
+                    row.TypeName(typeEntry[0].Text);
+                }
+            });
+            row.IsLastComment = ko.observable(false);
+        }
+
+        self.comments = ko.observableArray(comments);
+
+        self.comments().forEach(function(entry) {
+            self.prepareRow(entry);
+        });
+        if (self.comments().length > 0) {
+            self.comments()[self.comments().length - 1].IsLastComment(true);
+        }
+
+        self.addComment = function() {
+            var newRow = {
+                Id: 0,
+                Comment: '',
+                Type: self.settings.defaultCommentType || 0,
+                TypeName: '-',
+                HasEmailLink: false,
+                EmailUrl: null,
+                CommentDate: new Date(),
+                CommentByName: '',
+            };
+            self.prepareRow(newRow);
+
+            self.comments.push(newRow);
+        };
+
+        self.removeComment = function(comment) {
+            self.comments.remove(comment);
+        };
+
+        self.hasNotEmpty = function() {
+            var notEmptyList = $.grep(self.comments(), function(n, i) { return n.Comment != '' && n.Comment != null; });
+            return notEmptyList.length > 0;
+        };
+    };
+</script>
+
+<script>
+    var EditOrderViewModel = function(model, settings) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+        self.message = ko.observable("");
+
+        self.Id = model.EntityId;
+        self.OrderId = model.OrderId;
+        self.FormattedOrderId = model.FormattedOrderId;
+        self.BatchId = model.BatchId;
+        self.MarketUrl = model.MarketUrl;
+
+        console.log(model.ManuallyShippingGroupId);
+        self.manuallyShippingGroupId = ko.observable(model.ManuallyShippingGroupId);
+        self.InitialShipmentProviderType = model.ManuallyShipmentProviderType;
+        self.ManuallyShipmentProviderType = ko.observable(model.ManuallyShipmentProviderType);
+        console.log("ShippingProviderType=" + self.ManuallyShipmentProviderType());
+        self.ShipmentProviderName = model.ShipmentProviderName;
+        self.SourceShippingName = model.SourceShippingName;
+        self.shippingOptions = ko.observable(model.ShippingOptions);
+        self.ShippingProviders = model.ShippingProviders;
+        self.hasCancelationRequest = ko.observable(model.HasCancelationRequest);
+        self.hasBatchLabel = ko.observable(model.HasBatchLabel);
+        self.isPrime = ko.observable(model.IsPrime);
+        self.isOversold = ko.observable(model.IsOversold);
+
+        console.log(model.OrderStatus);
+        console.log(settings.shippedOrderStatus);
+        console.log(settings.canceledOrderStatus);
+
+        self.canEdit = ko.computed(function() {
+            return model.OrderStatus != settings.shippedOrderStatus
+                && model.OrderStatus != settings.canceledOrderStatus
+                && !model.IsDisabled
+                && !self.hasBatchLabel();
+        });
+
+        self.canEditAddress = ko.computed(function() {
+            return self.canEdit() && !self.isPrime();
+        });
+
+        self.canCancel = ko.computed(function() {
+            return model.OrderStatus == settings.unshippedOrderStatus
+                && !self.hasCancelationRequest();
+        });
+
+        console.log('canEdit=' + self.canEdit());
+
+        settings.defaultCommentType = self.canEdit() ? settings.commentTypes.address : settings.commentTypes.none;
+        self.comment = new CommentModel(model.Comments, settings);
+
+        self.isSignConfirmation = ko.observable(model.IsSignConfirmation);
+        self.isInsured = ko.observable(model.IsInsured);
+        self.isDisabled = ko.observable(model.IsDisabled);
+
+        self.isEditable = ko.observable(false);
+        console.log("onHold: " + model.OnHold);
+        self.onHold = ko.observable(model.OnHold);
+        self.onHoldUpdateDate = ko.observable(kendo.parseDate(model.OnHoldUpdateDate))
+            .extend({ format: 'MM.dd.yyyy HH:mm' });
+        self.onHoldText = ko.computed(function() {
+            return self.onHold() ? "Unhold" : "Hold";
+        });
+
+        self.isRefundLocked = ko.observable(model.IsRefundLocked);
+
+        self.AddressValidationStatus = ko.observable(model.AddressValidationStatus);
+        self.IsDismissAddressValidation = ko.observable(model.IsDismissAddressValidation);
+
+        self.disableDismissAddressValidationError = ko.computed(function() {
+            if (self.AddressValidationStatus() >= '@((int) AddressValidationStatus.Invalid)')
+                if (!self.IsDismissAddressValidation())
+                    return false;
+            return true;
+        });
+
+        self.isSameDay = ko.computed(function() {
+            return self.SourceShippingName == "SameDay";
+        });
+
+        self.enableDismissAddressValidationError = ko.computed(function() {
+            return !self.disableDismissAddressValidationError();
+        });
+
+        self.enableIsInsured = ko.computed(function() {
+            return self.ManuallyShipmentProviderType() != self.settings.dhlShipmentProvider
+                && self.canEdit();
+        });
+
+        self.enableShipmentProvider = ko.computed(function() {
+            return !self.isSameDay()
+                && !self.isPrime()
+                && self.canEdit();
+        });
+
+        self.geocodeResult = ko.observable(model.AddressGoogleValidationMessage);
+        self.hasGeocodeResult = ko.computed(function() {
+            return !dataUtils.isEmpty(self.geocodeResult());
+        });
+
+        self.USStateList = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.States));
+        self.ManuallyShippingUSState = ko.observable(model.ManuallyShippingState);
+
+        self.CountryList = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.Countries));
+
+        self.IsManuallyUpdated = ko.observable(model.IsManuallyUpdated);
+        self.ManuallyPersonName = ko.observable(model.ManuallyPersonName);
+        self.ManuallyShippingAddress1 = ko.observable(model.ManuallyShippingAddress1);
+        self.ManuallyShippingAddress2 = ko.observable(model.ManuallyShippingAddress2);
+        self.ManuallyShippingCity = ko.observable(model.ManuallyShippingCity);
+        self.ManuallyShippingState = ko.observable(model.ManuallyShippingState);
+        self.ManuallyShippingZip = ko.observable(model.ManuallyShippingZip);
+        self.ManuallyShippingZipAddon = ko.observable(model.ManuallyShippingZipAddon);
+        self.ManuallyShippingCountry = ko.observable(model.ManuallyShippingCountry);
+        self.ManuallyShippingPhone = ko.observable(model.ManuallyShippingPhone);
+
+        self.PersonName = ko.observable(model.PersonName);
+        self.ShippingAddress1 = ko.observable(model.ShippingAddress1);
+        self.ShippingAddress2 = ko.observable(model.ShippingAddress2);
+        self.ShippingCity = ko.observable(model.ShippingCity);
+        self.ShippingState = ko.observable(model.ShippingState);
+        self.ShippingZip = ko.observable(model.ShippingZip);
+        self.ShippingZipAddon = ko.observable(model.ShippingZipAddon);
+        self.ShippingCountry = ko.observable(model.ShippingCountry);
+        self.ShippingPhone = ko.observable(model.ShippingPhone);
+        self.BuyerEmail = ko.observable(model.BuyerEmail);
+
+        //Name
+        self.manuallyPersonNameLength = ko.computed(function() {
+            return (self.ManuallyPersonName() || "").length;
+        });
+        self.personNameMaxLength = ko.computed(function() {
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlShipmentProvider)
+                return 35;
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlEComShipmentProvider)
+                return 30;
+            if (self.ManuallyShipmentProviderType() == self.settings.ibcShipmentProvider)
+                return 40;
+            return null;
+        });
+        self.hasPersonNameIssue = ko.computed(function() {
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlShipmentProvider)
+                return (self.ManuallyPersonName() || "").length > 35;
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlShipmentProvider
+                || self.ManuallyShipmentProviderType() == self.settings.dhlEComShipmentProvider
+                || self.ManuallyShipmentProviderType() == self.settings.stampsShipmentProvider)
+                return (self.ManuallyPersonName() || "").length < 2;
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlEComShipmentProvider)
+                return (self.ManuallyPersonName() || "").length > 30;
+            if (self.ManuallyShipmentProviderType() == self.settings.ibcShipmentProvider)
+                return (self.ManuallyPersonName() || "").length > 40;
+            return false;
+        });
+
+        //Address1
+        self.manuallyShippingAddress1Length = ko.computed(function() {
+            return (self.ManuallyShippingAddress1() || "").length;
+        });
+        self.shippingAddress1MaxLength = ko.computed(function() {
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlShipmentProvider)
+                return 35;
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlEComShipmentProvider)
+                return 40;
+            if (self.ManuallyShipmentProviderType() == self.settings.stampsShipmentProvider)
+                return 50;
+            if (self.ManuallyShipmentProviderType() == self.settings.ibcShipmentProvider)
+                return 40;
+            return null;
+        });
+        self.hasShippingAddress1Issue = ko.computed(function() {
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlShipmentProvider)
+                return (self.ManuallyShippingAddress1() || "").length > 35;
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlEComShipmentProvider)
+                return (self.ManuallyShippingAddress1() || "").length > 40;
+            if (self.ManuallyShipmentProviderType() == self.settings.stampsShipmentProvider)
+                return (self.ManuallyShippingAddress1() || "").length > 50;
+            if (self.ManuallyShipmentProviderType() == self.settings.ibcShipmentProvider)
+                return (self.ManuallyShippingAddress1() || "").length > 40;
+            return false;
+        });
+
+        //Address2
+        self.manuallyShippingAddress2Length = ko.computed(function() {
+            return (self.ManuallyShippingAddress2() || "").length;
+        });
+        self.shippingAddress2MaxLength = ko.computed(function() {
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlShipmentProvider)
+                return 35;
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlEComShipmentProvider)
+                return 40;
+            if (self.ManuallyShipmentProviderType() == self.settings.stampsShipmentProvider)
+                return 50;
+            if (self.ManuallyShipmentProviderType() == self.settings.ibcShipmentProvider)
+                return 40;
+            return null;
+        });
+        self.hasShippingAddress2Issue = ko.computed(function() {
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlShipmentProvider)
+                return (self.ManuallyShippingAddress2() || "").length > 35;
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlEComShipmentProvider)
+                return (self.ManuallyShippingAddress2() || "").length > 40;
+            if (self.ManuallyShipmentProviderType() == self.settings.stampsShipmentProvider)
+                return (self.ManuallyShippingAddress2() || "").length > 50;
+            if (self.ManuallyShipmentProviderType() == self.settings.ibcShipmentProvider)
+                return (self.ManuallyShippingAddress2() || "").length > 40;
+            return false;
+        });
+
+        //City
+        self.manuallyShippingCityLength = ko.computed(function() {
+            return (self.ManuallyShippingCity() || "").length;
+        });
+        self.shippingCityMaxLength = ko.computed(function() {
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlShipmentProvider)
+                return 35;
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlEComShipmentProvider)
+                return 30;
+            if (self.ManuallyShipmentProviderType() == self.settings.stampsShipmentProvider)
+                return 50;
+            if (self.ManuallyShipmentProviderType() == self.settings.ibcShipmentProvider)
+                return 40;
+            return null;
+        });
+        self.hasShippingCityIssue = ko.computed(function() {
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlShipmentProvider)
+                return (self.ManuallyShippingCity() || "").length > 35;
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlEComShipmentProvider)
+                return (self.ManuallyShippingCity() || "").length > 30;
+            if (self.ManuallyShipmentProviderType() == self.settings.stampsShipmentProvider)
+                return (self.ManuallyShippingCity() || "").length > 50;
+            if (self.ManuallyShipmentProviderType() == self.settings.ibcShipmentProvider)
+                return (self.ManuallyShippingCity() || "").length > 40;
+            return false;
+        });
+
+        //State
+        self.manuallyShippingStateLength = ko.computed(function() {
+            return (self.ManuallyShippingState() || "").length;
+        });
+        self.shippingStateMaxLength = ko.computed(function() {
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlShipmentProvider)
+                return 35;
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlEComShipmentProvider)
+                return 30;
+            if (self.ManuallyShipmentProviderType() == self.settings.stampsShipmentProvider)
+                return 30;
+            if (self.ManuallyShipmentProviderType() == self.settings.ibcShipmentProvider)
+                return 15;
+            return null;
+        });
+        self.hasShippingStateIssue = ko.computed(function() {
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlShipmentProvider)
+                return (self.ManuallyShippingState() || "").length > 35;
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlEComShipmentProvider)
+                return (self.ManuallyShippingState() || "").length > 30;
+            if (self.ManuallyShipmentProviderType() == self.settings.stampsShipmentProvider)
+                return (self.ManuallyShippingState() || "").length > 30;
+            if (self.ManuallyShipmentProviderType() == self.settings.ibcShipmentProvider)
+                return (self.ManuallyShippingState() || "").length > 15;
+            return false;
+        });
+
+        //Zip
+        self.manuallyShippingZipLength = ko.computed(function() {
+            return (self.ManuallyShippingZip() || "").length;
+        });
+        self.shippingZipMaxLength = ko.computed(function() {
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlShipmentProvider)
+                return 12;
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlEComShipmentProvider)
+                return 11;
+            if (self.ManuallyShipmentProviderType() == self.settings.stampsShipmentProvider)
+                return 9;
+            if (self.ManuallyShipmentProviderType() == self.settings.ibcShipmentProvider)
+                return 10;
+            return null;
+        });
+        self.hasShippingZipIssue = ko.computed(function() {
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlShipmentProvider)
+                return (self.ManuallyShippingZip() || "").length > 12;
+            if (self.ManuallyShipmentProviderType() == self.settings.dhlEComShipmentProvider)
+                return (self.ManuallyShippingZip() || "").length > 11 || (self.ManuallyShippingZip() || "").length < 5;
+            if (self.ManuallyShipmentProviderType() == self.settings.stampsShipmentProvider)
+                return (self.ManuallyShippingZip() || "").length > 9;
+            if (self.ManuallyShipmentProviderType() == self.settings.ibcShipmentProvider)
+                return (self.ManuallyShippingZip() || "").length > 10;
+            return false;
+        });
+
+
+        self.hasAddressChanges = ko.computed(function() {
+            if (self.ShippingAddress1() != self.ManuallyShippingAddress1()
+                || self.ShippingAddress2() != self.ManuallyShippingAddress2()
+                || self.ShippingCity() != self.ManuallyShippingCity()
+                || self.ShippingCountry() != self.ManuallyShippingCountry()
+                || self.ShippingState() != self.ManuallyShippingState()
+                || self.ShippingZip() != self.ManuallyShippingZip()
+                || self.ShippingZipAddon() != self.ManuallyShippingZipAddon()
+                || self.ShippingPhone() != self.ManuallyShippingPhone()
+                || self.PersonName() != self.ManuallyPersonName())
+                return true;
+            return false;
+        });
+
+        self.insuredValue = tmpl.isNullFormat(model.InsuredValue, "$" + "0.00", "-");
+
+        self.getStyleListingByStyleIdAndMarketAsync = function(styleString,
+            market,
+            marketplaceId,
+            listingId)
+        {
+            return $.ajax({
+                url: '@Url.Action("GetListingsToReplace", "Order")',
+                data: {
+                    styleString: styleString,
+                    market: market,
+                    marketplaceId: marketplaceId,
+                    listingId: listingId,
+                },
+                cache: false,
+            });
+        };
+
+
+        self.updateItemListings = function(item) {
+            self.getStyleListingByStyleIdAndMarketAsync(item.styleString(),
+                    item.market(),
+                    item.marketplaceId(),
+                    item.listingId())
+                .done(function(result) {
+                    console.log("getListings response");
+                    console.log(result);
+                    if (result.IsSuccess) {
+                        var hasCurrentListing = false;
+                        $.each(result.Data, function(i, l) {
+                            l.Text = l.StyleSize;
+                            if (!dataUtils.isEmpty(l.StyleColor)) {
+                                l.Text += "/" + l.StyleColor;
+                            }
+                            l.Text += " - qty: " + l.AvailableQuantity;
+                            console.log("listingId=" + l.Id);
+                            l.Value = l.Id;
+
+                            if (l.Id == item.listingId())
+                                hasCurrentListing = true;
+                        });
+                        if (!hasCurrentListing
+                            && item.StyleString == item.styleString()) //Style the same
+                            item.canChangeListing(false);
+                        item.styleListingList(result.Data);
+                    } else {
+                        item.styleListingList([]);
+                    }
+                    //if (!self.canEdit())
+                    //    item.canChangeListing(false);
+                });
+        };
+
+
+        var orderItems = model.Items;
+        $.each(orderItems, function(i, item) {
+            item.styleString = ko.observable(item.StyleString);
+            item.styleString.subscribe(function() {
+                console.log("styleString changed");
+                self.updateItemListings(item);
+            });
+            item.styleId = ko.observable(item.StyleId);
+            item.styleItemId = ko.observable(item.StyleItemId);
+            item.styleSize = ko.observable(item.StyleSize);
+            item.styleColor = ko.observable(item.StyleColor);
+
+            item.sourceStyleString = ko.observable(item.SourceStyleString);
+            item.sourceStyleSize = ko.observable(item.SourceStyleSize);
+            item.sourceStyleColor = ko.observable(item.SourceStyleColor);
+
+            item.asin = ko.observable(item.ASIN);
+            item.listingId = ko.observable(item.ListingId);
+            item.newListingId = ko.observable(item.NewListingId);
+            item.market = ko.observable(item.Market);
+            item.marketplaceId = ko.observable(item.MarketplaceId);
+            item.itemOrderId = ko.observable(item.ItemOrderId);
+            item.sourceItemOrderId = ko.observable(item.SourceItemOrderId);
+            item.quantity = ko.observable(item.Quantity);
+
+            item.styleListingList = ko.observableArray([]);
+            console.log(item.styleItemId());
+            item.canChangeListing = ko.observable(item.styleItemId() != null);
+            item.enableChangeListing = ko.computed(function() {
+                return item.canChangeListing() && self.canEdit();
+            });
+
+            self.updateItemListings(item);
+        });
+        self.orderItemList = ko.observableArray(orderItems);
+
+        self.onCancelOrder = function(m, e) {
+            var sender = $(e.target);
+
+            if (confirm('Are you sure you want to Cancel order?')) {
+                helper.ui.showLoading(sender);
+
+                $.ajax({
+                    url: '@Url.Action("CancelOrder", "Order")',
+                    cache: false,
+                    data: {id: self.Id },
+                    success: function(data) {
+                        //$("#OnHold").val(data);
+                        //Send to page
+                        helper.ui.hideLoading(sender, true);
+
+                        self.hasCancelationRequest(true);
+
+                        popupWindow.customAction("cancelOrder", {
+                            id: self.Id
+                        });
+                    }
+                });
+            }
+        }
+
+        self.toggleHold = function(m, e) {
+            var sender = $(e.target).parent();
+            helper.ui.showLoading(sender);
+
+            $.ajax({
+                url: '@Url.Action("SetOnHold", "Order")',
+                cache: false,
+                data: {id: self.Id, onHold: !self.onHold() },
+                success: function(data) {
+                    //$("#OnHold").val(data);
+                    //Send to page
+                    helper.ui.hideLoading(sender);
+
+                    console.log(data.OnHodlUpdateDate);
+
+                    self.onHold(data.OnHold);
+
+                    popupWindow.customAction("toggleHold", {
+                        onHold: data.OnHold,
+                        onHoldUpdateDate: data.OnHoldUpdateDate,
+                        id: self.Id
+                    });
+                }
+            });
+        };
+
+        self.toggleOversold = function(m, e) {
+            var sender = $(e.target).parent();
+            helper.ui.showLoading(sender);
+
+            $.ajax({
+                url: '@Url.Action("SetIsOversold", "Order")',
+                cache: false,
+                data: {id: self.Id, isOversold: !self.isOversold() },
+                success: function(data) {
+                    //$("#OnHold").val(data);
+                    //Send to page
+                    helper.ui.hideLoading(sender);
+
+                    self.isOversold(data.IsOversold);
+
+                    popupWindow.customAction("toggleOversold", {
+                        isOversold: data.IsOversold,
+                        id: self.Id
+                    });
+                }
+            });
+        };
+
+        self.toggleRefundLocked = function(m, e) {
+            var sender = $(e.target).parent();
+            helper.ui.showLoading(sender);
+
+            $.ajax({
+                url: '@Url.Action("SetRefundLocked", "Order")',
+                cache: false,
+                data: {id: self.Id, isRefundLocked: !self.isRefundLocked() },
+                success: function(data) {
+                    //$("#OnHold").val(data);
+                    //Send to page
+                    helper.ui.hideLoading(sender);
+
+                    self.isRefundLocked(data.IsRefundLocked);
+
+                    popupWindow.customAction("toggleRefundLocked", {
+                        isRefundLocked: data.IsRefundLocked,
+                        id: self.Id
+                    });
+                }
+            });
+        };
+
+        self.onEmailCustomer = function(m, e) {
+            if (!self.onHold()) {
+                self.toggleHold(m, e);
+            }
+            return true;
+        };
+
+        self.onDismissAddressValidationError = function(m, e) {
+            console.log("comments: " + self.comment.comments().length + ", " + self.comment.hasNotEmpty());
+            if (!self.comment.hasNotEmpty()) {
+                Message.popup('Please add comment before Dismiss',
+                    Message.POPUP_INFO);
+                return;
+            }
+            self.IsDismissAddressValidation(true);
+            $.ajax({
+                url: '@Url.Action(MVC.Order.SetDismissAddressValidationError())',
+                cache: false,
+                data: {id: self.Id, dismiss: true },
+                success: function(data) {
+                    //Send to page
+                    popupWindow.customAction("dismissAddressValidationError", { id: self.Id });
+                }
+            });
+
+            @*3.	When I click Dismiss button for the order which has address issue, automatically unhold it.*@
+            if (self.onHold()) {
+                self.toggleHold(m, e);
+            }
+        };
+
+        self.getAddressData = function() {
+            return {
+                ManuallyPersonName: self.ManuallyPersonName(),
+                ManuallyShippingAddress1: self.ManuallyShippingAddress1(),
+                ManuallyShippingAddress2: self.ManuallyShippingAddress2(),
+                ManuallyShippingCity: self.ManuallyShippingCity(),
+                ManuallyShippingState: self.ManuallyShippingState(),
+                ManuallyShippingUSState: self.ManuallyShippingUSState(),
+                ManuallyShippingCountry: self.ManuallyShippingCountry(),
+                ManuallyShippingZip: self.ManuallyShippingZip(),
+                ManuallyShippingZipAddon: self.ManuallyShippingZipAddon(),
+                ManuallyShippingPhone: self.ManuallyShippingPhone()
+            };
+        };
+
+        self.checkAddress = function() {
+            self.message("");
+            $.ajax({
+                url: '@Url.Action("CheckAddress", "Order")',
+                async: true,
+                data: self.getAddressData(),
+                success: function(data) {
+                    if (data.CorrectedAddress != null) {
+                        self.ManuallyShippingAddress1(data.CorrectedAddress.FinalAddress1);
+                        self.ManuallyShippingAddress2(data.CorrectedAddress.FinalAddress2);
+                        self.ManuallyShippingCity(data.CorrectedAddress.FinalCity);
+                        //NOTE: now correction works only for US
+                        //$("[name='ManuallyShippingState']").val(data.Data.FinalState);
+                        self.ManuallyShippingState(data.CorrectedAddress.FinalState);
+                        self.ManuallyShippingCountry(data.CorrectedAddress.FinalCountry);
+                        self.ManuallyShippingZip(data.CorrectedAddress.FinalZip);
+                        self.ManuallyShippingZipAddon(data.CorrectedAddress.FinalZipAddon);
+
+                        self.enableEdit();
+                    }
+                    var resultHtml = "";
+                    for (var i = 0; i < data.CheckResults.length; i++) {
+                        var result = data.CheckResults[i];
+                        var msg = "";
+                        if (result.AdditionalData[0].indexOf("Stamps") >= 0) {
+                            if (result.IsSuccess) {
+                                msg += "- Address successfully verified (by stamps.com)";
+                            } else {
+                                msg += "- The address could not be verified (by stamps.com)";
+                            }
+                            console.log("New address status=" + result.Status);
+                            self.AddressValidationStatus(result.Status);
+                        }
+
+                        if (result.AdditionalData[0].indexOf("Google") >= 0) {
+                            if (result.IsSuccess) {
+                                msg += "- Address successfully verified (by google geocode)";
+                            } else {
+                                msg += "- The address could not be verified (by google geocode)";
+                            }
+                        }
+                        if (!dataUtils.isEmpty(result.Message))
+                            msg += ", details: " + result.Message;
+                        if (result.IsSuccess)
+                            resultHtml += "<div class='text-success'>" + msg + "</div>";
+                        else
+                            resultHtml += "<div class='text-danger'>" + msg + "</div>";
+                    }
+
+                    self.message(resultHtml);
+                }
+            });
+        };
+
+        self.toggleEditable = function() {
+            self.isEditable(!self.isEditable());
+        };
+
+        self.enableEdit = function() {
+            self.isEditable(true);
+            if (self.isSameDay()) {
+                Message.popup("Amazon label provider will ignore all address changes", null, null, 1);
+            }
+        };
+
+        self.disableEdit = function() {
+            self.isEditable(false);
+        };
+
+        self.isUSStateVisible = ko.computed(function() {
+            return self.ManuallyShippingCountry() == 'US';
+        });
+
+        self.melissaAddressUrl = ko.computed(function() {
+            var data = self.getAddressData();
+            var addressString = dataUtils.combineString(data.ManuallyShippingAddress1, data.ManuallyShippingAddress2, ' ');
+            var state = self.isUSStateVisible() ? data.ManuallyShippingUSState : data.ManuallyShippingState;
+            var zipString = dataUtils.combineString(data.ManuallyShippingZip, data.ManuallyShippingZipAddon, '-');
+            return "http://www.melissadata.com/Lookups/AddressVerify.asp?name=" + encodeURI(data.ManuallyPersonName)
+                + "&Company=&Address=" + encodeURIComponent(addressString)
+                + "&city=" + encodeURIComponent(data.ManuallyShippingCity)
+                + "&state=" + encodeURIComponent(state)
+                + "&zip=" + encodeURIComponent(zipString);
+        });
+
+        self.googleAddressUrl = ko.computed(function() {
+            var data = self.getAddressData();
+            console.log(data);
+            var addressString = dataUtils.combineString(data.ManuallyShippingAddress1, data.ManuallyShippingAddress2, ' ');
+            var state = self.isUSStateVisible() ? data.ManuallyShippingUSState : data.ManuallyShippingState;
+            var zipString = dataUtils.combineString(data.ManuallyShippingZip, data.ManuallyShippingZipAddon, ' ');
+            var parts = [
+                addressString,
+                data.ManuallyShippingCity,
+                state,
+                zipString,
+                data.ManuallyShippingCountry
+            ];
+            var searchString = parts.join(', ');
+
+            return "https://www.google.com/search?q=" + encodeURIComponent(searchString);
+        });
+
+        self.visibleShipmentMethods = ko.computed(function() {
+            return self.InitialShipmentProviderType == self.ManuallyShipmentProviderType();
+        });
+
+        self.onAddressChanged = function() {
+            if (self.hasAddressChanges()) {
+                if (self.ManuallyShipmentProviderType() == self.settings.amazonShipmentProvider)
+                {
+                    if (self.enableShipmentProvider()) {
+                        self.ManuallyShipmentProviderType(self.settings.stampsShipmentProvider);
+                    }
+                }
+            }
+        };
+
+        self.ManuallyPersonName.subscribe(self.onAddressChanged);
+        self.ManuallyShippingAddress1.subscribe(self.onAddressChanged);
+        self.ManuallyShippingAddress2.subscribe(self.onAddressChanged);
+        self.ManuallyShippingCity.subscribe(self.onAddressChanged);
+        self.ManuallyShippingCountry.subscribe(self.onAddressChanged);
+        self.ManuallyShippingZip.subscribe(self.onAddressChanged);
+        self.ManuallyShippingZipAddon.subscribe(self.onAddressChanged);
+        self.ManuallyShippingState.subscribe(self.onAddressChanged);
+        self.ManuallyShippingUSState.subscribe(self.onAddressChanged);
+        self.ManuallyShippingPhone.subscribe(self.onAddressChanged);
+
+        self.ManuallyShipmentProviderType.subscribe(function() {
+            if (self.hasAddressChanges()
+                && self.ManuallyShipmentProviderType() == self.settings.amazonShipmentProvider) {
+                Message.popup("Amazon label provider will ignore all address changes", null, function() {
+                    console.log("yes callback");
+                    self.IsManuallyUpdated(false);
+                    self.ManuallyPersonName(self.PersonName());
+                    self.ManuallyShippingAddress1(self.ShippingAddress1());
+                    self.ManuallyShippingAddress2(self.ShippingAddress2());
+                    self.ManuallyShippingCity(self.ShippingCity());
+                    self.ManuallyShippingState(self.ShippingState());
+                    self.ManuallyShippingZip(self.ShippingZip());
+                    self.ManuallyShippingZipAddon(self.ShippingZipAddon());
+                    self.ManuallyShippingCountry(self.ShippingCountry());
+                    self.ManuallyShippingPhone(self.ShippingPhone());
+
+                }, 1);
+            }
+        });
+
+
+        self.styleIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: self.settings.urls.getStyleIdListUrl,
+                parameterMap: function(data, action) {
+                    console.log("action=" + action);
+                    if (action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.trackingNumberUpdatedCallback = function() {
+            console.log("trackingNumberUpdatedCallback, orderId=" + self.Id);
+            self.hasBatchLabel(true);
+            popupWindow.customAction("setTrackingNumber", { id: self.Id });
+        }
+
+        self.onSetTrackingNumber = function(data, e) {
+            var activeShippings = $.grep(self.model.Shippings, function(n) { return n.IsActive; });
+            var settings = {
+                setTrackingNumberUrl: self.settings.urls.setTrackingNumberUrl,
+                submitCallback: self.trackingNumberUpdatedCallback,
+                carrierList: self.settings.carrierList,
+            };
+
+            var popupModel = new SetTrackingNumberPopupModel(activeShippings,
+                settings);
+            popupModel.show();
+        }
+
+        self.attachOrderTo = function(data, e) {
+            var model = {
+                Id: self.model.EntityId,
+                AttachedToOrderId: self.model.AttachedToOrderId
+            };
+            var settings = {
+                submitCallback: self.attachOrderToCallback,
+                urls: {
+                    attachOrderTo: self.settings.urls.attachOrderTo,
+                    getOrderIdList: self.settings.urls.getOrderIdList,
+                },
+            }
+            var popupModel = new AttachOrderToPopupModel(model,
+                settings);
+            popupModel.show();
+        }
+
+        self.attachOrderToCallback = function(data) {
+            self.model.AttachedToOrderId = data != null ? data.AttachedToOrderId : null;
+        }
+
+        self.shippingsUpdatedCallback = function(data) {
+            console.log("shippingsUpdatedCallback");
+            self.shippingOptions(data);
+            var activeGroupIds = $.grep(data, function(n) {
+                return n.Selected;
+            });
+            if (activeGroupIds.length > 0) {
+                console.log(activeGroupIds[0].Value);
+                self.manuallyShippingGroupId(activeGroupIds[0].Value);
+            } else {
+                console.log("no selected");
+            }
+        }
+
+        self.onCustomShipping = function(data, e) {
+            console.log("onCustomShipping");
+            var model = {
+                orderId: self.Id
+            };
+            var popupModel = new SetCustomShippingPopupModel(model,
+                self.settings,
+                self.shippingsUpdatedCallback);
+            popupModel.show();
+        }
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function() {
+            return self.errors().length === 0;
+        });
+        self.onSubmit = function(data, e) {
+            //console.log(data);
+            console.log(e);
+            console.log("save click");
+            //var validator = $("#form").kendoValidator().data('kendoValidator');
+
+            //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+            //http://jsfiddle.net/KHFn8/3238/
+            if (self.isValid()) { //validator.validate() &&
+                console.log("validate true");
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                e.preventDefault();
+                return false;
+            }
+        };
+    };
+
+    var settings = {
+        shippedOrderStatus: '@(OrderStatusEnumEx.Shipped)',
+        unshippedOrderStatus: '@(OrderStatusEnumEx.Unshipped)',
+        canceledOrderStatus: '@(OrderStatusEnumEx.Canceled)',
+        dhlShipmentProvider: '@((int)ShipmentProviderType.Dhl)',
+        dhlEComShipmentProvider: '@((int)ShipmentProviderType.DhlECom)',
+        ibcShipmentProvider: '@((int)ShipmentProviderType.IBC)',
+        stampsShipmentProvider: '@((int)ShipmentProviderType.Stamps)',
+        amazonShipmentProvider: '@((int)ShipmentProviderType.Amazon)',
+        commentTypeList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.CommentTypes)),
+
+        carrierList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.CarrierList)),
+
+        commentTypes: {
+            address: @((int)CommentType.Address),
+            none: @((int)CommentType.None),
+        },
+
+        urls: {
+            getStyleIdListUrl: '@Url.Action("GetStyleIdList", "AutoComplete")',
+            setTrackingNumberUrl: '@Url.Action("SetTrackingNumber", "Order")',
+            setCustomShipping: '@Url.Action("SetCustomShipping", "Order")',
+            getCustomShipping: '@Url.Action("GetCustomShipping", "Order")',
+            getOrderIdList: '@Url.Action("GetOrderIdList", "AutoComplete")',
+            attachOrderTo: '@Url.Action("AttachOrderTo", "Order")'
+        }
+    };
+    var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+    var editOrderModel = new EditOrderViewModel(model, settings);
+
+    ko.applyBindings(editOrderModel, document.getElementById('editOrderContent'));
+</script>
+<div id="editOrderContent">
+    <div>
+
+        <input type="hidden" name="EntityId" data-bind="value: Id" />
+        <input type="hidden" name="OrderId" data-bind="value: OrderId" />
+        <input type="hidden" name="BatchId" data-bind="value: BatchId"/>
+        <input type="hidden" name="OnHold" data-bind="attr: { value: onHold() ? 'True' : 'False' }"/>
+        <input type="hidden" name="IsRefundLocked" data-bind="attr: { value: isRefundLocked() ? 'True' : 'False' }" />
+        <input type="hidden" name="IsSignConfirmation" data-bind="attr: { value: isSignConfirmation() ? 'True' : 'False' }" />
+        <input type="hidden" name="IsInsured" data-bind="attr: { value: isInsured() ? 'True' : 'False' }" />
+
+        <table class="noborder">
+            <tr>
+                <td class="edit-order" style="padding-right: 10px; width: 428px">
+                    <table class="noborder">
+                        <colgroup>
+                            <col style="width: 150px" />
+                        </colgroup>
+                        <tr>
+                            <th>Order #</th>
+                            <td>
+                                <a class='order-num' target='_blank' data-bind="attr: { href: MarketUrl }"><span data-bind="text: FormattedOrderId"></span></a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Expected Ship Date:</th>
+                            <td>
+                                @(Model.ExpectedShipDate.HasValue ? Model.ExpectedShipDate.Value.ToString("MM.dd.yyyy hh:mm") : "-")
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Name:</th>
+                            <td>
+                                <div class="base-address">source: <span data-bind="text: PersonName"></span></div>
+                                <input name="ManuallyPersonName"
+                                       type="text"
+                                       class="k-textbox"
+                                       data-bind="value: ManuallyPersonName, enable: isEditable" />
+                                <span data-bind="visible: hasPersonNameIssue"
+                                      class="glyphicon glyphicon-exclamation-sign text-danger"
+                                      style="font-size: 18px; vertical-align: middle; margin: 0px 0px 0px 2px"></span>
+                                <div class="note">symbols: <span data-bind="text: manuallyPersonNameLength"></span>/<span data-bind="textFormatted: personNameMaxLength, ifEmpty: '-'"></span></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Address 1:</th>
+                            <td>
+                                <div class="base-address">source: <span data-bind="text: ShippingAddress1"></span></div>
+                                <input name="ManuallyShippingAddress1"
+                                       type="text"
+                                       class="k-textbox"
+                                       data-bind="value: ManuallyShippingAddress1, valueUpdate:'afterkeydown', enable: isEditable" />
+                                <span data-bind="visible: hasShippingAddress1Issue"
+                                      class="glyphicon glyphicon-exclamation-sign text-danger"
+                                      style="font-size: 18px; vertical-align: middle; margin: 0px 0px 0px 2px"></span>
+                                <div class="note">symbols: <span data-bind="text: manuallyShippingAddress1Length"></span>/<span data-bind="textFormatted: shippingAddress1MaxLength, ifEmpty: '-'"></span></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Address 2:</th>
+                            <td>
+                                <div class="base-address">source: <span data-bind="text: ShippingAddress2"></span></div>
+                                <input name="ManuallyShippingAddress2"
+                                       type="text"
+                                       class="k-textbox"
+                                       data-bind="value: ManuallyShippingAddress2, valueUpdate:'afterkeydown', enable: isEditable" />
+                                <span data-bind="visible: hasShippingAddress2Issue"
+                                      class="glyphicon glyphicon-exclamation-sign text-danger"
+                                      style="font-size: 18px; vertical-align: middle; margin: 0px 0px 0px 2px"></span>
+                                <div class="note">symbols: <span data-bind="text: manuallyShippingAddress2Length"></span>/<span data-bind="textFormatted: shippingAddress2MaxLength, ifEmpty: '-'"></span></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>City:</th>
+                            <td>
+                                <div class="base-address">source: <span data-bind="text: ShippingCity"></span></div>
+                                <input name="ManuallyShippingCity"
+                                       type="text"
+                                       class="k-textbox"
+                                       data-bind="value: ManuallyShippingCity, enable: isEditable"
+                                       style="width: 150px" />
+                                <span data-bind="visible: hasShippingCityIssue"
+                                      class="glyphicon glyphicon-exclamation-sign text-danger"
+                                      style="font-size: 18px; vertical-align: middle; margin: 0px 0px 0px 2px"></span>
+                                <div class="note">symbols: <span data-bind="text: manuallyShippingCityLength"></span>/<span data-bind="textFormatted: shippingCityMaxLength, ifEmpty: '-'"></span></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>State:</th>
+                            <td>
+                                <div class="base-address">source: <span data-bind="text: ShippingState"></span></div>
+
+                                <div id="FromNonUSA" data-bind="visible: !isUSStateVisible()">
+                                    <input name="ManuallyShippingState"
+                                           type="text"
+                                           class="k-textbox"
+                                           data-bind="value: ManuallyShippingState, enable: isEditable"
+                                           style="width: 150px" />
+                                    <span data-bind="visible: hasShippingStateIssue"
+                                          class="glyphicon glyphicon-exclamation-sign text-danger"
+                                          style="font-size: 18px; vertical-align: middle; margin: 0px 0px 0px 2px"></span>
+                                    <div class="note">symbols: <span data-bind="text: manuallyShippingStateLength"></span>/<span data-bind="textFormatted: shippingStateMaxLength, ifEmpty: '-'"></span></div>
+                                </div>
+                                <div id="FromUSA" data-bind="visible: isUSStateVisible">
+                                    <input name="ManuallyShippingUSState"
+                                           data-bind="kendoDropDownList: {data: USStateList,
+                                                value: ManuallyShippingUSState,
+                                                dataTextField: 'Text',
+                                                dataValueField: 'Value',
+                                                optionLabel: 'State...',
+                                                enabled: isEditable }" />
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Country:</th>
+                            <td>
+                                <div class="base-address">source: <span data-bind="text: ShippingCountry"></span></div>
+                                <input name="ManuallyShippingCountry"
+                                       data-bind="kendoDropDownList:
+                                             {data: CountryList,
+                                                value: ManuallyShippingCountry,
+                                                dataTextField: 'Text',
+                                                dataValueField: 'Value',
+                                                optionLabel: 'Country...',
+                                                enabled: isEditable }" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Zip+4:</th>
+                            <td>
+                                <div class="base-address">source: <span data-bind="text: ShippingZip"></span>-<span data-bind="text: ShippingZipAddon"></span></div>
+                                <input name="ManuallyShippingZip"
+                                       type="text"
+                                       class="k-textbox"
+                                       data-bind="value: ManuallyShippingZip, enable: isEditable"
+                                       style="width: 100px" />
+                                -
+                                <input name="ManuallyShippingZipAddon"
+                                       type="text"
+                                       class="k-textbox"
+                                       data-bind="value: ManuallyShippingZipAddon, enable: isEditable"
+                                       style="width: 50px" />
+                                <span data-bind="visible: hasShippingZipIssue"
+                                      class="glyphicon glyphicon-exclamation-sign text-danger"
+                                      style="font-size: 18px; vertical-align: middle; margin: 0px 0px 0px 2px"></span>
+                                <div class="note">symbols: <span data-bind="text: manuallyShippingZipLength"></span>/<span data-bind="textFormatted: shippingZipMaxLength, ifEmpty: '-'"></span></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Phone:</th>
+                            <td>
+                                <div class="base-address">source: <span data-bind="text: ShippingPhone"></span></div>
+                                <input name="ManuallyShippingPhone"
+                                       type="text"
+                                       class="k-textbox"
+                                       data-bind="value: ManuallyShippingPhone, enable: isEditable" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Email:</th>
+                            <td>
+                                <input name="ManuallyShippingEmail"
+                                       type="text"
+                                       class="k-textbox"
+                                       data-bind="value: BuyerEmail, enable: false" />
+                            </td>
+                        </tr>
+                        <tr data-bind="visible: hasGeocodeResult">
+                            <th>
+                                <b>Google Geocoding:</b>
+                            </th>
+                            <td style="padding: 10px 0px 7px 5px">
+                                <span class="" style="color: black" data-bind="text: geocodeResult"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <table class="noborder">
+                                    <tr>
+                                        <td style="width: 150px">
+                                            <a style="width: 140px;"
+                                               data-bind="click:onEmailCustomer, visible: model.AddressVerifyRequestDate == null"
+                                               target="_blank"
+                                               href="@Url.Action("ComposeEmailFromTemplate", "Email")?orderNumber=@(Model.OrderId)&type=@(EmailTypes.AddressVerify)"
+                                               class="k-button">
+                                                <span class='glyphicon glyphicon-envelope am-icon'></span>
+                                                Email customer
+                                            </a>
+
+                                            @*<split-button params="{ defaultAction: '@Url.Action("ComposeEmailFromTemplate", "Email")?orderid=@(Model.OrderId) &type=@(EmailTypes.AddressVerify)',
+                                                              actions: [
+                                                                  {url: '@Url.Action("ComposeEmailFromTemplate", "Email")?orderid=@(Model.OrderId) &type=@(EmailTypes.AddressVerify)', title: 'No Apartment/Suite' },
+                                                                  {url: '@Url.Action("ComposeEmailFromTemplate", "Email")?orderid=@(Model.OrderId) &type=@(EmailTypes.AddressVerify)', title: 'Not served by USPS' }
+                                                              ]}">
+                                                    <span class="glyphicon glyphicon-envelope am-icon"></span>Email customer
+                                                </split-button>*@
+
+
+                                            <span data-bind="visible: model.AddressVerifyRequestDate != null"
+                                                  style="width: 140px;">[Already sent<br />verification request]</span>
+                                        </td>
+                                        <td style="text-align: right;">
+                                            <a data-bind="click: checkAddress" style="width: 140px" href="javascript:;" class="k-button">Check Address</a>
+                                            <button data-bind="click: enableEdit, visible: !isEditable(), enable: canEditAddress, css: { 'k-state-disabled': !canEditAddress() }" style="width: 80px" href="javascript:;" class="k-button"><span class='glyphicon glyphicon-pencil am-icon'></span>Edit</button>
+                                            <a data-bind="click: disableEdit, visible: isEditable" style="width: 80px" href="javascript:;" class="k-button"><span class='glyphicon glyphicon-ban-circle am-icon'></span>Cancel</a>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <div data-bind="html: message" style="padding: 2px"></div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align: right; padding-bottom: 20px">
+                                <a class='order-link' target="_blank" style="margin-right: 15px" data-bind="attr: { href: melissaAddressUrl }">Address on Melissa</a>
+                                <a class='order-link' target="_blank" style="margin-right: 15px" data-bind="attr: { href: googleAddressUrl }">Address on Google</a>
+                                <button class="k-button"
+                                        style="width: 80px"
+                                        data-bind="click: onDismissAddressValidationError, disable: disableDismissAddressValidationError, css: { 'k-state-disabled': disableDismissAddressValidationError }">
+                                    Dismiss
+                                </button>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+
+                <td class="edit-order" style="width: 400px">
+                    <table class="noborder">
+                        <colgroup>
+                            <col style="width: 150px" />
+                        </colgroup>
+                        <tr>
+                            <th style="vertical-align: middle">Shipping provider:</th>
+                            <td>
+                                <input name="ManuallyShipmentProviderType"
+                                       style="width: 200px; margin-top: 3px"
+                                       data-bind="kendoDropDownList:
+                                             {data: ShippingProviders,
+                                                value: ManuallyShipmentProviderType,
+                                                enabled: enableShipmentProvider,
+                                                dataTextField: 'Text',
+                                                dataValueField: 'Value' }" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <th style="padding-bottom: 10px">
+                                Shipping method:
+                            </th>
+                            <td>
+                                <div class="base-address">source: <span data-bind="text: SourceShippingName"></span></div>
+                                <div data-bind="visible: visibleShipmentMethods">
+                                    <input name="ManuallyShippingGroupId"
+                                           style="width: 200px"
+                                           data-bind="kendoDropDownList:
+                                             {data: shippingOptions,
+                                                value: manuallyShippingGroupId,
+                                                enabled: canEdit,
+                                                dataTextField: 'Text',
+                                                dataValueField: 'Value' }" />
+                                    <button 
+                                       data-bind="click: onCustomShipping, enable: canEdit, css: { 'k-state-disabled': !canCancel() }"
+                                       class="k-button">
+                                        <span class="glyphicon glyphicon-pencil am-icon"></span></button>
+                                </div>
+                                <div data-bind="visible: !visibleShipmentMethods()">
+                                    [options will be recalculated after save]
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th></th>
+                            <td style="vertical-align: text-bottom; padding-top: 20px">
+                                <input type="checkbox" name="IsInsured" data-bind="checked: isInsured, enable: enableIsInsured" />
+                                Insurance (insured value: <span data-bind='text: insuredValue'></span>)
+                            </td>
+                        </tr>
+                        <tr>
+                            <th></th>
+                            <td style="vertical-align: text-bottom">
+                                <input type="checkbox" name="IsSignConfirmation" data-bind="checked: isSignConfirmation, enable: canEdit" />
+                                Signature Confirmation
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left; padding-top: 20px; padding-bottom: 8px">
+                                @if (AccessManager.IsAdmin)
+                                {
+                                    <button data-bind="click: onCancelOrder, enable: canCancel, css: { 'k-state-disabled': !canCancel() }"
+                                            style="width: 140px"
+                                            href="javascript:;"
+                                            class="k-button">
+                                        <span class='glyphicon glyphicon-remove-circle am-icon'></span>
+                                        <span>Cancel Order</span>
+                                    </button>
+                                }
+                            </td>
+                            <td style="text-align: right; padding-top: 20px;">
+                                <button data-bind="click: toggleHold, enable: canEdit, css: { 'k-state-disabled': !canEdit() }"
+                                        style="width: 80px"
+                                        href="javascript:;"
+                                        class="k-button">
+                                    <span data-bind='visible: !onHold()' class='glyphicon glyphicon-ban-circle am-icon'></span>
+                                    <span data-bind="text: onHoldText()"></span>
+                                </button>
+                                <div data-bind="visible: onHold(), enable: canEdit, css: { 'k-state-disabled': !canEdit() }" class="remark">
+                                    at: <span data-bind="text: onHoldUpdateDate"></span>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div class="edit-order-items">
+                        <div class="caption">Items:</div>
+                        <table class="noborder">
+                            <tr>
+                                <th>Style Id</th>
+                                <th>Size/Color</th>
+                            </tr>
+                            <tbody data-bind="foreach: orderItemList">
+                                <tr>
+                                    <td>
+                                        <div><span class="gray">source: </span><span data-bind="text: sourceStyleString"></span></div>
+                                        <div>
+                                            <input type="text"
+                                                   style="width: 180px"
+                                                   data-bind="kendoAutoComplete: {
+                                                   value: styleString,
+                                                   data: {},
+                                                   minLenght: 3,
+                                                    highlightFirst: true,
+                                                   dataSource: $root.styleIdSource },
+                                                    valueUpdate: 'afterkeydown',
+                                                    event: {  }"
+                                                   class="k-textbox" />
+
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <input type="hidden" data-bind="value: itemOrderId, attr: { name: 'Items[' + $index() + '].ItemOrderId' }" />
+                                        <input type="hidden" data-bind="value: sourceItemOrderId, attr: { name: 'Items[' + $index() + '].SourceItemOrderId' }" />
+                                        <input type="hidden" data-bind="value: quantity, attr: { name: 'Items[' + $index() + '].Quantity' }" />
+                                        <input type="hidden" data-bind="value: listingId, attr: { name: 'Items[' + $index() + '].ListingId' }" />
+                                        <input type="hidden" data-bind="value: styleSize, attr: { name: 'Items[' + $index() + '].StyleSize' }" />
+                                        <input type="hidden" data-bind="value: styleColor, attr: { name: 'Items[' + $index() + '].StyleColor' }" />
+
+                                        <div><span class="gray">source: </span><span data-bind="text: sourceStyleSize"></span> / <span data-bind="textFormatted: sourceStyleColor, ifEmpty: '-'"></span></div>
+                                        <div data-bind="visible: canChangeListing">
+                                            <input style="width: 150px"
+                                                   data-bind="attr: { name: 'Items[' + $index() + '].NewListingId' },
+                                                kendoDropDownList: {data: styleListingList,
+                                                    value: newListingId,
+                                                    enabled: enableChangeListing,
+                                                    dataTextField: 'Text',
+                                                    dataValueField: 'Value' }" />
+                                        </div>
+                                        <div data-bind="visible: !canChangeListing()">[no reference to style variation]</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <table class="noborder">
+                        <colgroup>
+                            <col style="width: 110px" />
+                        </colgroup>
+                        <tr>
+                            <th style="vertical-align: top">Last Comment:</th>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div data-bind="with: comment" style="padding-top: 2px; padding-bottom: 12px; font-size: 12px">
+                                    <div data-bind='foreach: comments'>
+                                        <div data-bind="visible: Id == 0 || IsLastComment">
+                                            <div class="editor-label">
+                                                <div>#<span data-bind='text: $index() + 1'></span>: <span data-bind='text: CommentDate' class='gray'></span></div>
+                                                <div class='gray'>by <span data-bind='text: CommentByName'></span></div>
+                                            </div>
+                                            <div class="editor-field">
+                                                <table style="margin-bottom: 5px; margin-top: 3px" class="noborder">
+                                                    <tr>
+                                                        <td style="vertical-align: top">
+                                                            <input type="hidden" data-bind='value: Id, attr: { name: "Comments[" + $index() + "].Id" }'/>
+                                                            <input type="hidden" data-bind='value: Type, attr: { name: "Comments[" + $index() + "].Type" }'/>
+
+                                                            <div data-bind="visible: Id == 0">
+                                                                <textarea style="min-height: 20px; height: 60px; width: auto" cols="45" class="k-textbox" data-bind='value: Comment, attr: { name: "Comments[" + $index() + "].Comment" }'></textarea>
+                                                            </div>
+                                                            <div data-bind="visible: Id != 0">
+                                                                <div data-bind="text: Comment" style="width: 260px"></div>
+                                                            </div>
+
+                                                            <div style="padding-top: 3px">
+                                                                <span class="gray">Type:</span>
+                                                                <span data-bind="visible: Id == 0">
+                                                                    <input style="width: 180px"
+                                                                           data-bind="attr: { name: 'Comments[' + $index() + '].Type' },
+                                                                                                            kendoDropDownList: {data: $parent.commentTypeList,
+                                                                                                                value: Type,
+                                                                                                                dataTextField: 'Text',
+                                                                                                                dataValueField: 'Value' }" />
+                                                                </span>
+                                                                <span data-bind="text: TypeName, visible: Id != 0"></span>
+                                                            </div>
+                                                        </td>
+                                                        <td style="vertical-align: top; font-size: 13px">
+                                                            <div data-bind="style: { visibility: HasEmailLink ? 'visible' : 'hidden' }" style="margin-bottom: 30px;">
+                                                                <a href="" target="_blank" data-bind='attr: { href: EmailUrl }'><span class='glyphicon glyphicon-envelope am-icon'></span></a>
+                                                            </div>
+                                                            <div data-bind="visible: Id == 0">
+                                                                <a href="#" data-bind='click: $parent.removeComment'><span class="k-icon k-delete"></span></a>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+
+                                                </table>
+                                            </div>
+                                            <div class="clear"></div>
+                                        </div>
+                                    </div>
+                                    <div class="editor-label"></div>
+                                    <div class="editor-field" style="text-align: right">
+                                        <button type="button" style="width: 80px; font-size: 13px" class="k-button" data-bind='click: addComment'>
+                                            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add
+                                        </button>
+                                    </div>
+                                    <div class="clear"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+    @Html.Partial("_SetOrderTrackingNumber")
+    @Html.Partial("_SetCustomShipping")
+    @Html.Partial("_AttachOrderTo")
+
+    <div class="k-edit-buttons k-state-default popup-button-panel" style="position: static">
+        <table style="width: 100%">
+            <tr>
+                <td style="text-align: left">
+                    <button tabindex="-1"
+                            type="button"
+                            data-bind="click: onSetTrackingNumber, enable: !hasBatchLabel(), css: { 'k-state-disabled': hasBatchLabel() }"
+                            class="k-button k-button-icontext k-grid-update">
+                        <span class="glyphicon glyphicon-pencil am-icon"></span>Set Tracking Number
+                    </button>
+                    @if (AccessManager.IsAdmin)
+                    {
+                        <button tabindex="-1"
+                                type="button"
+                                data-bind="click: toggleRefundLocked"
+                                class="k-button k-button-icontext k-grid-update">
+                            <span data-bind="visible: !isRefundLocked()"><span class="fa fa-lock fa-lg am-icon"></span>Lock refund</span>
+                            <span data-bind="visible: isRefundLocked()"><span class="fa fa-unlock fa-lg am-icon"></span>Unlock refund</span>
+                        </button>
+                    }
+                    <button tabindex="-1"
+                            type="button"
+                            data-bind="click: attachOrderTo, enable: canEdit, css: { 'k-state-disabled': !canEdit() }"
+                            class="k-button k-button-icontext k-grid-update">
+                        <span class="glyphicon glyphicon-pencil am-icon"></span>Attach Order To
+                    </button>
+                    @if (AccessManager.IsAdmin)
+                    {
+                        <button tabindex="-1"
+                                type="button"
+                                data-bind="click: toggleOversold"
+                                class="k-button k-button-icontext k-grid-update">
+                            <span class="glyphicon glyphicon-pencil am-icon"></span>
+                            <span data-bind="visible: isOversold">Unmark oversold</span>
+                            <span data-bind="visible: !isOversold()">Mark as oversold</span>
+                        </button>
+                    }
+                </td>
+                <td>
+                    <table style="margin-left: auto">
+                        <tr>
+                            <td>
+                                <button tabindex="-1"
+                                        type="submit"
+                                        id="submit"
+                                        data-bind="click: onSubmit"
+                                        class="k-button k-button-icontext k-grid-update">
+                                    <span class="k-icon k-update"></span> Save
+                                </button>
+                            </td>
+                            <td style="padding-left: 4px">
+                                <button class="k-button k-button-icontext k-grid-cancel"
+                                        type="reset"
+                                        id="cancel"
+                                        onclick="popupWindow.close()">
+                                    <span class="k-icon k-cancel"></span> Cancel
+                                </button>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>

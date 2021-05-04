@@ -1,0 +1,409 @@
+﻿@using Amazon.Common.Helpers
+@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.Models
+@{
+    ViewBag.Title = "Purchase Order";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/inventory.ico" />
+}
+
+<script>
+    var PurchaseOrderListViewModel = function (model, settings) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+
+        self.items = ko.observableArray([]);
+        self.rowTotal = ko.computed(function () {
+            return self.items.length;
+        });
+
+        self.styleIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: self.settings.getStyleIdListUrl,
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if (action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+
+
+        //Search begin
+        self.searchFilters = {
+            styleId: ko.observable(''),
+        };
+
+        self.searchFilters.styleId.subscribe(function () {
+            console.log('redrawAll');
+            self.search();
+        });
+
+        //Search end
+        //self.createOpenBox = function (sender, styleId) {
+        //    popupWindow.initAndOpenWithSettings({
+        //        content: self.settings.urls.createOpenBox,
+        //        title: "Purchase Order",
+        //        width: 450,
+        //        submitSuccess: function (result) {
+        //            console.log('create purchase order');
+        //            self.updateOpenBoxRows(styleId);
+        //        }
+        //    });
+        //};
+
+        self.onCreate = function(sender, id) {
+            console.log("onView, id=" + id);
+
+            var model = {
+                Id: 0,
+                StyleString: null,
+                BoxQuantity: 1,
+                Sizes: [],
+            };
+
+            var settings = {
+                urls: {
+                    //submit: '@Url.Action("Submit", "PurchaseOrder")',
+                    getStyleIdListUrl: '@Url.Action("GetStyleIdList", "AutoComplete")',
+                },
+                submitCallback: function () { self.search(); }
+            };
+            var popupModel = new PuchaseOrderViewModel(model,
+                settings);
+            popupModel.show();
+
+            //popupWindow.initAndOpen(self.settings.urls.addSaleFeed, "Upload Sales", 600);
+        };
+
+
+        self.onEdit = function (sender, id) {
+            console.log("onEdit, id=" + id);
+
+            $.ajax({
+                url: '@Url.Action("GetPurchaseOrder", "PurchaseOrder")',
+                data: {
+                    Id: id
+                },
+                success: function (result) {
+                    if (result.IsSuccess) {
+                        console.log('success');
+
+                        var model = {
+                            Id: id,
+                            StyleString: result.Data.StyleString,
+                            ReceiveDate: result.Data.ReceiveDate,
+                            BoxQuantity: result.Data.BoxQuantity,
+                            Sizes: result.Data.Sizes
+                        };
+
+                        var settings = {
+                            urls: {
+                                //submit: '@Url.Action("Submit", "PurchaseOrder")',
+                                getStyleIdListUrl: '@Url.Action("GetStyleIdList", "AutoComplete")',
+                            },
+                            submitCallback: function () { self.search(); }
+                        };
+                        var popupModel = new PuchaseOrderViewModel(model,
+                            settings);
+                        popupModel.show();
+                    }
+                }
+            });
+        };
+
+        self.onDelete = function (sender, id) {
+            if (confirm('Are you sure you want to delete purchase order?')) {
+                helper.ui.showLoading(sender, "deleting...");
+                $.ajax({
+                    url: '@Url.Action("Delete", "PurchaseOrder")',
+                    data: { id: id },
+                    success: function () {
+                        helper.ui.hideLoading(sender);
+                        self.search();
+                    }
+                });
+            }
+        };
+
+        self.searchByKeyCmd = function (data, event) {
+            console.log('searchByKeyCmd');
+            if (event.keyCode == 13)
+                self.search(true);
+            return true;
+        };
+
+        self.search = function () {
+            console.log("search");
+            //self.grid.refresh();
+            self.grid.read({ Page: 1 }).done(function () {
+
+            });
+        };
+
+        self.clear = function () {
+            self.searchFilters.styleId('');
+
+            //self.grid.refresh();
+            self.search();
+        };
+
+        self.updateOpenBoxRows = function (styleId) {
+            var loadingTagId = "OpenBox_Loading_" + styleId;
+            $("#" + loadingTagId).show();
+
+            $.ajax({
+                cache: false,
+                url: self.settings.urls.getOpenBoxes + '?styleId=' + styleId,
+                success: function (result) {
+                    console.log("end getall open, time=" + performance.now());
+                    var tagId = "OpenBox_" + styleId;
+                    $("#" + tagId).html('');
+
+                    var compile = tmpl.compileT('style-openbox-row-template');
+                    document.getElementById(tagId).innerHTML = kendo.render(compile, result.Data);
+
+                    $("#" + loadingTagId).hide();
+                }
+            });
+        };
+
+        self.filterCallback = function (row) {
+            if (self.searchFilters.styleId() != null && self.searchFilters.styleId() != '') {
+                var reg = new RegExp(self.searchFilters.styleId(), 'i');
+                if (row != null && row.StyleString != null && row.StyleString != '') {
+                    if (reg.test(row.StyleString))
+                        return true;
+                }
+
+                return false;
+            }
+
+            return true;
+        };
+
+        self.getItemsAsync = function (params) {
+            var defer = $.Deferred();
+            $.ajax({
+                cache: false,
+                data: params,
+                url: self.settings.urls.getAll,
+                success: function (result) {
+                    for (var i = 0; i < result.Items.length; i++) {
+                        var item = result.Items[i];
+                        self.prepareRow(item);
+                    }
+
+                    console.log("getAllAsync end: " + result.Items.length);
+                    defer.resolve(result);
+                }
+            });
+            return defer;
+        };
+
+        self.prepareRow = function (rowData) {
+
+        };
+
+        self.grid = new FastGridViewModel({
+            gridId: 'StyleListGrid',
+            rowTemplate: 'purchase-order-row-template',
+            getItemsAsync: self.getItemsAsync,
+            filterCallback: self.filterCallback,
+            itemsPerPage: 50,
+            sortField: 'CreateDate',
+            sortMode: 'desc',
+            fields: [
+                { name: "CreateDate", type: 'date' },
+                { name: "StyleString", type: 'string' },
+                //{ name: "LocationIndex", type: 'int' },
+                //{ name: "SealedBoxQuantity", type: 'int' },
+                { name: "BoxQuantity", type: 'int' }
+            ],
+        });
+
+        self.fastGridSettings = {
+            gridId: self.grid.gridId,
+            hierarchy: { enable: false },
+            sort: { field: self.grid.sortField, mode: self.grid.sortMode },
+            columns: [
+                { title: "#", width: "25px" },
+                { title: "Style Id", width: "auto", field: "StyleString", sortable: true },
+                { title: "Order Date", width: "130px", field: "CreateDate", sortable: true },
+                { title: "Purchase Qty", width: "120px", field: "BoxQuantity", sortable: true },
+                { title: "", width: "300px" },
+            ],
+            loadingStatus: self.grid.loadingStatus,
+            itemCount: self.grid.itemCount,
+        };
+
+        self.grid.read().done(function () {
+
+        });
+    };
+</script>
+
+<div id="page-content">
+    <div id="windowContainer"></div>
+
+    <div id="MessagePopupWindow0" style="display: none;"></div>
+    <div id="MessagePopupWindow1" style="display: none;"></div>
+
+    @Html.Partial("_EditPurchaseOrder")
+
+    <ol class="breadcrumb">
+        <li><a href="#">Purchase Order</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <div class="messages-block">
+                <div><span id="infoMessage" class="text-info"></span></div>
+                <div><span id="errorMessage" class="label label-danger"></span></div>
+                <div><span id="successMessage" class="label label-success"></span></div>
+            </div>
+
+            <table style="width: 100%">
+                <colgroup>
+                    <col style="width: 80px" />
+                    <col style="width: 230px" />
+                    <col style="width: 100px" />
+                    <col style="width: 300px" />
+                    <col style="width: 110px" />
+                    <col style="width: 180px" />
+                    <col style="width: 110px" />
+                    <col style="width: auto" />
+                </colgroup>
+                <tr>
+                    <th>StyleId:</th>
+                    <td style="padding-right: 20px">
+                        <input type="text"
+                               class="k-textbox"
+                               style="border-color: #2d2d2d"
+                               data-bind="value: searchFilters.styleId, valueUpdate:'afterkeydown'" />
+                    </td>
+                    <td colspan="2" style="text-align: left; padding-top: 5px">
+                        <button class="k-button"
+                                style="width: 110px; margin: 0px 0px 0px 0px; padding: 3px 20px 3px 20px"
+                                data-bind="click: search">
+                            <span class='glyphicon glyphicon-search am-icon'></span>Search
+                        </button>
+                        <button class="k-button"
+                                style="width: 100px; margin: 0px 0px 0px 10px; padding: 3px 20px 3px 20px"
+                                data-bind="click: clear">
+                            <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+                        </button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="k-toolbar k-grid-toolbar">
+        <div style="float: left">
+            <a href="#"
+               class="k-button k-button-icontext k-grid-add"
+               style="margin: 0px 20px 0px 10px"
+               data-bind="click: onCreate">
+                <span class="k-icon k-add"></span>
+                Add Purchase Order
+            </a>
+        </div>
+
+        <div class="clear"></div>
+    </div>
+
+    <div class="grid-small">
+        <div data-bind='component: {
+        name: "grid-pager",
+        params: { itemCount: grid.itemCount, pageIndex: grid.pageIndex, itemsPerPage: grid.itemsPerPage, refreshCallback: grid.reload }
+        }'></div>
+
+        <div data-bind='component: {
+         name: "fast-grid",
+         params: fastGridSettings }'></div>
+
+        <div data-bind='component: {
+        name: "grid-pager",
+        params: { itemCount: grid.itemCount, pageIndex: grid.pageIndex, itemsPerPage: grid.itemsPerPage, refreshCallback: grid.reload }
+        }'></div>
+    </div>
+</div>
+
+
+
+@Html.Partial("_TemplateGridPager")
+@Html.Partial("_TemplateFastGrid")
+
+
+<script type="text/x-kendo-template" id="purchase-order-buttons-column-template">
+    <a href='javascript: void(0)'
+       class='k-button'
+       style='margin-top:0px; width:120px' onclick='purchaseOrderListVm.onEdit(this, "#=data.Id#")'>
+        <span class='glyphicon glyphicon-edit am-icon'></span>Edit
+    </a>
+    <a href='javascript: void(0)'
+       class='k-button'
+       style='margin-top:0px; width:120px' onclick='purchaseOrderListVm.onDelete(this, "#=data.Id#")'>
+        <span class='glyphicon glyphicon-remove am-icon'></span>Delete
+    </a>
+</script>
+
+
+<script type="text/kendo-tmpl" id="purchase-order-row-template">
+    <tr class="k-master-row #=data._isAlt ? 'k-alt': ''#" row-uid="#=data.Id#">
+        <td>#=data.Id#</td>
+        <td>
+            @*<div class="image-box-holder" style="float: left; margin-right: 5px">
+                    <img src='#=data.Thumbnail#' style="max-width: 75px" />
+                </div>*@
+            <div>#=data.StyleString#</div>
+            @*<div style='padding-top:3px' class="gray">#=data.Name#</div>*@
+        </td>
+        <td>#= tmpl.isNullFormat(data.CreateDate, 'MM.dd.yyyy HH:mm', '-')#</td>
+        <td>#= tmpl.isNull(data.TotalBoxesQuantity, '-')#</td>
+        <td>#= tmpl.t('purchase-order-buttons-column-template', data)#</td>
+    </tr>
+</script>
+
+
+<script type="text/javascript">
+    var purchaseOrderListVm = null;
+
+    $(document).ready(function() {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        var settings = {
+            urls: {
+                getAll: '@Url.Action("GetAll", "PurchaseOrder")',
+                createOpenBox: '@Url.Action(MVC.PurchaseOrder.OnCreateItem())',
+                editOpenBox: '@Url.Action(MVC.PurchaseOrder.OnUpdateItem())',
+                deleteOpenBox: '@Url.Action(MVC.PurchaseOrder.Delete())',
+            }
+        };
+
+        purchaseOrderListVm = new PurchaseOrderListViewModel(model, settings);
+
+        ko.applyBindings(purchaseOrderListVm, document.getElementById('page-content'));
+    });
+</script>

@@ -1,0 +1,61 @@
+﻿.wizard {
+}
+
+.wizard .wizard-buttons {
+    text-align: right;
+    padding-top: 15px;
+}
+
+.wizard label, .k-window label  {
+    font-weight: normal;
+}
+
+
+.wizard .wizard-buttons button {
+    padding: 5px 20px;
+    margin-left: 5px;
+}
+
+.wizard .wizard-sizes th {
+    padding: 5px 10px;    
+}
+
+.wizard .wizard-sizes td {
+    padding: 5px 10px;
+}
+
+.wizard .nav-tabs {
+    border-right: 1px solid #ddd;
+    border-bottom: none;
+}
+
+.wizard .nav-tabs li a {
+    padding: 8px 6px;
+    border-radius: 4px 0px 0px 4px;
+    margin-right: inherit;
+}
+
+.wizard .nav>li.active>a,
+.wizard .nav>li.active>a:hover,
+.wizard .nav>li.active>a:focus {
+    border-right-color: transparent;
+    border-bottom-color: #ddd;
+}
+
+.wizard .nav>li>a:hover, 
+.wizard .nav>li>a:focus {
+    background: none;
+}
+
+.wizard .nav>li {
+    float: none;
+    margin-right: -1px;
+    margin-bottom: 0px;
+}
+
+
+
+.wizard .wizard-tab {
+    padding: 25px 20px 20px 20px;
+    min-height: 200px;
+}

@@ -1,0 +1,330 @@
+﻿@using Amazon.Core.Models
+@using Amazon.Web.Models.SearchFilters
+@using Amazon.Web.ViewModels.Customers
+@using Kendo.Mvc.UI
+
+@model CustomerFilterViewModel
+
+@{
+    ViewBag.Title = "Customers";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/feedback.ico" />
+}
+
+<script type="text/javascript">
+
+    var CustomersModel = function(model, settings) {
+        var self = this;
+        ko.BaseViewModel.call(self);
+
+        self.settings = settings;
+        self.model = model;
+
+        //Search
+        self.buyerName = ko.observable('');
+        self.orderNumber = ko.observable('');
+
+        self.minDate = new Date(2000, 1, 1);
+        self.maxDate = new Date();
+        self.maxDate.setHours(23);
+        self.maxDate.setMinutes(59);
+
+        self.dateFrom = ko.observable('');
+        self.dateTo = ko.observable('');
+
+        //Grid
+        self.gridId = settings.gridId;
+        self.gridNode = $("#" + self.gridId);
+        self.grid = self.gridNode.data("kendoGrid");
+
+        //Search
+
+        self.search = function (isSearch) {
+            var params = self.getGridParams();
+
+            self.resetRowNumber(0);
+
+            if (self.grid.dataSource.page() != 1) {
+                self.grid.dataSource.page(1); //May call read
+            }
+            self.grid.dataSource.read(params);
+        };
+
+        self.searchByKeyCmd = function (data, event) {
+            if (event.keyCode == 13)
+                self.search(true);
+            return true;
+        };
+
+        self.exportToExcelUrl = ko.computed(function () {
+            var baseUrl = self.settings.urls.exportToExcel;
+            var parts = [];
+
+            //var searchParams = self.getSearchParams();
+
+            //if (!dataUtils.isNullOrEmpty(searchParams.orderString))
+            //    parts.push("orderString=" + searchParams.orderString);
+            //if (searchParams.dropShipperId != null)
+            //    parts.push("dropshipperId=" + searchParams.dropShipperId);
+            //if (searchParams.fromDate != null)
+            //    parts.push("fromDate=" + searchParams.fromDate);
+            //if (searchParams.toDate != null)
+            //    parts.push("toDate=" + searchParams.toDate);
+            //if (searchParams.orderStatus != null)
+            //    parts.push("orderStatus=" + searchParams.orderStatus);
+            //if (searchParams.market != null)
+            //    parts.push("market=" + searchParams.market);
+
+            if (parts.length > 0)
+                baseUrl += "?" + parts.join("&");
+            return baseUrl;
+        });
+
+        self.getGridParams = function () {
+            console.log("getGridParams");
+
+            var from = kendo.toString(self.dateFrom(), 'MM/dd/yyyy');
+            var to = kendo.toString(self.dateTo(), 'MM/dd/yyyy');
+            var orderNumber = self.orderNumber();
+            var buyerName = self.buyerName();
+
+            var params = {
+                dateFrom: from,
+                dateTo: to,
+                buyerName: buyerName,
+                orderNumber: orderNumber
+            };
+            console.log(params);
+            return params;
+        };
+
+        self.orderIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetOrderIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if(action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.clear = function () {
+            self.dateFrom('');
+            self.dateTo('');
+            self.buyerName('');
+            self.orderNumber('');
+        };
+
+        self.clearAndSearch = function () {
+            self.clear();
+            self.search(false);
+        };
+
+        self.searchByButton = function () {
+            self.search(true);
+        };
+
+        helper.ui.addTopPager(self.grid);
+
+        self.clear();
+        self.search(false);
+    };
+
+</script>
+
+<div id="page-content">
+    <div id="windowContainer"></div>
+
+    <ol class="breadcrumb">
+        <li><a href="#">Customers</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <div class="messages-block">
+                <div><span id="infoMessage" class="text-info"></span></div>
+                <div><span id="errorMessage" class="label label-danger"></span></div>
+                <div><span id="successMessage" class="label label-success"></span></div>
+            </div>
+
+            <table>
+                <colgroup>
+                    <col style="width: 100px" />
+                    <col style="width: 210px" />
+                    <col style="width: 100px" />
+                    <col style="width: 450px" />
+                </colgroup>
+                <tr>
+                    <th class="right-content">Order Date: </th>
+                    <td>
+                        <table>
+                            <tr>
+                                <th>From</th>
+                                <td>
+                                    <input data-bind="kendoDatePicker: { value: dateFrom, format: 'MM/dd/yyyy', min: minDate, max: maxDate }" />
+                                </td>
+                                <th>To</th>
+                                <td>
+                                    <input data-bind="kendoDatePicker: { value: dateTo, format: 'MM/dd/yyyy', min: minDate, max: maxDate }" />
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            <table>
+                <colgroup>
+                    <col style="width: 100px" />
+                    <col style="width: 210px" />
+                    <col style="width: 100px" />
+                    <col style="width: 210px" />
+                    <col style="width: 100px" />
+                    <col style="width: 210px" />
+                </colgroup>
+                <tr>
+                    <th>Buyer Name:</th>
+                    <td>
+                        <input type="text" data-bind="value: buyerName, valueUpdate: 'afterkeydown', event: { keypress: searchByKeyCmd }" class="k-textbox" />
+                    </td>
+                    @*<th class="right-block">Order #:</th>
+                        <td>
+                            <input type="text"
+                                   style="width: 200px"
+                                   data-bind="kendoAutoComplete: {
+                               value: orderNumber,
+                               data: {},
+                               minLenght: 3,
+                               dataSource: orderIdSource },
+                            valueUpdate: 'afterkeydown',
+                            event: { keypress: searchByKeyCmd }" class="k-textbox" />
+                        </td>*@
+
+                </tr>
+            </table>
+            <table style="width: 100%">
+                <tr>
+                    <td colspan="3" style="text-align: left; padding-top: 5px">
+                        <button class="k-button"
+                                style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                                data-bind="click: searchByButton">
+                            <span class='glyphicon glyphicon-search am-icon'></span>Search
+                        </button>
+                        <button class="k-button"
+                                style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                                data-bind="click: clearAndSearch">
+                            <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+                        </button>
+                    </td>
+                    <td style="text-align:right">
+                        <a data-bind="attr: { href: exportToExcelUrl }"
+                           target="_blank" class="k-button" style="margin-top:5px; margin-left: 20px; padding-right: 10px"><img src="/Images/excel.png" width="20" style="margin-left: 5px; margin-right: 5px" />Export...</a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div>
+        @(Html.Kendo().Grid<CustomerViewModel>()
+          .Name("grid")
+          .Columns(columns =>
+          {
+              columns.Bound(c => c.Id)
+                  .Encoded(false)
+                  .Width(25);
+              columns.Bound(c => c.BuyerName)
+                  .Title("Name")
+                  .ClientTemplate("#=tmpl.isNull(BuyerName, '')#")
+                  .Width(125);
+              columns.Bound(c => c.ShippingAddress1)
+                  .Title("Street")
+                  //.Width(350)
+                  .ClientTemplate("#=tmpl.isNull(ShippingAddress1, '')# #=tmpl.isNull(ShippingAddress2, '')#");
+              columns.Bound(c => c.ShippingCity)
+                  .Title("City")
+                  //.Width(350)
+                  .ClientTemplate("#=tmpl.isNull(ShippingCity, '')#");
+              columns.Bound(c => c.ShippingState)
+                  .Title("State")
+                  //.Width(350)
+                  .ClientTemplate("#=tmpl.isNull(ShippingState, '')#");
+              columns.Bound(c => c.ShippingZip)
+                  .Title("Zip")
+                  //.Width(350)
+                  .ClientTemplate("#=tmpl.isNull(ShippingZip, '')#");
+              columns.Bound(c => c.ShippingCountry)
+                  .Title("Country")
+                  //.Width(350)
+                  .ClientTemplate("#=tmpl.isNull(ShippingCountry, '')#");
+
+              columns.Bound(c => c.ShippingPhone)
+                  .Title("Phone")
+                  .Width(140);
+              columns.Bound(c => c.BuyerEmail)
+                  .Title("Email")
+                  .ClientTemplate("<a href='mailto: #=BuyerEmail#'>#=tmpl.isNull(BuyerEmail, '')#</a>")
+                  .Width(100);
+              columns.Bound(o => o.OrdersCount)
+                  .Title("Orders Count")
+                  .Width(80);
+              columns.Bound(o => o.CreateDate)
+                  .Title("Create Date")
+                  .Format("{0:MM/dd/yyyy}")
+                  .Width(80);
+          })
+          .Pageable(conf => conf.Enabled(true).Refresh(true))
+          .AutoBind(false)
+          .DataSource(dataSource => dataSource
+              .Ajax()
+              .Model(conf => conf.Id(m => m.Id))
+              .Sort(conf => conf.Add(o => o.CreateDate).Descending())
+              .PageSize(50)
+              .Read(read => read.Action("GetAll", "Customer").Data("GetGridParams")))
+        )
+    </div>
+</div>
+
+<script>
+    var customersVm = null;
+
+    $(document).ready(function () {
+        console.log("begin ready");
+
+        var settings = {
+            gridId: "grid",
+            urls: {
+                exportToExcel: '@Url.Action("ExportToExcel", "Customer")',
+            }
+        };
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        customersVm = new CustomersModel(model, settings);
+        ko.applyBindings(customersVm, document.getElementById("page-content"));
+    });
+
+
+    function GetGridParams() {
+        console.log("GetGridParams");
+        if (customersVm != null)
+            return customersVm.getGridParams();
+        return {};
+    }
+</script>

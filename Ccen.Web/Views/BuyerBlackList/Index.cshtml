@@ -1,0 +1,217 @@
+﻿@{
+    ViewBag.Title = "Buyer Black List";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div id="page-content">
+    <ol class="breadcrumb">
+        <li><a href="#">Reports</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="grid-small">
+        <div id="grid"></div>
+    </div>
+</div>
+
+
+<script id="buyerBlackListPopupTemplate" type="text/x-kendo-template">
+    <div class="k-edit-form-container">
+        <div class="inventory-popup">
+            <input type="hidden" data-bind="value: Id" name="Id" />
+
+            <div class="editor-label">Order Id</div>
+            <div class="editor-field">
+                <input type="text" name="FromOrderId" class="k-textbox" data-bind="value: OrderId" required="required" />
+                <div data-val-msg-for="FromOrderId"></div>
+            </div>
+            <div class="editor-label">Reason</div>
+            <div class="editor-field">
+                <input type="text" name="Reason" class="k-textbox" data-bind="value: Reason" />
+            </div>
+
+            <div class="clear"></div>
+        </div>
+    </div>
+</script>
+
+<script>
+    function onSaveBuyerBlackList(e) {
+        console.log(e.model);
+        e.model.dirty = true;
+    }
+
+    function onDataSourceChange(e) {
+
+    }
+
+
+    $(document).ready(function () {
+        console.log("onready");
+
+        //Custom validation
+        //http://demos.telerik.com/kendo-ui/grid/editing-custom-validation
+
+
+        var dataSource = new kendo.data.DataSource({
+            //type: "json",
+
+            transport: {
+                read: {
+                    url: '@Url.Action("GetAll", "BuyerBlackList")',
+                    //dataType: "json",
+                },
+                update: {
+                    url: '@Url.Action("Update", "BuyerBlackList")',
+                    dataType: "json",
+                    contentType: "application/json",
+                    type: "POST"
+                },
+                destroy: {
+                    url: '@Url.Action("Remove", "BuyerBlackList")',
+                    dataType: "json",
+                    contentType: "application/json",
+                    type: "POST"
+                },
+                create: {
+                    url: '@Url.Action("Add", "BuyerBlackList")',
+                    dataType: "json",
+                    contentType: "application/json",
+                    type: "POST"
+                },
+                parameterMap: function (options, operation) { //data
+                    console.log("parameterMap");
+                    console.log(options);
+                    if (operation !== "read") { // && options.models
+                        //    //if (operation === "update" || operation === "create") {
+                        return JSON.stringify({ item: options });
+                        //    return {item: kendo.stringify(options.models)};
+                    }
+                    return options;
+                }
+            },
+
+            serverPaging: true,
+            serverSorting: true,
+            serverFiltering: true,
+            serverGrouping: true,
+            serverAggregates: true,
+            type: "aspnetmvc-ajax",
+
+            filter: [],
+
+            change: onDataSourceChange,
+            error: error,
+            //batch: true,
+
+            pageSize: 20,
+            page: 1,
+            total: 0,
+
+            schema: {
+                data: "Data",
+                total: "Total",
+                errors: "Errors",
+                model: {
+                    id: "Id",
+                    fields: {
+                        Id: { "editable": false, "type": "number" }, // { editable: false, nullable: true },
+                        FromOrderId: { required: true },// { editable: false },
+                        Reason: {}, // { validation: { required: true } },
+
+                        Market: { editable: false, nullable: true },
+                        MarketplaceId: { editable: false, nullable: true },
+                        MarketOrderId: { editable: false, nullable: true },
+
+                        BuyerName: { editable: false, nullable: true },
+                        BuyerEmail: { editable: false, nullable: true },
+                        PersonName: { editable: false, nullable: true },
+
+                        ShippingAddress1: { editable: false, nullable: true },
+                        ShippingAddress2: { editable: false, nullable: true },
+                        ShippingCity: { editable: false, nullable: true },
+                        ShippingState: { editable: false, nullable: true },
+                        ShippingCountry: { editable: false, nullable: true },
+                        ShippingZip: { editable: false, nullable: true },
+                        ShippingZipAddon: { editable: false, nullable: true },
+                        ShippingPhone: { editable: false, nullable: true },
+
+                        //SortOrder: { type: "number" }//, validation: { required: true, min: 0 } },
+                    }
+                }
+            }
+        });
+
+
+        $("#grid").kendoGrid({
+            dataSource: dataSource,
+            pageable: true,
+            toolbar: ["create"],
+
+            save: onSaveBuyerBlackList,
+
+            columns: [
+                { field: "Id", title: "#", width: '45px' },
+                { field: "OrderId", title: "Order Id", width: '180px', template: "#= tmpl.t('blacklist-orderid-column-template', data)#" },
+                { field: "Buyer", title: "Buyer", template: "#=tmpl.t('buyer-column-template', data)#" },
+                { field: "Address", title: "Address", template: "#=tmpl.t('address-column-template', data)#" },
+                { field: "Reason", title: "Reason" }, //"template":"\\# if (DefaultIsChecked) {\\# yes \\#} else {\\# no \\#}\\#"
+                { command: ["edit", "destroy"], title: "&nbsp;", width: "180px" }],
+            editable: {
+                mode: "popup",
+                template: kendo.template($("#buyerBlackListPopupTemplate").html())
+            }
+        });
+    });
+</script>
+
+@Html.Partial("_TemplatesOrder")
+
+<script type="text/x-kendo-template" id="buyer-column-template">
+    <div>#=tmpl.isNull(BuyerName, '')#</div>
+    <div>#=tmpl.isNull(BuyerEmail, '')#</div>
+</script>
+
+<script type="text/x-kendo-template" id="address-column-template">
+    <div>
+        <div>#=tmpl.isNull(PersonName, '')#</div>
+        <div>#=tmpl.isNull(ShippingAddress1, '')#</div>
+        <div>#=tmpl.isNull(ShippingAddress2, '')#</div>
+        <div>#=tmpl.isNull(ShippingCity, '')#, #=tmpl.isNull(ShippingState, '')# #=tmpl.isNull(ShippingZip, '')##if (ShippingZipAddon) {#<span>-#=ShippingZipAddon#</span> #}#</div>
+        <div>#=tmpl.isNull(ShippingCountry, '')#</div>
+        <div>#=tmpl.isNull(ShippingPhone, '')#</div>
+    </div>
+</script>
+
+
+
+<script type="text/kendo-template" id="message">
+    <div class="k-widget k-tooltip k-tooltip-validation k-invalid-msg field-validation-error" style="margin: 0.5em; display: block; " data-for="#=field#" data-valmsg-for="#=field#" id="#=field#_validationMessage">
+        <span class="k-icon k-warning"> </span>#=message#<div class="k-callout k-callout-n"></div>
+    </div>
+</script>
+
+<script type="text/javascript">
+    var validationMessageTmpl = kendo.template($("#message").html());
+
+    function error(args) {
+        if (args.errors) {
+            var grid = $("#grid").data("kendoGrid");
+            grid.one("dataBinding", function (e) {
+                e.preventDefault();   // cancel grid rebind if error occurs
+
+                for (var error in args.errors) {
+                    console.log("error=" + error);
+                    console.log(args.errors);
+                    showMessage(grid.editable.element, error, args.errors[error].errors);
+                }
+            });
+        }
+    }
+
+    function showMessage(container, name, errors) {
+        //add the validation message to the form
+        container.find("[data-valmsg-for='" + name + "'],[data-val-msg-for='" + name + "']")
+            .replaceWith(validationMessageTmpl({ field: name, message: errors[0] }));
+    }
+</script>

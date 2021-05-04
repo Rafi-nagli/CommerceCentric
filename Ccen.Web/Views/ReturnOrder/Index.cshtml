@@ -1,0 +1,2440 @@
+﻿@using Amazon.Common.Helpers
+@using Amazon.Core.Models
+@using Amazon.Core.Models.Stamps
+@using Amazon.DTO
+@using Amazon.Web
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels
+
+@model Amazon.Web.ViewModels.Pages.ReturnOrderPageViewModel
+
+@{
+    ViewBag.Title = "Return / Exchange";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/mail.ico" />
+}
+
+<script type="text/javascript">
+
+    var ReturnOrderViewModel = function (model, settings) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+
+        self.wasProcessed = ko.observable(false);
+        self.isLoading = ko.observable(false);
+        self.loadingText = ko.observable("");
+
+        self.isRefundLocked = ko.observable(false);
+        self.refundMode = ko.observable("0");
+        self.reasonCode = ko.observable(self.model.ReasonCode);
+        self.isDeductPrepaidLabelCost = ko.observable(false);
+        self.prepaidLabelCost = ko.observable(0);
+        console.log("reasonCode=" + self.reasonCode());
+
+        self.market = ko.observable();
+        self.marketplaceId = ko.observable();
+
+        self.isWalmart = ko.computed(function () {
+            return self.market() == self.settings.markets.walmart;
+        });
+
+        self.isReturn = ko.computed(function () {
+            return self.reasonCode() == self.settings.returnReasonCode;
+        });
+
+        self.isRefund = ko.computed(function () {
+            return self.reasonCode() == self.settings.refundReasonCode;
+        });
+
+        self.isExchange = ko.computed(function () {
+            return self.reasonCode() == self.settings.exchangeReasonCode;
+        });
+
+        self.onExchange = function () {
+            self.reasonCode(self.settings.exchangeReasonCode);
+        };
+
+        self.isEnableOperations = function () {
+            return !self.isRefundLocked();
+        }
+
+        self.onReturn = function () {
+            self.reasonCode(self.settings.returnReasonCode);
+            self.orderItemList().forEach(function (n) {
+                n.refundItemPrice(0);
+                n.refundShippingPrice(0);
+                n.inputDamagedQuantity(0);
+                n.inputQuantity(0);
+            });
+        };
+
+        self.refundMode.subscribe(function () {
+            if (self.refundMode() == "1") {
+                self.orderItemList().forEach(function (n) {
+                    n.refundItemPrice(n.originalItemPrice());
+                    n.refundShippingPrice(n.originalShippingPrice());
+                });
+            } else {
+                self.orderItemList().forEach(function (n) {
+                    n.refundItemPrice(0);
+                    n.refundShippingPrice(0);
+                });
+            }
+        });
+
+        self.isPartialRefundMode = ko.computed(function () {
+            return self.refundMode() == "0";
+        });
+
+        self.onRefund = function () {
+            self.reasonCode(self.settings.refundReasonCode);
+            self.orderItemList().forEach(function (n) {
+                n.refundItemPrice(0);
+                n.refundShippingPrice(0);
+            });
+        };
+
+        self.toAddressFullName = ko.observable();
+        self.toAddressAddress1 = ko.observable();
+        self.toAddressAddress2 = ko.observable();
+        self.toAddressCity = ko.observable();
+        self.toAddressUSAState = ko.observable();
+        self.toAddressNonUSAState = ko.observable();
+        self.toAddressZip = ko.observable();
+        self.toAddressZipAddon = ko.observable();
+        self.toAddressCountry = ko.observable(self.settings.defaultCountryCode);
+        self.toAddressPhone = ko.observable();
+        self.toAddressIsCountryUSA = ko.computed(function () {
+            return self.toAddressCountry() == "US";
+        });
+        self.toAddressIsCountryNonUSA = ko.computed(function () {
+            return self.toAddressCountry() != "US";
+        });
+        self.toAddressMessage = ko.observable("");
+
+
+        self.printMessages = ko.observableArray([]);
+
+        self.errorMessage = ko.computed(function () {
+            var array = $.grep(self.printMessages(), function (n) { return n.IsError; });
+            array = $.map(array, function (n) { return n.IsError ? "- " + n.Message : ""; });
+            return array.join('<br/>');
+        });
+        self.successMessage = ko.computed(function () {
+            var array = $.grep(self.printMessages(), function (n) { return n.IsSuccess; });
+            array = $.map(array, function (n) { return n.IsSuccess ? "- " + n.Message : ""; });
+            return array.join('<br/>');
+        });
+
+        self.weightLb = ko.observable('')
+            .extend(ko.validation.patterns.requredNumber("*"));
+        self.weightLb.subscribe(function () { self.updateShippingMethods(); });
+
+        self.weightOz = ko.observable('')
+            .extend(ko.validation.patterns.requredNumber("*"));
+        self.weightOz.subscribe(function () { self.updateShippingMethods(); });
+
+        self.notes = ko.observable('');
+
+        self.totalPrice = ko.observable();
+        self.actualShippingCost = ko.observable().extend({ format: "0.00" });
+        self.priceCurrency = ko.observable();
+        self.isInsured = ko.observable(false);
+        self.isSignConfirmation = ko.observable(false);
+
+        self.walmartReturnMode = ko.observable("0");
+        self.isWalmartCustomRefundMode = ko.computed(function () {
+            return self.isWalmart() && self.walmartReturnMode() == "1";
+        });
+        self.isWalmartReturnRequestMode = ko.computed(function () {
+            return self.isWalmart() && self.walmartReturnMode() == "0";
+        });
+        self.returnRequests = ko.observableArray([]);
+
+        self.prepareReturnRequest = function (row) {
+            row.date = ko.observable(kendo.parseDate(row.ReceiveDate));
+            row.reason = ko.observable(row.Reason);
+            row.itemName = ko.observable(row.ItemName);
+            row.customerComments = ko.observable(row.CustomerComments);
+            row.details = ko.observable(row.Details);
+            row.hasPrepaidLabel = ko.observable(row.HasPrepaidLabel);
+            row.prepaidLabelCost = ko.observable(row.PrepaidLabelCost);
+            row.returnType = ko.observable(row.Type);
+            row.processMode = ko.observable(row.ProcessMode);
+
+            row.priceCurrency = ko.computed(function () { return self.priceCurrency(); });
+
+            row.hasRMA = ko.computed(function () {
+                return self.market() == self.settings.markets.walmart || self.market() == self.settings.markets.amazon;
+            });
+
+            row.dateString = ko.computed(function () {
+                return tmpl.isNullFormat(row.date(), "MM/dd/yyyy", "-");
+            });
+
+            row.returnRequestAfter30Days = ko.computed(function () {
+                var request = row;
+                if (request != null && request.date() != null) {
+                    var requestDate = request.date();
+                    requestDate = requestDate.addDays(-30);
+
+                    var deliveryDate = self.getDeliveryDate();
+
+                    //NOTE: exception, from 1 nov till 31 jan
+                    var year = new Date().getFullYear();
+                    if (new Date().getMonth() == 0)
+                        year = year - 1;
+                    var nov1 = new Date(year, 10, 1); //Dec - 11, Jan - 0
+                    var jan31 = new Date(year + 1, 0, 31);
+                    if (self.orderDate().getTime() >= nov1 && self.orderDate().getTime() <= jan31) {
+                        if (requestDate.getTime() >= nov1 && requestDate.getTime() <= jan31) {
+                            console.log('enter to exception period');
+                            return false;
+                        }
+                    }
+
+                    return deliveryDate.getTime() < requestDate.getTime();
+                }
+                return false;
+            });
+
+            row.returnRequest20DaysHavePassed = ko.computed(function () {
+                var request = row;
+                if (request != null && request.date() != null) {
+                    var requestDate = request.date();
+                    var requestLifeEndDate = requestDate.addDays(20);
+
+                    var deliveryDate = self.getDeliveryDate();
+                    var returnPeriodEndDate = deliveryDate.addDays(30);
+                    var today = new Date();
+
+                    if (requestLifeEndDate.getTime() < returnPeriodEndDate.getTime())
+                        requestLifeEndDate = returnPeriodEndDate;
+
+                    console.log("end period");
+                    console.log(requestLifeEndDate);
+                    return today.getTime() > requestLifeEndDate.getTime();
+                }
+                return false;
+            });
+
+            row.canAcceptReturn = ko.computed(function () {
+                return row.returnType() == 10 && row.processMode() != 5;
+            });
+            row.acceptedReturn = ko.computed(function () {
+                return row.processMode() == 5;
+            });
+
+            row.onAcceptReturn = function () {
+                console.log("onAcceptReturn: " + row.Id);
+
+                $.ajax({
+                    url: '@Url.Action("AcceptReturn", "ReturnOrder")',
+                    method: "POST",
+                    dataType: 'json',
+                    contentType: 'application/json; charset=utf-8',
+
+                    async: true,
+                    cache: false,
+                    data: JSON.stringify({
+                        id: row.Id
+                    }),
+                    success: function (result) {
+                        console.log("success accept return");
+                        self.setLoading(null);
+                        if (result.IsSuccess) {
+                            self.search();
+                        } else {
+                            self.printMessages(result.Messages);
+                        }
+                    }
+                });
+            };
+        };
+
+
+        self.backItemsToInventory = ko.observable(true);
+        self.subtractReplacementFromInventory = ko.observable(true);
+        self.sendNewTrackingNumberToClient = ko.observable(true);
+        self.sendRefundCompletionToClient = ko.observable(true);
+        self.includeShipping = ko.observable(false);
+        self.deductShipping = ko.observable(false);
+
+        self.returnShippingFee = ko.observable(true);
+        self.restockingFee = ko.observable(false);
+        self.changingFeeReason = ko.observable(null).extend({
+            required: {
+                message: '*',
+                onlyIf: function () {
+                    return self.restockingFee() || self.returnShippingFee();
+                }
+            }
+        });
+        self.returnRequestId = ko.observable(null);
+
+        self.doRefund = ko.observable(true);
+        self.doRefund.subscribe(function () {
+            if (!self.doRefund()) {
+                self.includeShipping(false);
+                self.deductShipping(false);
+            }
+        });
+
+        //SHIPPING METHOD BEGIN
+
+        self.shippingMethodId = ko.observable(null)
+            .extend(ko.validation.patterns.requred("Required"));
+
+        self.shippingMethodList = ko.observableArray([]);
+
+        self.onShippingMethodChanged = function () {
+
+        };
+        self.shippingMethodId.subscribe(onShippingMethodChanged);
+        self.updateShippingMethods = function () {
+
+            $.ajax({
+                data: {
+                    countryFrom: 'US',
+                    countryTo: self.toAddressCountry(),
+                    weightLb: self.weightLb(),
+                    weightOz: self.weightOz(),
+                },
+                url: '@Url.Action(MVC.ReturnOrder.GetShippingOptions())',
+                success: function (data) {
+                    var currentMethodId = self.shippingMethodId();
+                    var keepCurrent = false;
+
+                    self.shippingMethodList.removeAll();
+                    if (data != null) {
+                        for (var i = 0; i < data.length; i++) {
+                            self.shippingMethodList.push(data[i]);
+                            if (data[i].Id == currentMethodId)
+                                keepCurrent = true;
+                        }
+                    }
+
+                    if (!keepCurrent && self.shippingMethodId() != null)
+                        self.shippingMethodId(null);
+                }
+            });
+        };
+
+        //SHIPPING METHOD END
+        self.getStyleItemByIdAsync = function (styleItemId) {
+            return $.ajax({
+                cache: false,
+                data: { styleItemId: styleItemId },
+                url: '@Url.Action(MVC.ReturnOrder.GetStyleItemById())'
+            });
+        };
+
+        self.getNotes = function () {
+            var notes = self.loadedOrderId() + " ";
+            for (var i = 0; i < self.orderItemList().length; i++) {
+                var item = self.orderItemList()[i];
+                if (item.inputQuantity() > 0)
+                    notes += item.exchangeStyleString() + "[" + item.Size + "]" + (item.inputQuantity() > 1 ? "x" + item.inputQuantity() : "");
+            }
+            return notes;
+        };
+
+        self.updateDeductShippingPrices = function () {
+            console.log("updateDeductShippingPrices");
+
+            var totalQty = self.getItemQtyTotal();
+            $.each(self.orderItemList(), function (i, item) {
+                var isFree = self.getIsFreeShipping();
+                if (!isFree) {
+                    var newValue = 0;
+                    if (item.inputQuantity() > 0)
+                        newValue = self.actualShippingCost() / totalQty * item.inputQuantity() * 1.15; //TASK: +15%
+                    item.deductShippingPrice(dataUtils.floorPrice(newValue));
+                } else {
+                    item.deductShippingPrice(0);
+                }
+            });
+        }
+
+        self.updateDeductPrepaidLabelPrices = function () {
+            console.log("updateDeductPrepaidLabelPrices, total: " + self.prepaidLabelCost());
+
+            var totalQty = self.getInputQtyTotal();
+            $.each(self.orderItemList(), function (i, item) {
+                var newValue = totalQty != 0 ? self.prepaidLabelCost() / totalQty * item.inputQuantity() : 0;
+                item.deductPrepaidLabelCost(dataUtils.floorPrice(newValue));
+            });
+        }
+
+        self.updateNotes = function () {
+            self.notes(self.getNotes());
+        };
+
+        self.updateChangingFeeReason = function () {
+            var returnRequests = $.grep(self.returnRequests(), function (r) {
+                return r.Id == self.returnRequestId();
+            });
+            if (returnRequests.length > 0) {
+                var returnRequest = returnRequests[0];
+                var reason = returnRequest.reason();
+                console.log("reason: " + reason);
+                if (reason.indexOf("DEFECTIVE") !== -1) {
+                    //self.changingFeeReason("");
+                }
+                if (reason.indexOf("NOT_AS_DESCRIBED") !== -1) {
+                    self.changingFeeReason("The item 100% matches website pictures and description. Buyer choose incorrect return reason to get shipping fees refunded");
+                }
+                if (reason.indexOf("NO_LONGER_WANTED") !== -1) {
+                    //self.changingFeeReason("");
+                    self.restockingFee(false);
+                    self.returnShippingFee(false);
+                }
+                if (reason.indexOf("INCORRECT_ITEM") !== -1) {
+                    self.changingFeeReason("The package included all the pieces shown on the picture and description.");
+                }
+                if (reason.indexOf("DAMAGED") !== -1) {
+                    self.changingFeeReason("We carefully examined the order which was returned and it doesn’t have a damage. Buyer choose the incorrect return reason.");
+                }
+                if (reason.indexOf("MISSING_PARTS") !== -1) {
+                    self.changingFeeReason("The package included all the pieces shown on the picture and description.");
+                }
+                if (reason.indexOf("INADEQUATE_QUALITY") !== -1) {
+                    self.changingFeeReason("This is branded 100% authentic merchandise, with highest quality and reliability. Buyer choose incorrect return reason to get shipping fees refunded");
+                }
+                if (reason.indexOf("ARRIVED_LATE") !== -1) {
+                    var deliveryDate = self.deliveryDate();
+                    self.changingFeeReason("Order was delivered ahead of estimated delivery date. The order was delivered " + tmpl.isNullFormat(deliveryDate, 'MM.dd.yyyy', '-') + " according to tracking history.");
+                }
+            }
+        }
+
+        self.updateComments = function () {
+            var text = "";
+
+            //Return
+            if (self.doRefund())
+                text = "refunded";
+            if (self.backItemsToInventory())
+                text = dataUtils.combineString(text, "returned", "&");
+
+            if (!dataUtils.isEmpty(text))
+                text = text + ": ";
+
+            var itemInfo = [];
+
+            for (var i = 0; i < self.orderItemList().length; i++) {
+                var item = orderItemList()[i];
+                if (item.inputQuantity() > 0 || item.refundItemPrice() > 0) {
+                    var refundShippingPrice = parseFloat(item.refundShippingPrice()) || 0;
+                    var deductShippingPrice = parseFloat(item.deductShippingPrice()) || 0;
+                    var prepaidLabelCost = parseFloat(item.deductPrepaidLabelCost()) || 0;
+                    var refundItemPrice = parseFloat(item.refundItemPrice()) || 0;
+
+
+                    console.log("prepaidLabelCost: " + prepaidLabelCost + ", cost=" + item.deductPrepaidLabelCost());
+                    var itemRefund = item.SKU + " x " + item.inputQuantity();
+                    if (self.doRefund() && !self.isWalmartReturnRequestMode()) {
+                        itemRefund += " - " + self.priceCurrency()
+                            + (refundItemPrice + (self.includeShipping() ? refundShippingPrice : 0)
+                                - (self.deductShipping() ? deductShippingPrice : 0)
+                                - (self.isDeductPrepaidLabelCost() ? prepaidLabelCost : 0)).toFixed(2);
+                    }
+
+                    itemInfo.push(itemRefund);
+                }
+            }
+            text += itemInfo.join("; ");
+            if (self.isWalmartReturnRequestMode()
+                && self.refundItemPriceTotal() >= 0.01) {
+                text += " - " + self.refundItemPriceTotal().toFixed(2);
+            }
+            self.orderReturnComment(text);
+
+            //Refund
+            text = "refunded";
+
+            if (!dataUtils.isNullOrEmpty(self.refundReasonCode())) {
+                var refundNode = $.grep(self.refundReasonList(), function (r) { return r.Value == self.refundReasonCode(); });
+                text = text + " (" + refundNode[0].Text + "): ";
+            } else {
+                text = text + ": ";
+            }
+
+            var itemInfo = [];
+            for (var i = 0; i < self.orderItemList().length; i++) {
+                var item = orderItemList()[i];
+                var refundItemPrice = parseFloat(item.refundItemPrice()) || 0;
+                var refundShippingPrice = parseFloat(item.refundShippingPrice()) || 0;
+
+                if (refundItemPrice >= 0.01 || refundShippingPrice >= 0.01) {
+                    var itemRefund = item.SKU;
+                    itemRefund += " - " + self.priceCurrency() + (refundItemPrice + refundShippingPrice).toFixed(2);
+                    itemInfo.push(itemRefund);
+                }
+            }
+            text += itemInfo.join("; ");
+            self.orderRefundComment(text);
+        };
+
+        self.getWeight = function () {
+            var weight = 0;
+            for (var i = 0; i < self.orderItemList().length; i++)
+                weight += self.orderItemList()[i].weight() * self.orderItemList()[i].inputQuantity();
+
+            weight += 0.75;
+            if (weight > 15.999 && weight < 16.99) {
+                weight = 15.99;
+            }
+            var rounded = Math.round(weight);
+
+            return rounded < weight ? rounded : weight;
+        };
+
+        self.updateWeight = function () {
+            var totalWeight = self.getWeight();
+            self.weightLb(Math.floor(totalWeight / 16));
+            self.weightOz(totalWeight % 16);
+        };
+
+        //ADDRESS BEGIN
+
+        self.checkToAddress = function (data, e) {
+            var sender = $(e.target);
+            self.toAddressMessage("");
+            self.validateAddress(sender,
+                self.getAddressModel(false),
+                false,
+                function (data) {
+                    console.log(data);
+                    self.toAddressMessage(self.getCheckAddressResult(data, false));
+                    if (data.Data != null)
+                        self.setAddressFromModel(data.Data, false);
+                });
+        };
+
+        self.getCheckAddressResult = function (data, asPlanText) {
+            if (data.IsSuccess) {
+                var msg = "- Address successfully verified (by stamps.com)";
+                if (data.Data != null)
+                    msg = "- Address was corrected (by Melissa) with message: \"" + data.Message + "\". " + "<br/>" + msg;
+                else if (data.Message != null && data.Message != '')
+                    msg = "- Address checked (by Melissa) with message: \"" + data.Message + "\"" + "<br/>" + msg;
+                if (asPlanText)
+                    return msg;
+                return "<span class='text-success'>" + msg + "</span>";
+            } else {
+                var msg = "- The address could not be verified (by stamps.com).";
+                if (data.Data != null)
+                    msg = "- Address was corrected (by Melissa) with message: \"" + data.Message + "\". " + "<br/>" + msg;
+                else if (data.Message != null && data.Message != '')
+                    msg = "- Address checked (by Melissa) with message: \"" + data.Message + "\"" + "<br/>" + msg;
+                if (asPlanText)
+                    return msg;
+                return "<span  class='text-danger'>" + msg + "</span>";
+            }
+        };
+
+        self.setAddressFromModel = function (address) {
+
+            self.toAddressFullName(address.FullName);
+            self.toAddressAddress1(address.Address1);
+            self.toAddressAddress2(address.Address2);
+            self.toAddressCity(address.City);
+            self.toAddressUSAState(address.USAState);
+            self.toAddressNonUSAState(address.NonUSAState);
+            self.toAddressZip(address.Zip);
+            self.toAddressZipAddon(address.ZipAddon);
+            self.toAddressCountry(address.Country);
+            self.toAddressPhone(address.Phone);
+            self.toAddressMessage("");
+
+        };
+
+        self.getAddressModel = function (isFrom) {
+            return {
+                FullName: self.toAddressFullName(),
+                Address1: self.toAddressAddress1(),
+                Address2: self.toAddressAddress2(),
+                City: self.toAddressCity(),
+                USAState: self.toAddressUSAState(),
+                NonUSAState: self.toAddressNonUSAState(),
+                Country: self.toAddressCountry(),
+                Zip: self.toAddressZip(),
+                ZipAddon: self.toAddressZipAddon(),
+                Phone: self.toAddressPhone(),
+                IsCountryUSA: self.toAddressIsCountryUSA(),
+            };
+        };
+
+        //URL Computing
+        @*http://stackoverflow.com/questions/332872/encode-url-in-javascript*@
+        self.getGoogleAddressUrl = function (address) {
+            return "https://www.google.com/search?q=" +
+                tmpl.joinNotEmpty([
+                    tmpl.joinNotEmpty([address.Address1, address.Address2], " "),
+                    address.City,
+                    address.State,
+                    tmpl.joinNotEmpty([address.Zip, address.ZipAddon], " "),
+                    address.Country
+                ], ", ");
+        };
+
+        self.googleSearchToAddressUrl = ko.computed(function () {
+            return self.getGoogleAddressUrl(self.getAddressModel(false));
+        });
+
+        self.getMelissaAddressUrl = function (address) {
+            return "http://www.melissadata.com/Lookups/AddressVerify.asp?"
+                + "name=" + encodeURIComponent(address.FullName)
+                + "&company="
+                + "&address=" + encodeURIComponent(tmpl.joinNotEmpty([address.Address1, address.Address2], " "))
+                + "&city=" + encodeURIComponent(address.City)
+                + "&state=" + (address.IsCountryUS ? encodeURIComponent(address.USAState) : encodeURIComponent(address.USAState))
+                + "&zip=" + encodeURIComponent(tmpl.joinNotEmpty([address.Zip, address.ZipAddon], "-"));
+        };
+
+        self.melissaSearchToAddressUrl = ko.computed(function () {
+            return self.getMelissaAddressUrl(self.getAddressModel(false));
+        });
+
+        self.validateAddress = function (sender, data, onlyCheck, callback) {
+            self.setLoading('validating...');
+
+            data.onlyCheck = onlyCheck;
+            $.ajax({
+                url: '@Url.Action(MVC.Mailing.CheckAddress())',
+                data: data,
+                success: function (data) {
+                    self.setLoading(null);
+                    callback(data);
+                }
+            });
+        };
+
+        //ADDRESS END
+
+
+        self.orderItemList = ko.observableArray([]);
+        self.labels = ko.observableArray([]);
+        self.comments = ko.observableArray([]);
+        self.orderEmailList = ko.observableArray([]);
+        self.refunds = ko.observableArray([]);
+
+        self.orderIdLoading = ko.observable(false);
+        self.orderEmailLoading = ko.observable(false);
+
+        self.orderErrorMessage = ko.observable('');
+        self.loadedOrderId = ko.observable("");
+        self.customerOrderId = ko.observable("");
+        //self.orderId = ko.observable("");
+        self.searchString = ko.observable("");
+        self.searchString.subscribe(function () {
+            self.search();
+        });
+
+
+        self.orderReturnComment = ko.observable("");
+        self.orderRefundComment = ko.observable("");
+        self.orderExchangeComment = ko.observable("");
+
+        self.refundReasonList = ko.observable(settings.refundReasonList);
+        self.refundReasonCode = ko.observable()
+            .extend(ko.validation.patterns.requred("Required"));
+
+        self.hasLabel = ko.computed(function () {
+            return self.labels().length > 0;
+        });
+
+        self.enableFullRefund = ko.computed(function () {
+            return self.hasLabel();
+        });
+
+        self.orderEntityId = ko.observable(null);
+        self.deliveryDate = ko.observable(null);
+        self.expDeliveryDate = ko.observable(null);
+        self.orderDate = ko.observable(null);
+
+        self.marketReturnUrl = ko.observable(null);
+        self.marketOrderUrl = ko.observable(null);
+        self.orderUrl = ko.observable(null);
+
+        self.orderEmailsUrl = ko.computed(function () {
+            return self.settings.urls.baseOrderEmailUrl + "?orderId=" + self.loadedOrderId();
+        });
+
+        self.getItemPriceTotal = function () {
+            var total = 0;
+            self.orderItemList().forEach(function (n) { total += parseFloat(n.originalItemPrice()) || 0; });
+            return total;
+        };
+
+        self.getItemTaxTotal = function () {
+            var total = 0;
+            self.orderItemList().forEach(function (n) { total += parseFloat(n.itemTax()) || 0; });
+            return total;
+        };
+
+        self.getItemPriceInUSDTotal = function () {
+            var total = 0;
+            self.orderItemList().forEach(function (n) { total += parseFloat(n.originalItemPriceInUSD()) || 0; });
+            return total;
+        };
+
+        self.getItemQtyTotal = function () {
+            var total = 0;
+            self.orderItemList().forEach(function (n) { total += n.originalItemCount(); });
+            return total;
+        };
+
+        self.getInputQtyTotal = function () {
+            var total = 0;
+            self.orderItemList().forEach(function (n) { total += parseInt(n.inputQuantity()) || 0; });
+            return total;
+        }
+
+        self.itemPriceTotal = ko.computed(function () {
+            return self.getItemPriceTotal();
+        }).extend({ format: "0.00" });
+
+        self.itemTaxTotal = ko.computed(function () {
+            return self.getItemTaxTotal();
+        }).extend({ format: "0.00" });
+
+        self.itemPriceInUSDTotal = ko.computed(function () {
+            return self.getItemPriceInUSDTotal();
+        }).extend({ format: "0.00" });
+
+        self.shippingPriceTotal = ko.computed(function () {
+            var total = 0;
+            self.orderItemList().forEach(function (n) { total += parseFloat(n.originalShippingPrice()) || 0; });
+            return total;
+        }).extend({ format: "0.00" });
+
+        self.shippingTaxTotal = ko.computed(function () {
+            var total = 0;
+            self.orderItemList().forEach(function (n) { total += parseFloat(n.shippingTax()) || 0; });
+            return total;
+        }).extend({ format: "0.00" });
+
+        self.shippingDiscountTotal = ko.computed(function () {
+            var total = 0;
+            self.orderItemList().forEach(function (n) { total += parseFloat(n.originalShippingDiscount()) || 0; });
+            return total;
+        }).extend({ format: "0.00" });
+
+        self.hasShippingDiscount = ko.computed(function () {
+            return self.shippingDiscountTotal() > 0;
+        });
+
+        self.refundItemPriceTotal = ko.computed(function () {
+            var total = 0;
+            console.log("isWalmartReturnRequestMode=" + self.isWalmartReturnRequestMode());
+            if (!self.isWalmartReturnRequestMode() || self.isRefund()) {
+                self.orderItemList().forEach(function (n) { total += parseFloat(n.refundItemPrice()) || 0; });
+                return total;
+            } else {
+                var returnRequests = $.grep(self.returnRequests(), function (r) {
+                    return r.Id == self.returnRequestId();
+                });
+                var total = 0;
+                if (returnRequests.length > 0) {
+                    var returnRequest = returnRequests[0];
+                    total = returnRequest.RequestedRefundAmount;
+                    if (self.restockingFee())
+                        total = total * 0.80;
+                    if (self.returnShippingFee())
+                        total = total - 7;
+                }
+                return total;
+            }            
+        });
+
+        self.refundShippingPriceTotal = ko.computed(function() {
+            var total = 0;
+            self.orderItemList().forEach(function(n) { total += (parseFloat(n.refundShippingPrice()) || 0); });
+            return total;
+        });
+
+        self.getIsFreeShipping = function() {
+            var totalRefund = 0;
+            self.orderItemList().forEach(function(n) { totalRefund += (parseFloat(n.refundItemPrice()) || 0); });
+            var previousRefund = 0; //TODO:
+            return self.getItemPriceTotal() - totalRefund > 39;
+        };
+
+        self.isFreeShipping = ko.computed(function() {
+            return getIsFreeShipping();
+        });
+
+        self.getIsSourceFreeShipping = function() {
+            return self.getItemPriceInUSDTotal() > 39
+                && (self.shippingPriceTotal() - self.shippingDiscountTotal() == 0);
+        };
+
+        self.isSourceFreeShipping = ko.computed(function() {
+            return getIsSourceFreeShipping();
+        });
+
+        self.deductPrepaidLabelCost = ko.computed(function() {
+            var total = 0;
+            self.orderItemList().forEach(function(n) { total += parseFloat(n.deductPrepaidLabelCost()) || 0; });
+            return total;
+        }).extend({ format: "0.00"});
+
+        self.deductShippingPriceTotal = ko.computed(function() {
+            var total = 0;
+            self.orderItemList().forEach(function(n) { total += parseFloat(n.deductShippingPrice()) || 0; });
+            return total;
+        }).extend({ format: "0.00"});
+
+        self.enableDeduct = ko.computed(function() {
+            return self.doRefund() && (self.includeShipping() || self.getIsSourceFreeShipping());
+        });
+
+        self.hasOrder = ko.computed(function() {
+            return self.orderEntityId() != null;
+        });
+
+        self.getDeliveryDate = ko.computed(function() {
+            var deliveryDate = self.deliveryDate();
+            if (deliveryDate == null)
+                deliveryDate = self.expDeliveryDate();
+            if (deliveryDate == null)
+                deliveryDate = self.orderDate();
+
+            return deliveryDate;
+        });
+
+        
+
+        self.canReturn = ko.computed(function() {
+            var price = self.refundItemPriceTotal() + (self.includeShipping() ? self.refundShippingPriceTotal() : 0);
+            return self.hasOrder()
+                && !self.wasProcessed()
+                && !self.isLoading()
+                && (price >= 0.01 || !self.doRefund());
+        });
+
+        self.canRefund = ko.computed(function() {
+            var price = self.refundItemPriceTotal() + self.refundShippingPriceTotal();
+            var overpaidItems = $.grep(self.orderItemList(), function(n) { return n.originalItemPrice() < (parseFloat(n.refundItemPrice()) || 0)
+                || n.originalShippingPrice() < (parseFloat(n.refundShippingPrice()) || 0); });
+            console.log("overpaidItems.length=" + overpaidItems.length + ", price=" + price);
+            return self.hasOrder()
+                && !self.wasProcessed()
+                && !self.isLoading()
+                && price >= 0.01
+                && overpaidItems.length == 0;
+        });
+
+        self.canExchange = ko.computed(function() {
+            return self.hasOrder()
+                && !self.wasProcessed()
+                && !self.isLoading()
+                && self.getInputQtyTotal() > 0;
+        });
+
+        self.canSearch = ko.computed(function() {
+            return !self.orderIdLoading();
+        });
+
+        self.includeShipping.subscribe(function() {
+            self.updateComments();
+        });
+        self.deductShipping.subscribe(function() {
+            self.updateComments();
+        });
+        self.isDeductPrepaidLabelCost.subscribe(function() {
+            self.updateComments();
+        });
+        self.doRefund.subscribe(function() {
+            self.updateComments();
+        });
+        self.backItemsToInventory.subscribe(function() {
+            self.updateComments();
+        });
+
+        self.refundReasonCode.subscribe(function() {
+            self.updateComments();
+        });
+
+        self.restockingFee.subscribe(function () {
+            self.updateComments();
+        });
+        self.returnShippingFee.subscribe(function () {
+            self.updateComments();
+        });
+        self.returnRequestId.subscribe(function () {
+            self.updateComments();
+            self.updateChangingFeeReason();            
+        });
+        self.refundItemPriceTotal.subscribe(function () {
+            self.updateComments();
+        });
+
+        self.isNoEmails = ko.computed(function() {
+            return self.orderEmailList().length == 0 && !self.orderEmailLoading();
+        });
+
+        self.orderIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetOrderIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if(action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.searchByKeyCmd = function(data, event) {
+            console.log('searchByKeyCmd');
+            if (event.keyCode == 13)
+                self.search();
+            return true;
+        };
+
+        self.search = function() {
+            if (self.orderIdLoading())
+            {
+                console.log("search skipped, already in progress")
+                return;
+            }
+
+            console.log("search");
+            self.orderIdLoading(true);
+
+            Message.clear();
+            self.clearOrderInfo();
+
+            var searchString = self.searchString();
+
+            self.orderErrorMessage('');
+
+            self.orderEmailLoading(true);
+            
+            $.ajax({
+                url: '@Url.Action("GetModelByOrderId", "ReturnOrder")',
+                data: { searchString: self.searchString() },
+                cache: false,
+                success: function(data) {
+                    self.orderIdLoading(false);
+                    self.showModel(data);
+
+                    $.ajax({
+                        url: '@Url.Action("GetEmailsByOrderId", "ReturnOrder")',
+                        data: { orderId: self.loadedOrderId() },
+                        cache: false,
+                        success: function(data) {
+                            self.orderEmailLoading(false);
+
+                            $.each(data, function(i, n) {
+                                n.ReceiveDate = ko.observable(kendo.parseDate(n.ReceiveDate)).extend({
+                                    format: "MM/dd/yyyy HH:mm"
+                                });
+                            });
+
+                            self.orderEmailList(data);
+                        }
+                    });
+                }
+            });
+        };
+
+        self.showModel = function(model) {
+            console.log(model);
+
+            self.priceCurrency(model.PriceCurrency);
+
+            if (model.Items != null && model.Items.length > 0) {
+                $.each(model.Labels, function(i, n) {
+                    n.ActualDeliveryDate = ko.observable(kendo.parseDate(n.ActualDeliveryDate)).extend({
+                        format: "MM/dd/yyyy HH:mm"
+                    });
+                    n.TrackingStateDate = ko.observable(kendo.parseDate(n.TrackingStateDate)).extend({
+                        format: "MM/dd/yyyy HH:mm"
+                    });
+                    n.ReasonText = ko.computed(function() {
+                        if (n.FromType == '@((int)LabelFromType.Batch)')
+                            return "Batch";
+                        return "Mail (" + n.MailReasonName + ")";
+                    });
+                });
+
+                $.each(model.Comments, function(i, n) {
+                    n.CommentDate = ko.observable(kendo.parseDate(n.CommentDate)).extend({
+                        format: "MM/dd/yyyy HH:mm"
+                    });
+                });
+
+                $.each(model.Refunds, function(i, n) {
+                    n.Amount = dataUtils.floorPrice(n.Amount);
+                    n.status = ko.observable(n.Status);
+                    n.statusName = ko.observable(n.StatusName);
+                    n.statusCss = ko.computed(function() {
+                        var css = "";
+                        if (n.status() == '@((int)SystemActionStatus.Done)')
+                            css = "bold green";
+                        if (n.status() >= '@((int)SystemActionStatus.Fail)')
+                            css = "bold red";
+
+                        return css;
+                    });
+                    n.hasMessage = ko.computed(function () {
+                        return !dataUtils.isNullOrEmpty(n.Message);
+                    });
+
+                    n.canMarkAsDone = ko.computed(function () {
+                        return n.status() != '@((int)SystemActionStatus.Done)'
+                    });
+                    n.onMarkAsProcessed = function () {
+                        console.log("onMarkAsProcessed, id=" + n.Id);
+                        $.ajax({
+                            url: '@Url.Action("MarkRefundAsProcessed", "ReturnOrder")',
+                            method: "POST",
+                            dataType: 'json',
+                            contentType: 'application/json; charset=utf-8',
+
+                            async: true,
+                            cache: false,
+                            data: JSON.stringify({
+                                id: n.Id
+                            }),
+                            success: function (result) {
+                                if (result.IsSuccess) {
+                                    n.status('@((int)SystemActionStatus.Done)');
+                                    n.statusName('Done');
+                                } else {
+                                    //TODO: display errors
+                                }
+                            }
+                        });
+                    };
+                });
+
+
+                $.each(model.Items, function(i, n) {
+                    console.log("item:");
+                    console.log(n);
+
+                    var item = n;
+                    item.inputQuantity = ko.observable(0); //item.InputQuantity);
+                    item.inputQuantity.subscribe(function() {
+                        console.log("inputQuantity changed");
+                        self.updateNotes();
+                        self.updateWeight();
+
+                        item.refundItemPrice(dataUtils.floorPrice(item.originalItemPrice() / item.originalItemCount() * item.inputQuantity()));
+                        item.refundShippingPrice(dataUtils.floorPrice(item.originalShippingPrice() / item.originalItemCount() * item.inputQuantity()));
+                        self.updateDeductShippingPrices();
+                        self.updateDeductPrepaidLabelPrices();
+
+                        self.updateComments();
+                    });
+
+                    item.inputDamagedQuantity = ko.observable(0);
+
+                    item.priceCurrency = ko.computed(function () { return self.priceCurrency(); });
+
+                    item.refundItemPriceError = ko.observable("");
+                    item.refundItemPrice = ko.observable(0);
+                    item.refundItemPrice.subscribe(function() {
+                        self.updateDeductShippingPrices();
+                        self.updateDeductPrepaidLabelPrices();
+                        self.updateComments();
+                        item.refundItemPriceError((item.refundItemPrice() || 0) > item.originalItemPrice() ? "amount exceeds the max" : "");
+                    });
+
+                    item.refundShippingPriceError = ko.observable("");
+                    item.refundShippingPrice = ko.observable(0);
+                    item.refundShippingPrice.subscribe(function() {
+                        self.updateComments();
+                        item.refundShippingPriceError((item.refundShippingPrice() || 0) > item.originalShippingPrice() ? "amount exceeds the max" : "");
+                    });
+
+                    item.deductShippingPrice = ko.observable(0);
+                    item.deductPrepaidLabelCost = ko.observable(0);
+
+                    item.itemTax = ko.observable(item.ItemTax);
+                    item.originalItemCount = ko.observable(item.InputQuantity);
+                    item.originalItemPrice = ko.observable(item.ItemPrice);
+                    item.originalPerItemPrice = ko.observable(item.originalItemPrice() / item.originalItemCount());
+                    item.originalItemPriceInUSD = ko.observable(item.ItemPriceInUSD);
+                    item.originalShippingPrice = ko.observable(item.ShippingPrice);
+                    item.originalShippingDiscount = ko.observable(item.ShippingDiscount);
+                    item.shippingTax = ko.observable(item.ShippingTax);
+
+                    console.log("originalItemCount: " + item.originalItemCount());
+
+                    item.weight = ko.observable(item.Weight);
+                    item.sizeList = ko.observableArray([]);
+
+                    item.exchangeStyleItemId = ko.observable(item.StyleItemId);
+                    item.exchangeStyleItemId.subscribe(function() {
+                        console.log("exchangeStyleItemId changed");
+                        var sizeItem = $.grep(item.sizeList(), function(nItem) { return nItem.Value == item.exchangeStyleItemId(); });
+                        if (sizeItem.length > 0) {
+                            console.log(sizeItem);
+                            item.Size = sizeItem[0].Text;
+                        }
+
+                        if (item.exchangeStyleItemId() != '' && item.exchangeStyleItemId() != null) {
+                            self.getStyleItemByIdAsync(item.exchangeStyleItemId()).done(function(data) {
+                                console.log(data);
+                                item.weight(data.Weight);
+                                item.ExchangeStyleId = data.StyleId;
+
+                                self.updateNotes();
+                                self.updateWeight();
+
+                                self.updateShippingMethods();
+                            });
+                        } else {
+                            item.weight(0);
+                            item.ExchangeStyleId = null;
+
+                            self.updateNotes();
+                            self.updateWeight();
+
+                            self.updateShippingMethods();
+                        }
+                    });
+
+                    item.styleErrorMessage = ko.observable('');
+                    item.exchangeStyleId = ko.observable(item.StyleId);
+                    item.exchangeStyleString = ko.observable('');
+                    item.exchangeStyleStringLoading = ko.observable(false);
+                    item.exchangeStyleString.subscribe(function() {
+                        item.styleErrorMessage('');
+                        item.exchangeStyleStringLoading(true);
+                        $.ajax({
+                            url: '@Url.Action("GetStyleSizes", "AutoComplete")',
+                            data: { styleString: item.exchangeStyleString(), onlyWithQty: true },
+                            cache: false,
+                            success: function(data) {
+                                item.exchangeStyleStringLoading(false);
+                                if (data.Data != null && data.Data.length > 0) {
+                                    item.sizeList(data.Data);
+                                    item.exchangeStyleItemId(data.Data[0].Value);
+                                } else {
+                                    item.styleErrorMessage('StyleId is not found');
+                                    item.sizeList([]);
+                                    item.exchangeStyleItemId('');
+                                }
+                            }
+                        });
+                    });
+
+                    item.exchangeStyleString(item.StyleString);
+                });
+
+                self.loadedOrderId(model.OrderID);
+                self.orderEntityId(model.OrderEntityId);
+                self.customerOrderId(model.CustomerOrderId);
+                self.market(model.Market);
+                self.marketplaceId(model.MarketplaceId);
+                self.orderDate(kendo.parseDate(model.OrderDate));
+                self.deliveryDate(model.DeliveryDate != null ? kendo.parseDate(model.DeliveryDate) : null);
+                self.expDeliveryDate(model.ExpDeliveryDate != null ? kendo.parseDate(model.ExpDeliveryDate) : null);
+                self.marketReturnUrl(model.MarketReturnUrl);
+                self.marketOrderUrl(model.MarketOrderUrl);
+                self.orderUrl(model.OrderUrl);
+                self.orderReturnComment("returned&refunded");
+                self.orderRefundComment("refunded");
+                self.orderExchangeComment("");
+
+                self.isRefundLocked(model.IsRefundLocked);
+
+                model.ReturnRequests.forEach(function (entry) {
+                    self.prepareReturnRequest(entry);
+                });
+
+                self.returnRequests(model.ReturnRequests);
+                
+                self.orderItemList(model.Items);
+
+                self.notes(self.getNotes());
+
+                self.setAddressFromModel(model.ToAddress, false);
+
+                self.labels(model.Labels);
+
+                //var hasHighlightedComment = false;
+                $.each(model.Comments, function(i, n) {
+                    n.isHighlighted = false;
+                    //if (!hasHighlightedComment) {
+                        if (n.Type == self.settings.commentTypes.returnExchange) {
+                            n.isHighlighted = true;
+                            //hasHighlightedComment = true;
+                        }
+                    //}
+                });
+                self.comments(model.Comments);
+
+                self.refunds(model.Refunds);
+
+                self.weightLb(model.WeightLb);
+                self.weightOz(model.WeightOz);
+                //self.notes(model.Notes);
+
+                self.totalPrice(model.TotalPrice);
+                self.actualShippingCost(model.ActualShippingCost);
+
+                self.updateShippingMethods();
+
+                self.shippingMethodId(null);
+                self.isInsured(model.IsInsured);
+                self.isSignConfirmation(false);
+
+                self.backItemsToInventory(true);
+                self.subtractReplacementFromInventory(true);
+                self.sendNewTrackingNumberToClient(false);
+                self.sendRefundCompletionToClient(false);
+                self.doRefund(true);
+                self.includeShipping(false);
+                self.deductShipping(self.isSourceFreeShipping());
+                self.isDeductPrepaidLabelCost(model.DeductPrepaidLabel);
+                self.prepaidLabelCost(model.PrepaidLabelCost);
+                console.log("PrepaidCost: " + self.prepaidLabelCost());
+                self.updateDeductShippingPrices();
+                self.updateDeductPrepaidLabelPrices();
+
+                self.updateComments();
+            } else {
+                self.orderErrorMessage('Order # is not found');
+            }
+        };
+
+        self.styleIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetStyleIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if(action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.clearOrderInfo = function() {
+            console.log("clearOrderInfo");
+
+            self.orderErrorMessage('');
+
+            self.printMessages([]);
+
+            self.wasProcessed(false);
+
+            self.loadedOrderId(null);
+            self.orderEntityId(null);
+            self.labels([]);
+            self.comments([]);
+            self.orderItemList([]);
+            self.orderEmailList([]);
+
+            self.orderReturnComment("");
+            self.orderRefundComment("");
+            self.orderExchangeComment("");
+        };
+
+        //self.errors = ko.validation.group(self);
+        //self.isValid = ko.computed(function() {
+        //    return self.errors.length == 0;
+        //});
+        self.onSubmit = function(data, e) {
+            console.log(data);
+            console.log(e);
+            console.log("generateButton click");
+
+            var validationGroup = null;
+            if (self.reasonCode() == self.settings.returnReasonCode) {
+                validationGroup = ko.validatedObservable({ });
+            }
+
+            if (self.reasonCode() == self.settings.refundReasonCode) {
+                validationGroup = ko.validatedObservable({
+                    refundReasonCode: self.refundReasonCode,
+                });
+            }
+
+            if (self.reasonCode() == self.settings.exchangeReasonCode) {
+                validationGroup = ko.validatedObservable({
+                    weightLb: self.weightLb,
+                    weightOz: self.weightOz,
+                    shippingMethodId: self.shippingMethodId
+                });
+            }
+
+            //http://stackoverflow.com/questions/13037713/how-to-use-ko-validation-group-function
+
+            //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+            //http://jsfiddle.net/KHFn8/3238/
+            if (validationGroup == null || validationGroup.errors().length == 0) { //validator.validate() &&
+                console.log("validate true");
+
+                var dataModel = self.getDataModel();
+                var sender = $(e.target);
+
+                self.validateRefundAsync(dataModel, sender).done(function() {
+                    self.submitReturn(dataModel, sender);
+                });
+
+                return true;
+            } else {
+                console.log("validate false");
+                validationGroup.errors.showAllMessages();
+                e.preventDefault();
+                return false;
+            }
+        };
+
+        self.validateRefundAsync = function(dataModel, sender) {
+            var defer = $.Deferred();
+            if ((self.reasonCode() == self.settings.returnReasonCode
+                && self.doRefund())
+                || self.reasonCode() == self.settings.refundReasonCode) {
+                self.setLoading('validate refund...');
+
+                $.ajax({
+                    url: '@Url.Action("ValidateRefund", "ReturnOrder")',
+                    method: "POST",
+                    dataType: 'json',
+                    contentType: 'application/json; charset=utf-8',
+
+                    async: true,
+                    cache: false,
+                    data: JSON.stringify(dataModel),
+                    success: function(result) {
+                        self.setLoading(null);
+                        if (result.IsSuccess) {
+                            defer.resolve();
+                        } else {
+                            defer.reject();
+                            var text = result.Message; //'You are trying refund more items/price amount that customer ordered/paid.<br/>'
+                            Message.popupAsync({
+                                title: 'Error',
+                                message: text,
+                                type: Message.CLOSE
+                            });
+                        }
+                    }
+                });
+            }
+            else {
+                defer.resolve();
+            }
+            return defer;
+        }
+
+        self.getDataModel = function() {
+            var comment = "";
+            if (self.reasonCode() == self.settings.returnReasonCode)
+                comment = self.orderReturnComment();
+            if (self.reasonCode() == self.settings.exchangeReasonCode)
+                comment = self.orderExchangeComment();
+            if (self.reasonCode() == self.settings.refundReasonCode)
+                comment = self.orderRefundComment();
+
+            var dataModel = {
+                ToAddress: self.getAddressModel(false),
+
+                OrderId: self.loadedOrderId(),
+                OrderEntityId: self.orderEntityId(),
+                Market: self.market(),
+                MarketplaceId: self.marketplaceId(),
+
+                Notes: self.notes(),
+                WeightLb: self.weightLb(),
+                WeightOz: self.weightOz(),
+
+                Items: self.orderItemList(),
+
+                IsInsured: self.isInsured(),
+                IsSignConfirmation: self.isSignConfirmation(),
+                TotalPrice: self.totalPrice(),
+
+                ShippingMethodSelected: self.shippingMethodId(),
+                ReasonCode: self.reasonCode(),
+                RefundReasonCode: self.refundReasonCode(),
+
+                OrderComment: comment,
+
+                BackItemsToInventory: self.backItemsToInventory(),
+                SubtractReplacementFromInventory: self.subtractReplacementFromInventory(),
+                SendNewTrackingNumberToClient: self.sendNewTrackingNumberToClient(),
+
+                SendRefundCompletionToClient: self.sendRefundCompletionToClient(),
+                DoRefund: self.doRefund(),
+                IncludeShipping: self.isRefund() ? true : self.includeShipping(),
+                DeductShipping: self.isRefund() ? false : self.deductShipping(),
+                DeductPrepaidLabel: self.isDeductPrepaidLabelCost(),
+
+                ReturnShippingFee: self.returnShippingFee(),
+                RestockingFee: self.restockingFee(),
+                ChangingFeeReason: self.changingFeeReason(),
+                ReturnRequestId: self.returnRequestId(),
+
+                RefundAmount: self.isWalmartReturnRequestMode() ? self.refundItemPriceTotal() : null,
+            };
+
+            for (var i = 0; i < dataModel.Items.length; i++) {
+                dataModel.Items[i].ExchangeStyleItemId = dataModel.Items[i].exchangeStyleItemId();
+                dataModel.Items[i].ExchangeStyleString = dataModel.Items[i].exchangeStyleString();
+                dataModel.Items[i].InputQuantity = dataModel.Items[i].inputQuantity();
+                dataModel.Items[i].InputDamagedQuantity = dataModel.Items[i].inputDamagedQuantity();
+                dataModel.Items[i].RefundItemPrice = dataModel.Items[i].refundItemPrice();
+                dataModel.Items[i].RefundShippingPrice = dataModel.Items[i].refundShippingPrice();
+                dataModel.Items[i].DeductShippingPrice = dataModel.Items[i].deductShippingPrice();
+                dataModel.Items[i].DeductPrepaidLabelCost = dataModel.Items[i].deductPrepaidLabelCost();
+            };
+
+            return dataModel;
+        };
+
+        self.generate = function(dataModel, sender) {
+            self.submitReturn(dataModel, sender);
+        };
+
+
+        self.setLoading = function(message) {
+            if (message != null && message != '') {
+                self.isLoading(true);
+            } else {
+                self.isLoading(false);
+            }
+            self.loadingText(message);
+        }
+
+        self.submitReturn = function(dataModel, sender) {
+            self.setLoading('processing...');
+
+            $.ajax({
+                method: "POST",
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+
+                async: true,
+                cache: false,
+                data: JSON.stringify(dataModel),
+
+                url: '@Url.Action(MVC.ReturnOrder.Generate())',
+
+                success: function(data) {
+                    console.log('set wasProcessed');
+                    self.wasProcessed(true);
+
+                    if (data.IsPrinted) {
+                        data.Messages.push({
+                            IsSuccess: true,
+                            Message: "Label has been successfully printed, tracking number: "
+                            + "<b>" + data.PrintedTrackingNumber + "</b>"
+                            + " <b><a target='_blank' href='" + data.PrintedLabelUrl + "'>download</a></b>"
+                        });
+                    }
+
+                    //Returned items
+                    var returnedItems = $.grep(self.orderItemList(), function(n) { return n.inputQuantity() > 0; });
+                    if (returnedItems.length > 0) {
+                        var locStrings = $.map(returnedItems, function(n) {
+                            var loc = n.DefaultLocation;
+                            return n.StyleString + " - " + (loc != null ? loc.Isle + "/" + loc.Section + "/" + loc.Shelf : "none");
+                        });
+                        data.Messages.push({
+                                IsSuccess: true,
+                                Message: "Returned items locations: " + locStrings.join(", ")
+                            });
+                    }
+
+                    self.printMessages(data.Messages);
+
+                    if (data.IsPrinted) {
+                        console.log(data.PrintedLabelUrl);
+                        var url = data.PrintedLabelUrl;
+                        window.open(url, "_blank", "");
+                    }
+                },
+                complete: function(data) {
+                    console.log('submit complete');
+                    self.setLoading(null);
+                },
+            });
+        };
+
+        if (!dataUtils.isEmpty(self.model.OrderId))
+            self.searchString(self.model.OrderId); //Trigget search
+        else
+            self.updateShippingMethods();
+    };
+
+</script>
+
+<style>
+    .am-mail .block {
+        padding: 10px;
+    }
+
+    .am-mail .block .title {
+        font-weight: bold;
+        font-size: 16px;
+        padding-bottom: 5px;
+    }
+
+    .am-mail .block .list {
+    }
+
+    .am-mail .block .list tr {
+        border-bottom: 1px solid lightgrey;
+    }
+</style>
+
+<div id="page-content">
+
+
+    <ol class="breadcrumb">
+        <li><a href="#">Orders</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="am-mail">
+        <div style="padding: 10px 0px 5px 7px">
+            <div id="errorMessage" class="text-danger" data-bind="html: errorMessage"></div>
+            <div id="successMessage" class="text-success" data-bind="html: successMessage"></div>
+        </div>
+
+        <div>
+            <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation" data-bind="css: { 'active' : isReturn }"><a href="#return" data-bind="click: onReturn" aria-controls="home" role="tab" data-toggle="tab">Return</a></li>
+                <li role="presentation" data-bind="css: { 'active' : isRefund }"><a href="#refund" data-bind="click: onRefund" aria-controls="refund" role="tab" data-toggle="tab">Refund</a></li>
+                <li role="presentation" data-bind="css: { 'active' : isExchange }"><a href="#exchange" data-bind="click: onExchange" aria-controls="profile" role="tab" data-toggle="tab">Exchange</a></li>
+            </ul>
+        </div>
+
+        <div style="margin: 0px 8px; padding: 8px 0px 14px 0px">
+            <div>
+                <input type="text"
+                       style="width:250px; border-color: #2d2d2d"
+                       class="k-textbox"
+                       data-bind="kendoAutoComplete: {
+                               value: searchString,
+                               data: {},
+                               minLenght: 3,
+                        highlightFirst:true,
+                               dataSource: orderIdSource },
+                                    valueUpdate: 'afterkeydown',
+                                    event: { keypress: searchByKeyCmd }"
+                       placeholder="Order # / RMA #" />
+                <a class="k-button" href="javascript: ;" data-bind="click: search, enable: canSearch, css: { 'k-state-disabled': !canSearch() }">
+                    <span class='glyphicon glyphicon-search am-icon'></span>Search
+                </a>
+            </div>
+            <div>
+                <span data-bind="text: orderErrorMessage" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div style="margin: 0px 8px" data-bind="visible: !isEnableOperations()">
+            <div class="panel panel-default">
+                <div class="panel-heading">Notes</div>
+                <div class="panel-body">For this order refunds/exchange operations were disabled</div>
+            </div>
+        </div>
+
+        <table style="margin: 0px 8px" data-bind="visible: isEnableOperations()">
+            <tr>
+                <!--Order Info-->
+                <td style="vertical-align: top; min-width: 500px; padding-right: 20px">
+                    <div class="panel panel-default" data-bind="visible: isReturn() || isExchange()">
+                        <div class="panel-heading">Order Details</div>
+                        <div class="panel-body">
+                            <div style="padding: 5px" data-bind="visible: orderIdLoading">Loading...</div>
+                            <div data-bind="visible: hasOrder">
+                                <div>
+                                    <span class="gray">Order #:</span> <a href="#"
+                                                                          data-bind="attr: { href: orderUrl }"
+                                                                          target="_blank"><span data-bind="text: loadedOrderId"></span></a>
+                                </div>
+                                <div><span class="gray">Order Date: </span><span data-bind="textFormatted: orderDate, pattern: 'MM/dd/yyyy HH:mm', ifEmpty: '-'"></span></div>
+                                <div><span class="gray">Delivery Date: </span><span data-bind="textFormatted: deliveryDate, pattern: 'MM/dd/yyyy', ifEmpty: '-'"></span></div>
+                                <div>
+                                    <span class="gray">Total Price: </span><span data-bind="text: priceCurrency"></span><span data-bind="text: itemPriceTotal"></span>
+                                    + <span data-bind="text: priceCurrency"></span><span data-bind="text: shippingPriceTotal"></span>
+                                    <span data-bind="visible: hasShippingDiscount" class="red">
+                                        - <span data-bind="text: priceCurrency"></span><span data-bind="text: shippingDiscountTotal"></span>
+                                    </span>
+                                    ($<span data-bind="text: actualShippingCost"></span>)
+                                </div>
+                                <div style="padding-top: 8px">
+                                    <a href="#"
+                                       data-bind="attr: { href: marketReturnUrl }"
+                                       target="_blank">Marketplace Return page</a>
+                                </div>
+                                <div style="padding-top: 4px">
+                                    <a href="#"
+                                       data-bind="attr: { href: marketOrderUrl }"
+                                       target="_blank">Order on marketplace</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel panel-default" data-bind="visible: isReturn() || isRefund()">
+                        <div class="panel-heading">Prior Refunds</div>
+                        <div class="panel-body">
+                            <div data-bind="visible: refunds().length == 0">
+                                No refunds
+                            </div>
+                            <div style="padding-top: 5px"
+                                 class="order-items"
+                                 data-bind="visible: refunds().length > 0">
+                                <table>
+                                    <tr>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                        <th>Action</th>
+                                    </tr>
+                                    <tbody data-bind="foreach: refunds">
+                                        <tr>
+                                            <td>$<span data-bind="text: Amount"></span></td>
+                                            <td><span data-bind="text: statusName, css: statusCss"></span>
+                                                <a data-bind="attr: { 'title' : Message }, visible: hasMessage">
+                                                    <span class="glyphicon glyphicon-exclamation-sign text-danger"
+                                                          style="font-size: 18px; vertical-align: middle; margin: 0px 0px 0px 2px"></span>
+                                                </a>
+                                            </td>
+                                            <td><span data-bind="textFormatted: Date, pattern: 'MM.dd.yyyy', ifEmpty: '-'"></span></td>
+                                            <td>
+                                                <div data-bind="visible: canMarkAsDone">
+                                                    <a class="k-button" data-bind="click: onMarkAsProcessed">Mark as done</a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel panel-default" data-bind="visible: isExchange() || isReturn()">
+                        <div class="panel-heading">Return Items</div>
+                        <div class="panel-body">
+                            <div style="padding: 5px" data-bind="visible: orderIdLoading">Loading...</div>
+
+                            <div style="padding-top: 5px" class="order-items">
+                                <table>
+                                    <tr>
+                                        <th></th>
+                                        <th>Received</th>
+                                        <th data-bind='visible: isExchange' style="padding-left: 8px">Exchange to</th>
+                                        <th data-bind='visible: isReturn' style="padding-left: 8px">Refund amount</th>
+                                    </tr>
+                                    <tbody data-bind="foreach: orderItemList">
+                                        <tr>
+                                            <td style="padding-right: 5px;">
+                                                <a data-bind='attr: { href: ProductUrl }'
+                                                   style="color: black"
+                                                   target='_blank'>
+                                                    <img height='75' data-bind='attr: { src: Thumbnail }' style='border: 0' />
+                                                </a>
+                                            </td>
+                                            <td>
+
+                                                <table>
+                                                    <tr>
+                                                        <td colspan="3">
+                                                            <div style="margin: 3px 0px">
+                                                                <a data-bind='attr: { href: StyleUrl }'
+                                                                   style='color: black'
+                                                                   target='_blank'>
+                                                                    <span data-bind="text: StyleString" />
+                                                                </a> - <span data-bind="text: Size" />
+                                                            </div>
+                                                            <input type="hidden" data-bind="value: ItemOrderId" />
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>
+                                                            Total Received:
+                                                            <span class="note">(include damaged)</span>
+                                                        </td>
+                                                        <td>
+                                                            <input data-bind="value: inputQuantity, valueUpdate:'afterkeydown'"
+                                                                   style="width: 40px"
+                                                                   class="k-textbox" />
+                                                        </td>
+                                                        <td style="padding-top: 7px;">
+                                                            /<span data-bind="text: originalItemCount"></span>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>
+                                                            Damaged:
+                                                        </td>
+                                                        <td>
+                                                            <input data-bind="value: inputDamagedQuantity"
+                                                                   style="width: 40px"
+                                                                   class="k-textbox" />
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+
+                                            <td data-bind='visible: isReturn' style="vertical-align: top; text-align: right; padding-left: 8px; padding-top: 8px">
+                                                <table>
+                                                    <tr>
+                                                        <td>
+                                                            Items: <span data-bind="text: priceCurrency"></span><input class="k-textbox"
+                                                                                                                       style="width: 80px"
+                                                                                                                       data-bind="value: refundItemPrice, enable: doRefund" />
+                                                        </td>
+                                                        <td style="padding-top: 7px; text-align:left">
+                                                            /<span data-bind="text: priceCurrency"></span><span data-bind="text: originalItemPrice"></span>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>
+                                                            Shipping: <span data-bind="text: priceCurrency"></span><input class="k-textbox"
+                                                                                                                          style="width: 80px"
+                                                                                                                          data-bind="value: refundShippingPrice, enable: includeShipping" />
+                                                        </td>
+                                                        <td style="padding-top: 7px; text-align:left">
+                                                            /<span data-bind="text: priceCurrency"></span><span data-bind="text: originalShippingPrice"></span>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+
+
+                                            <td data-bind='visible: isExchange' style="vertical-align: bottom; padding-left: 8px; padding-top: 8px">
+                                                <table>
+                                                    <tr>
+                                                        <td>StyleId:</td>
+                                                        <td>
+                                                            <input type="hidden"
+                                                                   data-bind="value: exchangeStyleId" />
+
+                                                            <input style='width: 180px' class="k-textbox" data-bind="kendoAutoComplete: {
+                                                                        value: exchangeStyleString,
+                                                                        data: {},
+                                                                        minLenght: 3,
+                                                                        dataSource: styleIdSource }" />
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Size/Color:</td>
+                                                        <td>
+                                                            <input style="width: 100px"
+                                                                   data-bind="kendoDropDownList: {data: sizeList, value: exchangeStyleItemId, dataTextField: 'Text', dataValueField: 'Value' }" />
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Weight:</td>
+                                                        <td><span data-bind="text: weight" /> oz</td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel panel-default" data-bind="visible: isRefund()">
+                        <div class="panel-heading">Refund Amount</div>
+                        <div class="panel-body">
+                            <div style="padding: 5px" data-bind="visible: orderIdLoading">Loading...</div>
+
+                            <div style="padding-top: 5px; text-align: right">
+                                <input type="radio" data-bind="checked: refundMode, enable: enableFullRefund" value="1" />Full Refund
+                                <input type="radio" data-bind="checked: refundMode" style="margin-left: 10px" value="0" />Partial Refund
+                            </div>
+
+                            <div style="padding-top: 5px" class="order-items">
+                                <table>
+                                    <tr>
+                                        <th></th>
+                                        <th>Order Items</th>
+                                        <th style="padding-left: 8px">Refund amount</th>
+                                    </tr>
+                                    <tbody data-bind="foreach: orderItemList">
+                                        <tr>
+                                            <td style="padding-right: 5px;">
+                                                <a data-bind='attr: { href: ProductUrl }'
+                                                   style="color: black"
+                                                   target='_blank'>
+                                                    <img height='75' data-bind='attr: { src: Thumbnail }' style='border: 0' />
+                                                </a>
+                                            </td>
+                                            <td>
+                                                <div style="margin: 3px 0px">
+                                                    <a data-bind='attr: { href: StyleUrl }'
+                                                       style='color: black'
+                                                       target='_blank'>
+                                                        <span data-bind="text: StyleString" />
+                                                    </a> - <span data-bind="text: Size" />
+                                                </div>
+                                                <input type="hidden" data-bind="value: ItemOrderId" />
+                                            </td>
+
+                                            <td style="vertical-align: top; text-align: right; padding-left: 8px;">
+                                                <table>
+                                                    <tr>
+                                                        <td>
+                                                            Merchandise: <span data-bind="text: priceCurrency"></span><input class="k-textbox"
+                                                                                                                             style="width: 80px"
+                                                                                                                             data-bind="value: refundItemPrice, enable: isPartialRefundMode" />
+                                                        </td>
+                                                        <td style="padding-top: 7px;">
+                                                            /<span data-bind="text: priceCurrency"></span><span data-bind="textFormatted: originalItemPrice, pattern: '#,##0.00'"></span>
+                                                            <div data-bind="visible: originalItemCount() > 1">
+                                                                (<span data-bind="text: priceCurrency"></span><span data-bind="textFormatted: originalPerItemPrice, pattern: '#,##0.00'"></span> x <span data-bind="text: originalItemCount"></span>)
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td colspan="2"><span class="red" data-bind="text: refundItemPriceError"></span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>
+                                                            Shipping: <span data-bind="text: priceCurrency"></span><input class="k-textbox"
+                                                                                                                          style="width: 80px"
+                                                                                                                          data-bind="value: refundShippingPrice, enable: isPartialRefundMode" />
+                                                        </td>
+                                                        <td style="padding-top: 7px;">
+                                                            /<span data-bind="text: priceCurrency"></span><span data-bind="text: originalShippingPrice"></span>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td colspan="2"><span class="red" data-bind="text: refundShippingPriceError"></span></td>
+                                                    </tr>
+                                                </table>
+                                                <span class='gray'>maximum can be what client paid</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="panel panel-default" data-bind="visible: isExchange">
+                        <div class="panel-heading">Label for replacement items</div>
+                        <div class="panel-body">
+                            <div class="lb">
+                                <table>
+                                    <tr>
+                                        <th>Weight *:</th>
+                                        <td><input name="WeightLb" type="text" data-bind="value: weightLb" class="k-textbox" /> lb</td>
+                                        <td><input name="WeightOz" type="text" data-bind="value: weightOz" class="k-textbox" /> oz</td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <div class="address-block">
+                                <table>
+                                    <tr>
+                                        <td id="to">
+                                            <div>To:</div>
+                                            <table>
+                                                <tr>
+                                                    <th>Full Name</th>
+                                                    <td>
+                                                        <input type="text"
+                                                               name="ToAddress.FullName"
+                                                               class="text-box k-textbox"
+                                                               data-bind="value: toAddressFullName" />
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Address 1</th>
+                                                    <td>
+                                                        <input type="text"
+                                                               name="ToAddress.Address1"
+                                                               class="text-box k-textbox"
+                                                               data-bind="value: toAddressAddress1" />
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Address 2</th>
+                                                    <td>
+                                                        <input type="text"
+                                                               name="ToAddress.Address2"
+                                                               class="text-box k-textbox"
+                                                               data-bind="value: toAddressAddress2" />
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th>City</th>
+                                                    <td>
+                                                        <input type="text"
+                                                               name="ToAddress.City"
+                                                               class="text-box k-textbox"
+                                                               data-bind="value: toAddressCity" />
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th>State</th>
+                                                    <td>
+                                                        <div data-bind="visible: toAddressIsCountryNonUSA">
+                                                            <input type="text"
+                                                                   name="ToAddress.NonUSAState"
+                                                                   class="text-box k-textbox"
+                                                                   data-bind="value: toAddressNonUSAState" />
+                                                        </div>
+                                                        <div data-bind="visible: toAddressIsCountryUSA">
+                                                            <input name="ToAddress.USAState"
+                                                                   data-bind="kendoDropDownList: {data: settings.stateList, value: toAddressUSAState, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'State...' }" />
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Zip</th>
+                                                    <td>
+                                                        <input type="text"
+                                                               name="ToAddress.Zip"
+                                                               class="text-box k-textbox"
+                                                               style="width: 120px"
+                                                               data-bind="value: toAddressZip" />
+                                                        -
+                                                        <input type="text"
+                                                               name="ToAddress.ZipAddon"
+                                                               class="text-box k-textbox"
+                                                               style="width: 80px"
+                                                               data-bind="value: toAddressZipAddon" />
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Country</th>
+                                                    <td>
+                                                        <input name="ToAddress.Country"
+                                                               data-bind="kendoDropDownList: {data: settings.countryList, value: toAddressCountry, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Country...' }" />
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Phone</th>
+                                                    <td>
+                                                        <input type="text"
+                                                               name="ToAddress.Phone"
+                                                               class="text-box k-textbox"
+                                                               data-bind="value: toAddressPhone" />
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <a data-bind="click: checkToAddress" style="width: 140px" href="javascript:;" class="k-button">Check Address</a>
+                                                        <div style="padding-top: 5px">
+                                                            <a target="_blank" data-bind="attr: { href: melissaSearchToAddressUrl }">Address on Melissa</a>
+                                                            <a target="_blank" style="margin-left: 15px" data-bind="attr: { href: googleSearchToAddressUrl }">Address on Google</a>
+                                                        </div>
+                                                        <div data-bind="html: toAddressMessage" style="padding: 2px"></div>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="shipping">
+                                <div>
+                                    <span>Shipping Method *:</span>
+                                    <input name="ShippingMethodSelected"
+                                           style="width: 220px"
+                                           data-bind="kendoDropDownList: {data: shippingMethodList, value: shippingMethodId, dataTextField: 'Name', dataValueField: 'Id', optionLabel: 'Shipping method...' }" />
+                                    <span class="field-validation-error-inline"
+                                          data-bind="validationMessage: shippingMethodId"></span>
+                                </div>
+                                <div>
+                                    <span>Note:</span>
+                                    <input type="text"
+                                           name="Notes"
+                                           data-bind="value: notes"
+                                           class="k-textbox"
+                                           style="width: 300px" maxlength="160" />
+                                </div>
+                                <div>
+                                    <input type="hidden"
+                                           name="TotalPrice"
+                                           data-bind="value: totalPrice" />
+                                    <input type="checkbox"
+                                           name="IsInsured"
+                                           data-bind="checked: isInsured" /> <span>Insurance (insured value: <span data-bind="text: priceCurrency"></span><span id="TotalPriceLabel" data-bind="text: totalPrice"></span>)</span>
+                                </div>
+                                <div>
+                                    <input type="checkbox"
+                                           name="IsSignConfirmation"
+                                           data-bind="checked: isSignConfirmation" /> <span>Signature Confirmation</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel panel-default" data-bind="visible: isExchange">
+                        <div class="panel-heading">Actions</div>
+                        <div class="panel-body">
+                            <div style="padding: 10px">
+                                <input type="checkbox"
+                                       checked="checked"
+                                       disabled="disabled" /> <span>Print label for the replacement</span>
+                            </div>
+                            <div style="padding: 10px">
+                                <input type="checkbox"
+                                       name="SendNewTrackingNumberToClient"
+                                       disabled="disabled"
+                                       data-bind="checked: sendNewTrackingNumberToClient" /> <span>Send a new tracking number to the client</span>
+                            </div>
+                            <div style="padding: 10px">
+                                <input type="checkbox"
+                                       name="BackItemsToInventory"
+                                       data-bind="checked: backItemsToInventory" /> <span>Add returned/damaged items to inventory</span>
+                            </div>
+                            <div style="padding: 10px">
+                                <input type="checkbox"
+                                       name="SubtractReplacementFromInventory"
+                                       data-bind="checked: subtractReplacementFromInventory" /> <span>Subtract replacement items from inventory</span>
+                            </div>
+
+                            <div class=""
+                                 style="padding-top: 15px">
+                                <div>Comment</div>
+                                <textarea rows="3"
+                                          style="width: 350px"
+                                          class="k-textbox"
+                                          data-bind="value: orderExchangeComment"></textarea>
+                            </div>
+
+                            <div class="buttons" style="padding-top: 15px">
+                                <button type="button"
+                                        id="exchangeButton"
+                                        name="Exchange"
+                                        data-bind="click: onSubmit, enable: canExchange(), css: { 'k-state-disabled': !canExchange() }"
+                                        class="k-button"
+                                        style="width: 120px">
+                                    Exchange
+                                </button>
+                                <div data-bind="text: loadingText"></div>
+                                <div style="padding-top: 8px">
+                                    <div class="text-danger"
+                                         data-bind="html: errorMessage"></div>
+                                    <div class="text-success"
+                                         data-bind="html: successMessage"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel panel-default" data-bind="visible: isReturn()">
+                        <div class="panel-heading">Actions</div>
+                        <div class="panel-body">
+                            <div data-bind="visible: isWalmart">
+                                <div style="padding: 5px 10px 10px 15px">
+                                    <div>
+                                        <input type="radio" value="0" name="WalmartReturnMode" data-bind="checked: walmartReturnMode" /> Select refund request:
+                                        <input style="width: 200px"
+                                               data-bind="enable: doRefund, kendoDropDownList: {data: returnRequests, value: returnRequestId, dataTextField: 'Name', dataValueField: 'Id', optionLabel: 'Select...' }" />
+                                    </div>
+                                    <div>
+                                        <input type="radio" value="1" name="WalmartReturnMode" data-bind="checked: walmartReturnMode" /> Custom
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="padding: 10px">
+                                <input type="checkbox"
+                                       checked="checked"
+                                       data-bind="checked: doRefund" /> <span>Submit refund request to Marketplace, <span data-bind="text: priceCurrency"></span><span data-bind="textFormatted: refundItemPriceTotal, pattern: '0.00'"></span></span>
+                            </div>
+
+                            <div data-bind="visible: !isWalmart() || isWalmartCustomRefundMode()">
+                                <div style="padding: 5px 10px 10px 25px">
+                                    <input type="checkbox"
+                                           name="IncludeShipping"
+                                           data-bind="enable: doRefund, checked: includeShipping" /> <span>Refund shipping cost, <span data-bind="text: priceCurrency"></span><span data-bind="textFormatted: refundShippingPriceTotal, pattern: '0.00'"></span></span>
+                                </div>
+                                <div style="padding: 5px 10px 10px 25px">
+                                    <input type="checkbox"
+                                           data-bind="enable: enableDeduct, checked: deductShipping" /> <span>Deduct proportionate shipping, <span data-bind="text: priceCurrency"></span><span data-bind="text: deductShippingPriceTotal"></span></span>
+                                </div>
+                                <div style="padding: 5px 10px 10px 25px">
+                                    <input type="checkbox"
+                                           data-bind="enable: doRefund, checked: isDeductPrepaidLabelCost" /> <span>Deduct prepaid label cost, <span data-bind="text: priceCurrency"></span><span data-bind="textFormatted: prepaidLabelCost, pattern: '0.00', ifEmpty: '0.00'"></span></span>
+                                </div>
+                                <div style="padding: 10px">
+                                    <input type="checkbox"
+                                           name="SendRefundCompletionToClient"
+                                           data-bind="checked: sendRefundCompletionToClient"
+                                           disabled="disabled" /> <span>Send email to the client when the refund will be processed on Amazon</span>
+                                </div>
+                            </div>
+
+                            <div data-bind="visible: isWalmart() && isWalmartReturnRequestMode()">
+                                <div style="padding: 5px 10px 10px 25px">
+                                    <input type="checkbox"
+                                           data-bind="enable: doRefund, checked: restockingFee" /> <span>Restocking fee (-20%)</span>
+                                </div>
+                                <div style="padding: 5px 10px 10px 25px">
+                                    <input type="checkbox"
+                                           data-bind="enable: doRefund, checked: returnShippingFee" /> <span>Return shipping fee (-$7)</span>
+                                </div>
+                                <div style="padding: 5px 10px 10px 25px">
+                                    <div>Reason for Charging a Fee:</div>
+                                    <textarea rows="3"
+                                              style="width: 350px"
+                                              class="k-textbox"
+                                              data-bind="enable: doRefund, value: changingFeeReason"></textarea>
+                                </div>
+                            </div>
+
+                            <div style="padding: 10px">
+                                <input type="checkbox"
+                                       name="BackItemsToInventory"
+                                       data-bind="checked: backItemsToInventory" /> <span>Add returned items back to inventory</span>
+                            </div>
+
+                            <div class=""
+                                 style="padding-top: 15px">
+                                <div>Comment:</div>
+                                <textarea rows="3"
+                                          style="width: 350px"
+                                          class="k-textbox"
+                                          data-bind="value: orderReturnComment"></textarea>
+                            </div>
+
+                            <div class="buttons" style="padding-top: 15px">
+                                <button type="button"
+                                        id="returnButton"
+                                        name="Return"
+                                        data-bind="click: onSubmit, enable: canReturn(), css: {'k-state-disabled': !canReturn() }"
+                                        class="k-button"
+                                        style="width: 120px">
+                                    Return
+                                </button>
+                                <div data-bind="text: loadingText"></div>
+                                <div style="padding-top: 8px">
+                                    <div class="text-danger"
+                                         data-bind="html: errorMessage"></div>
+                                    <div class="text-success"
+                                         data-bind="html: successMessage"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @*<div class="panel panel-default" data-bind="visible: isReturn() && isWalmart()">
+                        <div class="panel-heading">Actions</div>
+                        <div class="panel-body">
+
+                            <div style="padding: 10px">
+                                <input type="checkbox"
+                                       checked="checked"
+                                       data-bind="checked: doRefund" /> <span>Submit refund request to Marketplace, <span data-bind="text: priceCurrency"></span><span data-bind="textFormatted: refundItemPriceTotal, pattern: '0.00'"></span></span>
+                            </div>
+                            <div style="padding: 5px 10px 10px 25px">
+                                Choose refund request:
+                                <input style="width: 200px"
+                                       data-bind="enable: doRefund, kendoDropDownList: {data: returnRequests, value: returnRequestId, dataTextField: 'Name', dataValueField: 'Id', optionLabel: 'Select...' }" />
+                            </div>
+                            <div style="padding: 5px 10px 10px 25px">
+                                <input type="checkbox"
+                                       data-bind="enable: doRefund, checked: restockingFee" /> <span>Restocking fee (-20%)</span>
+                            </div>
+                            <div style="padding: 5px 10px 10px 25px">
+                                <input type="checkbox"
+                                       data-bind="enable: doRefund, checked: returnShippingFee" /> <span>Return shipping fee (-$7)</span>
+                            </div>
+                            <div style="padding: 5px 10px 10px 25px">
+                                <div>Reason for Charging a Fee:</div>
+                                <textarea rows="3"
+                                          style="width: 350px"
+                                          class="k-textbox"
+                                          data-bind="enable: doRefund, value: changingFeeReason"></textarea>
+                            </div>
+
+                            <div style="padding: 10px">
+                                <input type="checkbox"
+                                       name="BackItemsToInventory"
+                                       data-bind="checked: backItemsToInventory" /> <span>Add returned items back to inventory</span>
+                            </div>
+
+                            <div class=""
+                                 style="padding-top: 15px">
+                                <div>Comment:</div>
+                                <textarea rows="3"
+                                          style="width: 350px"
+                                          class="k-textbox"
+                                          data-bind="value: orderReturnComment"></textarea>
+                            </div>
+
+                            <div class="buttons" style="padding-top: 15px">
+                                <button type="button"
+                                        id="returnButton"
+                                        name="Return"
+                                        data-bind="click: onSubmit, enable: canReturn(), css: {'k-state-disabled': !canReturn() }"
+                                        class="k-button"
+                                        style="width: 120px">
+                                    Return
+                                </button>
+                                <div data-bind="text: loadingText"></div>
+                                <div style="padding-top: 8px">
+                                    <div class="text-danger"
+                                         data-bind="html: errorMessage"></div>
+                                    <div class="text-success"
+                                         data-bind="html: successMessage"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>*@
+
+                    <div class="panel panel-default" data-bind="visible: isRefund">
+                        <div class="panel-heading">Actions</div>
+                        <div class="panel-body">
+                            <div>
+                                <span>Reason *:</span>
+                                <input name="ReasonCode"
+                                       style="width: 200px"
+                                       data-bind="kendoDropDownList: {data: refundReasonList, value: refundReasonCode, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Reason...' }" />
+                                <span class="field-validation-error-inline"
+                                      data-bind="validationMessage: refundReasonCode"></span>
+                            </div>
+
+                            <div class=""
+                                 style="padding-top: 15px">
+                                <div>Comment:</div>
+                                <textarea rows="3"
+                                          style="width: 350px"
+                                          class="k-textbox"
+                                          data-bind="value: orderRefundComment"></textarea>
+                            </div>
+
+                            <div class="buttons" style="padding-top: 15px">
+                                <button type="button"
+                                        id="refundButton"
+                                        name="Return"
+                                        data-bind="click: onSubmit, enable: canRefund(), css: {'k-state-disabled': !canRefund() }"
+                                        class="k-button"
+                                        style="width: 120px">
+                                    Refund
+                                </button>
+                                <div data-bind="text: loadingText"></div>
+                                <div style="padding-top: 8px">
+                                    <div class="text-danger"
+                                         data-bind="html: errorMessage"></div>
+                                    <div class="text-success"
+                                         data-bind="html: successMessage"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+
+
+                <!--Email Info-->
+                <td style="vertical-align: top; width: 600px">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">Return Request</div>
+                        <div class="panel-body">
+                            <div style="padding: 5px" data-bind="visible: orderIdLoading">Loading...</div>
+                            <div style="padding-top: 5px" data-bind="visible: !orderIdLoading(), foreach: returnRequests">
+                                <div style="padding-bottom: 10px">
+                                    <div>
+                                        #<span data-bind="text: $index() + 1"></span>. <span class="gray">Receive date:</span> <span data-bind="text: dateString"></span>
+                                    </div>
+                                    <div data-bind="visible: hasRMA">
+                                        <span class="gray">RMA: </span> <span data-bind="text: MarketReturnId"></span>
+                                    </div>
+                                    <div data-bind="visible: returnRequestAfter30Days" style="display: none">
+                                        <span class="red">return request came too late!</span>
+                                    </div>
+                                    <div data-bind="visible: returnRequest20DaysHavePassed" style="display: none">
+                                        <span class="red">return period expired!</span>
+                                    </div>
+                                    <div>
+                                        <span class="gray">Reason: </span> <span data-bind="text: reason"></span>
+                                    </div>
+                                    <div>
+                                        <span class="gray">Item Name: </span> <span data-bind="text: itemName"></span>
+                                    </div>
+                                    <div>
+                                        <span class="gray">Customer Comments: </span> <span data-bind="text: customerComments"></span>
+                                    </div>
+                                    <div>
+                                        <span class="gray">Details: </span> <span data-bind="text: details"></span>
+                                    </div>
+                                    <div>
+                                        <span class="gray">Has prepaid Label: </span>
+                                        <span data-bind="visible: hasPrepaidLabel() == true" class="red">
+                                            Yes (<span data-bind="text: priceCurrency"></span><span data-bind="textFormatted: prepaidLabelCost, pattern: '0.00'"></span>)
+                                        </span>
+                                        <span data-bind="visible: hasPrepaidLabel() === false">No</span>
+                                        <span data-bind="visible: hasPrepaidLabel() == null" class="gray">no info</span>
+                                    </div>
+                                    @*<div style="padding: 5px">
+            <div data-bind="visible: canAcceptReturn">
+                <a data-bind="click: onAcceptReturn" class="k-button">Accept</a>
+            </div>
+            <div data-bind="visible: acceptedReturn()">
+                <span class="label label-success">Accepted</span>
+            </div>
+        </div>*@
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel panel-default">
+                        <div class="panel-heading">Comments</div>
+                        <div class="panel-body">
+                            <div style="padding: 5px" data-bind="visible: orderIdLoading">Loading...</div>
+                            <div style="font-size: 13px">
+                                <table data-bind="foreach: comments">
+                                    <tr>
+                                        <td style="padding-right: 5px; padding-bottom: 6px">
+                                            <div data-bind="text: Comment, css: { 'highlight-comment': isHighlighted }"></div>
+                                            <div class="gray" text-align="left"><span data-bind="text: CommentDate"></span> - by <span data-bind="textFormatted: CommentByName, ifEmpty: 'system'"></span></div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel panel-default">
+                        <div class="panel-heading">Order Labels</div>
+                        <div class="panel-body">
+                            <div style="padding: 5px" data-bind="visible: orderIdLoading">Loading...</div>
+                            <div>
+                                <table data-bind="foreach: labels">
+                                    <tr>
+                                        <td style="padding-right: 5px; padding-bottom:8px">
+                                            <div style="color: #333">
+                                                <span data-bind="text: ReasonText"></span> - <a target="_blank"
+                                                                                                data-bind="attr: { href: TrackingUrl }"><span data-bind="text: TrackingNumber"></span></a>
+                                                - <a target="_blank"
+                                                     data-bind="attr: {href: LabelViewUrl }">view label</a>
+                                                <span data-bind="visible: IsCanceled"> (canceled)</span>
+                                            </div>
+                                            <div style="color: #333; font-size: 85%">
+                                                <div><span class="gray">Purchased at:</span> <span data-bind="textFormatted: PurchaseDate, pattern: 'MM.dd.yyyy HH:mm'"></span></div>
+                                                <div><span class="gray">Status:</span> <span data-bind="text: TrackingStateEvent"></span> (at: <span data-bind="text: TrackingStateDate"></span>)</div>
+                                                <div><span class="gray">Delivered at:</span> <span data-bind="text: ActualDeliveryDate"></span></div>
+                                            </div>
+
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel panel-default">
+                        <div class="panel-heading"><a target="_blank" data-bind="attr: {href: orderEmailsUrl }">Order Emails</a></div>
+                        <div class="panel-body">
+                            <div style="padding: 5px" data-bind="visible: orderEmailLoading">Loading...</div>
+                            <div style="padding: 5px" data-bind="visible: isNoEmails">No Emails</div>
+                            <div class="list" style="padding-top: 5px; padding-right: 5px; overflow-y: scroll; max-height: 500px; min-height: 150px">
+                                <table data-bind="foreach: orderEmailList">
+                                    <tr>
+                                        <td>
+                                            <div style="padding-top: 4px">
+                                                <span data-bind="text: FolderName, css: { 'sent-folder' : IsSent, 'inbox-folder': !IsSent}" class="folder"
+                                                      style="margin-right: 0px"></span>
+                                                <a target="_blank"
+                                                   data-bind="attr: { href: ViewEmailUrl }"
+                                                   style="font-weight: bold; color: #666; font-size: 14px">
+                                                    <span data-bind="html: Subject" />
+                                                </a>
+                                            </div>
+                                            <div style="float: left; color: #666" class="remark">
+                                                <span data-bind="text: FromName"></span> <<span data-bind="text: FromEmail"></span>>
+                                            </div>
+                                            <div data-bind="text: ReceiveDate" class="remark" style="float: right; color: #666"></div>
+                                            <div style="clear: both"></div>
+                                            <div data-bind="html: ShortBody" style="padding-top: 3px; padding-bottom: 14px; color: #333; font-size: 13px"></div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+
+@Html.Partial(MVC.Shared.Views._TemplatesOrder)
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        var settings = {
+            stateList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.States)),
+            countryList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.Countries)),
+            reasonList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(MailViewModel.Reasons)),
+            defaultCountryCode: '@Constants.DefaultCountryCode',
+            returnReasonCode: '@((int)MailLabelReasonCodes.ReturnLabelReasonCode)',
+            exchangeReasonCode: '@((int)MailLabelReasonCodes.ExchangeCode)',
+            refundReasonCode: '@((int)MailLabelReasonCodes.RefundCode)',
+
+            refundReasonList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(ReturnOrderViewModel.RefundReasons)),
+
+            commentTypes: {
+                returnExchange: '@((int)CommentType.ReturnExchange)',
+            },
+
+            urls: {
+                baseOrderEmailUrl: '@(Url.Action("Index", "Email"))',
+            },
+            markets: {
+                walmart: @((int)MarketType.Walmart),
+                amazon: @((int)MarketType.Amazon)
+            },
+        };
+
+        mailingVm = ReturnOrderViewModel(model, settings);
+
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error-inline",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(mailingVm, document.getElementById('page-content'));
+    });
+</script>

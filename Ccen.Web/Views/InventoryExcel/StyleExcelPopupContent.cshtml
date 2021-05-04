@@ -1,0 +1,274 @@
+﻿@using Amazon.Web.HtmlExtend
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Inventory
+@using Kendo.Mvc.UI
+@model StyleViewModel
+@{
+    ViewBag.Title = "Generate Style File";
+    Layout = null;
+}
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/inventory.ico" />
+}
+
+<script type="text/javascript">
+    var StyleExcelModel = function(model) {
+        var self = this;
+
+        self.market = ko.observable(model.Market);
+
+        self.itemTypeId = ko.observable(model.ItemTypeId);
+        self.itemTypeId.subscribe(function() {
+            helper.ui.showLoading($("#info"), "refreshing...");
+            self.styleId('');
+            self.reload();
+        });
+
+        self.styleId = ko.observable(model.StyleId);
+        self.originalStyleId = ko.observable(model.OriginalStyleId);
+
+        self.ItemTypeList = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.ItemTypes));
+
+        //self.load = function() {
+        //    helper.ui.showLoading($("#LoadButton"), "refreshing...");
+        //    self.reload();
+        //};
+
+        self.reload = function() {
+            console.log("reload: id=" + model.Id + ", styleId=" + model.StyleId + ", type=" + self.itemTypeId());
+            var contentUrl = '@Url.Action("Generate", "InventoryExcel")' + "?itemTypeId=" + self.itemTypeId();
+            if (self.styleId() != null && self.styleId() != '')
+                contentUrl += "&styleId=" + self.styleId();
+
+            $("#popup").data("kendoWindow").refresh({
+                url: contentUrl
+            });
+        };
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function() {
+            return self.errors().length === 0;
+        });
+        self.onSubmit = function(data, e) { // function(data, e) {
+            //console.log(data);
+            console.log(e);
+            console.log("save click");
+            //var validator = $("#form").kendoValidator().data('kendoValidator');
+
+            //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+            //http://jsfiddle.net/KHFn8/3238/
+            if (self.isValid()) { //validator.validate() &&
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                e.preventDefault();
+                return false;
+            }
+        };
+    };
+
+
+    function resetTabindexes(table, index) {
+        var tabindex = index;
+        var f = index + 1;
+
+        $(table + ">tbody>tr").each(function() {
+
+            var $tr = $(this);
+            var isChecked = $tr.find("input:checkbox").is(":checked");
+            if (isChecked) {
+                $tr.find(".barcode").each(function() {
+
+                    var tb = $(this);
+                    if (tb.parent().parent().is(':visible')) {
+                        tabindex++;
+                        tb.attr("tabindex", tabindex);
+                    }
+                });
+            } else {
+                $tr.find("input:text").removeAttr("tabindex");
+            }
+        });
+        $(table + ">tbody>tr").each(function() {
+            var $tr = $(this);
+
+            var isChecked = $tr.find("input:checkbox").is(":checked");
+            if (isChecked) {
+                $tr.find(".barcode").each(function() {
+                    var tb = $(this);
+                    var ind = $(tb).attr('tabindex');
+                    tb.on('keydown', function(e) {
+                        if (e.keyCode === 13) {
+                            ind++;
+                            var next = $('[tabindex=' + ind + ']');
+                            next.focus();
+                        }
+                    });
+                });
+            }
+        });
+
+        $('[tabindex=' + f + ']').focus();
+    }
+
+    $(document).ready(function() {
+        $('[tabindex=' + 1 + ']').focus();
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var styleExcelModel = new StyleExcelModel(model);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(styleExcelModel, $('#edit-style-excel-container')[0]);
+    });
+
+    var onImageSelect = function (e) {
+        $.each(e.files, function (index, value) {
+            var ext = value.extension.toLowerCase();
+            var ok = ext == ".jpg"
+                || ext == ".jpeg"
+                || ext == ".png"
+                || ext == ".bmp";
+
+            if (!ok) {
+                e.preventDefault();
+                alert("Please upload image files");
+            }
+        });
+    };
+</script>
+
+
+<div id="edit-style-excel-container">
+    <div class="inventory-popup am-style-popup">
+        <div class="k-edit-form-container ">
+            <div class="style-main-info" style="background-color: #e5e5e5; margin-bottom: 10px;">
+                @Html.HiddenFor(m => m.Id)
+                @Html.ValidationSummary(false)
+
+                <input type="hidden" name="Market" data-bind="value: market"/>
+
+                <div style="padding: 10px 0 0px 0; width: 350px;">
+                    <div class="editor-label">Type</div>
+                    <div class="editor-field">
+                        <input name="ItemTypeId" data-bind="kendoDropDownList: {data: ItemTypeList, value: itemTypeId, dataTextField: 'Text', dataValueField: 'Value' }"/>
+                        <div id="info"></div>
+                    </div>
+                    <div style='clear: both'></div>
+                </div>
+            </div>
+
+            <table style="margin-bottom: 5px">
+                <tr>
+                    <td class="am-left">
+                        <div class="style-panel style-main-info">
+                            <div class="panel panel-default">
+                                <div class="panel-heading">General</div>
+                                <div class="panel-body">
+                                    <div class="editor-label">StyleID</div>
+                                    <div class="editor-field">
+                                        @Html.TextBoxFor(m => m.StyleId, new { tabindex = 1, style = "width:230px", @class = "k-textbox", data_bind = "value: styleId" })
+                                        @Html.ValidationMessageFor(m => m.StyleId)
+                                    </div>
+                                    <div class="editor-label">Original<br />StyleID <span class="red">*</span></div>
+                                    <div class="editor-field">
+                                        @Html.TextBoxFor(m => m.OriginalStyleId, new { tabindex = 2, style = "width:230px", @class = "k-textbox", data_bind = "value: originalStyleId" })
+                                        @Html.ValidationMessageFor(m => m.OriginalStyleId)
+                                    </div>
+
+                                    <div class="editor-label">Name</div>
+                                    <div class="editor-field">
+                                        @Html.TextAreaFor(m => m.Name, new { tabindex = 6, style = "width:230px", rows = 3, @class = "k-textbox" })
+                                        @Html.ValidationMessageFor(m => m.Name)
+                                    </div>
+
+                                    <div class="editor-label" style="vertical-align: top">Description</div>
+                                    <div class="editor-field">@Html.TextAreaFor(m => m.Description, new { tabindex = 3, rows = 3, style = "width:230px", @class = "k-textbox" })</div>
+
+                                    <div class="editor-label">Price</div>
+                                    <div class="editor-field">@Html.TextBoxFor(m => m.Price, new { tabindex = 4, style = "width:70px", @class = "k-textbox" })</div>
+
+                                    <div class="editor-label">MSRP</div>
+                                    <div class="editor-field">@Html.TextBoxFor(m => m.MSRP, new { tabindex = 5, style = "width:70px", @class = "k-textbox" })</div>
+
+
+                                    <div class="clear"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="style-panel" style="padding-top: 10px; padding-bottom: 0px">
+                            @Html.Partial("_ItemImages", Model)
+                        </div>
+                    </td>
+
+                    <td class="am-right" style="width: 450px">
+                        <div class="style-panel" style="padding-left: 15px">
+                            @Html.Partial("_ItemStyleItems", Model.StyleItems)
+                        </div>
+                    </td>
+
+                    <td class="am-right">
+                        <div class="style-panel style-features-panel" style="padding-left: 15px">
+                            <div class="panel panel-default">
+                                <div class="panel-heading">Features</div>
+                                <div class="panel-body">
+                                    @for (int i = 0; i < Model.Features.Count; i++)
+                                    {
+                                        @Html.Partial("_ItemFeatures", Model.Features[i], HtmlHelperEx.GetPrefix("Features[" + i + "]"))
+                                    }
+                                    <div class="clear"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="k-edit-buttons k-state-default popup-button-panel" style="position: static">
+        <table style="margin-left: auto">
+            <tr>
+                <td>
+                    <button tabindex="-1"
+                            type="submit"
+                            id="submitUS"
+                            name="submitUS"
+                            data-bind="click: onSubmit"
+                            class="k-button k-button-icontext k-grid-update">
+                        <span class="glyphicon glyphicon-save-file am-icon"></span>Generate US
+                    </button>
+                </td>
+                <td style="padding-right: 20px">
+                    <button tabindex="-1"
+                            type="submit"
+                            id="submitUK"
+                            name="submitUK"
+                            data-bind="click: onSubmit"
+                            class="k-button k-button-icontext k-grid-update">
+                        <span class="glyphicon glyphicon-save-file am-icon"></span>Generate UK
+                    </button>
+                </td>
+                <td>
+                    <button class="k-button k-button-icontext k-grid-cancel"
+                            type="reset"
+                            id="cancel"
+                            onclick="popupWindow.close()">
+                        <span class="k-icon k-cancel"></span>Cancel
+                    </button>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>

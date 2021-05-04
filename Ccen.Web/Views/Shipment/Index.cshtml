@@ -1,0 +1,292 @@
+﻿@using Amazon.Web.ViewModels.Inventory.FBAPickLists
+@using Kendo.Mvc.UI
+
+@{
+    var shipmenttype = ViewBag.Shipmenttype;
+    var isFBA = shipmenttype == "FBA";
+    ViewBag.Title = shipmenttype + " Shipments";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<script src="~/Scripts/knockout-kendo.min.js" type="text/javascript"></script>
+<script type="text/javascript">
+
+    var FBAPickListModel = function(gridId, model, settings) {
+        var self = this;
+        ko.BaseViewModel.call(self);
+
+        self.settings = settings;
+        self.model = model;
+
+        self.hasChanges = ko.observable(false);
+        self.showArchived = ko.observable(false);
+        self.shipmenttype = ko.observable('@shipmenttype');
+
+        //Grid
+        self.gridId = gridId;
+        self.gridNode = $(gridId);
+        self.grid = $(gridId).data("kendoGrid");
+
+        self.onEdit = function(sender, id) {
+            console.log("onEdit, id=" + id);
+            popupWindow.initAndOpenWithSettings(
+                {
+                    content: '@Url.Action(MVC.Shipment.OnEdit())' + "?id=" + id + "&shipmenttype=@shipmenttype",
+                    title: "Edit @shipmenttype Shipment",
+                    width: 750,
+                    customAction: self.onPopupCustomAction,
+                    closeSuccess: self.onPopupCloseSuccess,
+                });
+        };
+
+        self.onNew = function() {
+            console.log("onNew");
+            popupWindow.initAndOpenWithSettings(
+                {
+                    content: '@Url.Action(MVC.Shipment.OnEdit())' + "?shipmenttype=@shipmenttype",
+                    title: "New @shipmenttype Shipment",
+                    width: 750,
+                    customAction: self.onPopupCustomAction,
+                    closeSuccess: self.onPopupCloseSuccess,
+                });
+        };
+
+        self.onPopupCustomAction = function (action, data) {
+            self.hasChanges(true);
+        };
+
+        self.onPopupCloseSuccess = function() {
+            if (self.hasChanges())
+            {
+                self.search();
+                self.hasChanges(false);
+            }
+        }
+
+        self.setFinishStatus = function (id, isFinished, sender) {
+            //Find button
+            var button = $(sender);
+
+            helper.ui.showLoading(button);
+
+            $.ajax({
+                url: '@Url.Action("SetFinishStatus", "Shipment")',
+                data: {
+                    id: id,
+                    isFinished: isFinished,
+                },
+                cache: false,
+                async: true,
+                success: function (result) {
+                    if (result.IsSuccess) {
+                        button.hide();
+                        self.search();
+                    }
+                    helper.ui.hideLoading(button);
+                }
+            });
+        }
+
+        self.setArchiveStatus = function(id, sender) {
+            //Find button
+            var button = $(sender);
+            var newStatus = !(button.is(":checked"));
+
+            helper.ui.showLoading(button);
+
+            $.ajax({
+                url: '@Url.Action("SetArchiveStatus", "Shipment")',
+                data: {
+                    id: id,
+                    status: newStatus
+                },
+                cache: false,
+                async: true,
+                success: function (result) {
+                    if (result.IsSuccess) {
+                        button.html(result.Data ? "UnArchive" : "Archive");
+                    }
+                    helper.ui.hideLoading(button);
+                }
+            });
+        }
+
+        //Search
+
+        self.search = function () {
+            console.log("search");
+            var params = self.getGridParams();
+
+            self.resetRowNumber(0);
+
+            if (self.grid.dataSource.page() != 1) {
+                self.grid.dataSource.page(1); //May call read
+            }
+            self.grid.dataSource.read(params);
+        };
+
+        self.searchByKeyCmd = function (data, event) {
+            if (event.keyCode == 13)
+                self.search(true);
+            return true;
+        };
+
+        self.getGridParams = function () {
+            console.log("getGridParams");
+
+            var params = {
+                showArchived: self.showArchived(),
+                shipmenttype: self.shipmenttype()
+            };
+            console.log(params);
+            return params;
+        };
+
+        self.clear = function () {
+
+        };
+
+        self.clearAndSearch = function () {
+            self.clear();
+            self.search();
+        };
+
+        self.searchByButton = function () {
+            self.search();
+        };
+
+        helper.ui.addTopPager(self.grid);
+
+        self.showArchived.subscribe(function () {
+            self.search();
+        });
+        self.search();
+    };
+
+</script>
+
+<div id="page-content">
+    <div id="windowContainer"></div>
+
+    <div class="info-panel" style="padding-bottom: 10px">
+        <ol class="breadcrumb">
+            <li><a href="#">Inventory</a></li>
+            <li class="active">@ViewBag.Title</li>
+        </ol>
+    </div>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <input type='checkbox' data-bind="checked: showArchived" /> Show Archived
+        </div>
+    </div>
+
+    <div id="commands" class="k-toolbar k-grid-toolbar k-grid-top">
+        <button class="k-button" data-bind="click: onNew"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> New Shipment</button>
+    </div>
+
+    @(Html.Kendo().Grid<ShipmentPickListViewModel>()
+                  .Name("grid")
+                  .Columns(columns =>
+                  {
+                      columns.Bound(c => c.Id)
+                          .Encoded(false)
+                          .Title("#")
+                          .Width(25);
+
+                      columns.Bound(c => c.Name)
+                        .Title("Name");
+
+
+                      columns.Bound(c => c.CreateDate)
+                        .Title("Create Date")
+                        .Width(180)
+                        .Format("{0:MM.dd.yyyy HH\\:mm}");
+
+                      columns.Bound(c => c.FormattedStatus)
+                        .Title("Status");
+
+                      columns.Bound(o => o.Id)
+                        .ClientTemplate("#= tmpl.t('actions2-column-template', data)#")
+                        .Title(" ")
+                        .Width(160);
+
+                      columns.Bound(o => o.Id)
+                          .ClientTemplate("#= tmpl.t('actions-column-template', data)#")
+                          .Title(" ")
+                          .Width(120);
+                  })
+                  .Pageable(conf => conf.Enabled(true).Refresh(true))
+                  .AutoBind(false)
+
+                  .DataSource(dataSource => dataSource
+                      .Ajax()
+                      .Model(conf => conf.Id(m => m.Id))
+                      .Sort(conf => conf.Add(o => o.CreateDate).Descending())
+                      .PageSize(100)
+                      .Read(read => read.Action("GetAll", "Shipment").Data("GetGridParams"))))
+
+</div>
+
+<script type="text/kendo-tmpl" id="actions-column-template">
+    #if (IsFinished) {#
+        <a class='k-button k-button-icontext k-state-disabled' style="margin-bottom: 3px; cursor: none"><span class="glyphicon glyphicon-pencil am-icon"></span> Edit</a>
+    #} else {#
+        <a class='k-button k-button-icontext' style="margin-bottom: 3px" onclick="fbaPickList.onEdit(this, '#=Id#')"><span class="glyphicon glyphicon-pencil am-icon"></span> Edit</a>
+    #}#
+
+    <a class='k-button k-button-icontext' style="margin-bottom: 3px" target="_blank" href="@Url.Action("PrintFBAPickList", "Print")?fbaShipmentId=#=Id#"><span class="glyphicon glyphicon-list am-icon"></span> Pick List</a>
+    <button class='k-button k-button-icontext' style="margin-bottom: 3px" id='archiveButton' onclick='fbaPickList.setArchiveStatus("#=Id#", this)'>#if(Archived) {# UnArchive #} else {# Archive #}#</button>
+
+    #if(!IsFinished) {#
+        <button class='k-button k-button-icontext' id='finishButton' onclick='fbaPickList.setFinishStatus("#=Id#", true, this)'>Close</button>
+    #} else { #
+        <button class='k-button k-button-icontext' id='finishButton' onclick='fbaPickList.setFinishStatus("#=Id#", false, this)'>Reopen</button>
+    #}#
+</script>
+
+@if (isFBA)
+{
+<script type="text/kendo-tmpl" id="actions2-column-template">
+    <a class='k-button k-button-icontext' style="margin-bottom: 3px" href="@(Url.Action(MVC.Shipment.ExportToExcel()))?id=#=Id#"><img src="/Images/excel.png" width="20" /> FBA Listings</a>
+    <a class='k-button k-button-icontext' style="margin-bottom: 3px" href="@(Url.Action(MVC.Shipment.ExportToPlanExcel()))?id=#=Id#"><img src="/Images/excel.png" width="20" /> Shipping Plan</a>
+    <a class='k-button k-button-icontext' href="@(Url.Action(MVC.Shipment.ExportPickListExcel()))?id=#=Id#"><img src="/Images/excel.png" width="20" /> Export pick list</a>
+</script>
+}
+else
+{
+<script type="text/kendo-tmpl" id="actions2-column-template">
+    <a class='k-button k-button-icontext' style="margin-bottom: 3px" href="@(Url.Action(MVC.Shipment.ExportToWFSExcel()))?id=#=Id#"><img src="/Images/excel.png" width="20" /> WFS Clothings</a>
+    <a class='k-button k-button-icontext' style="margin-bottom: 3px" href="@(Url.Action(MVC.Shipment.ExportToWFSPlanExcel()))?id=#=Id#"><img src="/Images/excel.png" width="20" /> WFS Inbound</a>
+    <a class='k-button k-button-icontext' href="@(Url.Action(MVC.Shipment.ExportPickListExcel()))?id=#=Id#"><img src="/Images/excel.png" width="20" /> Export pick list</a>
+</script>
+}
+
+
+<script>
+    var fbaPickList = null;
+
+    $(document).ready(function () {
+        console.log("begin ready");
+
+        var settings = {
+            urls: {
+                exportToExcel: '@Url.Action(MVC.Shipment.ExportToExcel())',
+            }
+        };
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        fbaPickList = new FBAPickListModel('#grid', model, settings);
+        ko.applyBindings(fbaPickList, document.getElementById("page-content"));
+    });
+
+
+    function GetGridParams() {
+        console.log("GetGridParams");
+        if (fbaPickList != null)
+            return fbaPickList.getGridParams();
+        return {};
+    }
+</script>

@@ -1,0 +1,727 @@
+﻿@using Amazon.Common.Helpers
+@using Amazon.Core.Entities
+@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Core.Models.Settings
+@using Amazon.DTO
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Pages.MailPageViewModel
+
+@{
+    ViewBag.Title = "New Order";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/mail.ico" />
+}
+
+<style>
+    .k-master-row .k-hierarchy-cell .k-icon {
+        visibility: hidden;
+    }
+</style>
+
+
+<script type="text/javascript">
+
+    var NewOrderViewModel = function (gridId, model, settings) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+
+        self.wasProcessed = ko.observable(false);
+        self.isLoading = ko.observable(false);
+        self.loadingText = ko.observable("");
+
+        self.setLoading = function (message) {
+            if (message != null && message != '') {
+                self.isLoading(true);
+            } else {
+                self.isLoading(false);
+            }
+            self.loadingText(message);
+        }
+
+        self.printMessages = ko.observableArray([]);
+
+        self.printError = ko.computed(function () {
+            var array = $.grep(self.printMessages(), function (n) { return n.IsError; });
+            array = $.map(array, function (n) { return n.IsError ? "- " + n.Message : ""; });
+            return array.join('<br/>');
+        });
+
+        self.printSuccess = ko.computed(function () {
+            var array = $.grep(self.printMessages(), function (n) { return n.IsSuccess; });
+            array = $.map(array, function (n) { return n.IsSuccess ? "- " + n.Message : ""; });
+            return array.join('<br/>');
+        });
+
+
+        self.toAddressFullName = ko.observable();
+        self.toAddressAddress1 = ko.observable();
+        self.toAddressAddress2 = ko.observable();
+        self.toAddressCity = ko.observable();
+        self.toAddressUSAState = ko.observable();
+        self.toAddressNonUSAState = ko.observable();
+        self.toAddressZip = ko.observable();
+        self.toAddressZipAddon = ko.observable();
+        self.toAddressCountry = ko.observable(self.settings.defaultCountryCode);
+        self.toAddressPhone = ko.observable();
+        self.toAddressEmail = ko.observable();
+        self.toAddressIsCountryUSA = ko.computed(function() {
+            return self.toAddressCountry() == "US";
+        });
+        self.toAddressIsCountryMX = ko.computed(function () {
+            return self.toAddressCountry() == "MX";
+        });
+        self.toAddressIsCountryNonUSA = ko.computed(function() {
+            return self.toAddressCountry() != "US";
+        });
+        self.toAddressMessage = ko.observable("");
+
+        self.orderNumber = ko.observable(null);
+        self.orderDate = ko.observable(new Date());
+
+        self.shippingService = ko.observable("Standard");
+        self.shippingServiceList = ko.observable(self.settings.shippingServiceList);
+
+        self.orderItemList = ko.observableArray([]);
+        self.addItem = function () {
+            var item = {};
+            item.isSizeListLoaded = ko.observable(false);
+            item.styleStringLoading = ko.observable(false);
+            item.styleErrorMessage = ko.observable(null);
+
+            item.weight = ko.observable(0);
+            item.sizeList = ko.observableArray([]);
+
+            item.isOutOfStock = ko.observable(false);
+
+            item.styleItemId = ko.observable(null);
+            item.styleItemId.subscribe(function () {
+                console.log("styleItemId changed, id=" + item.styleItemId());
+                var styleItem = $.grep(item.sizeList(), function (nItem) { return nItem.Value == item.styleItemId(); });
+                if (styleItem.length > 0) {
+                    console.log(styleItem);
+                    item.Size = styleItem[0].Text;
+                }
+
+                if (item.styleItemId() != '' && item.styleItemId() != null) {
+                    self.getStyleItemByIdAsync(item.styleItemId()).done(function (data) {
+                        console.log(data);
+                        item.weight(data.Weight);
+                        item.styleId(data.StyleId);
+
+                        self.updateWeight();
+
+                        //self.updateShippingMethods();
+                    });
+                } else {
+                    item.weight(0);
+                    item.styleId(null);
+
+                    self.updateWeight();
+                }
+            });
+
+            item.styleId = ko.observable(null);
+            item.styleString = ko.observable('');
+            item.styleStringLoading = ko.observable(false);
+            item.styleString.subscribe(function() {
+                console.log("styleString.rise");
+                item.styleErrorMessage('');
+                item.styleStringLoading(true);
+                $.ajax({
+                    url: '@Url.Action("GetStyleSizes", "AutoComplete")',
+                    data: { styleString: item.styleString(), onlyWithQty: false },
+                    cache: false,
+                    success: function(data) {
+                        console.log("styleString.success");
+                        console.log(data);
+                        item.styleStringLoading(false);
+                        if (data.Data != null && data.Data.length > 0) {
+                            item.sizeList(data.Data);
+                            item.isSizeListLoaded(true);
+
+                            var isContainCurrent = $.grep(data.Data, function(n) { return n.Value == item.styleItemId(); }).length > 0;
+
+                            if (item.styleItemId() == null || !isContainCurrent)
+                                item.styleItemId(data.Data[0].Value);
+                            else
+                                item.styleItemId.notifySubscribers(); //NOTE: to recalculate the isOutOfStock and init note calculation
+                        } else {
+                            item.styleErrorMessage('The entered SKU is not in the system');
+                            item.sizeList([]);
+                            item.styleItemId('');
+                        }
+                    }
+                });
+            });
+
+            item.inputQuantity = ko.observable(1);
+            item.inputQuantity.subscribe(function() {
+
+            });
+
+            item.inputPrice = ko.observable(9.99);
+            item.inputPrice.extend(ko.validation.patterns.requredNumber("*"));
+
+            orderItemList.push(item);
+        };
+
+        self.updateWeight = function () {
+
+        }
+
+        self.canCreate = ko.computed(function () {
+            console.log("canCreate: " + self.isLoading());
+            console.log("isSizeListLoaded: " + $.grep(self.orderItemList(), function (n) { return !n.isSizeListLoaded(); }).length);
+            console.log("inputQuantity: " + $.grep(self.orderItemList(), function (n) { n.inputQuantity() > 0; }).length);
+
+            var hasInvalidStyleIds = $.grep(self.orderItemList(), function (n) { return !dataUtils.isNullOrEmpty(n.styleString()) && (n.styleItemId() == null || n.styleItemId() == 0); }).length > 0;
+
+            return !self.isLoading()
+                && !self.wasProcessed()
+                && !hasInvalidStyleIds
+                && ($.grep(self.orderItemList(), function (n) { return !n.isSizeListLoaded() && n.styleId() > 0; }).length == 0)
+                && ($.grep(self.orderItemList(), function (n) { return n.inputQuantity() > 0 && n.styleId() > 0; }).length > 0)
+                && ($.grep(self.orderItemList(), function (n) { return n.inputPrice() == null && n.styleId() > 0; }).length == 0);
+        });
+
+        self.getStyleItemByStyleStringAsync = function(styleString) {
+            return $.ajax({
+                url: '@Url.Action("GetStyleSizes", "AutoComplete")',
+                data: { styleString: styleString, onlyWithQty: false },
+                cache: false,
+            });
+        };
+
+        self.getStyleItemByIdAsync = function(styleItemId) {
+            return $.ajax({
+                cache: false,
+                data: { styleItemId: styleItemId },
+                url: '@Url.Action(MVC.ReturnOrder.GetStyleItemById())'
+            });
+        };
+
+        self.checkToAddress = function(data, e) {
+            var sender = $(e.target);
+            self.toAddressMessage("");
+            self.validateAddress(sender,
+                    self.getAddressModel(false),
+                    false)
+                .done(function(data) {
+                    console.log(data);
+                    self.toAddressMessage(self.getCheckAddressResult(data, false));
+                    if (data.Data != null)
+                        self.setAddressFromModel(data.Data, false);
+                });
+        };
+
+        self.getCheckAddressResult = function(data, asPlanText) {
+            if (data.IsSuccess) {
+                var msg = "- Address successfully verified (by stamps.com)";
+                if (asPlanText)
+                    return msg;
+                return "<span class='label label-success'>" + msg + "</span>";
+            } else {
+                var msg = "- The address could not be verified (by stamps.com). Details: " + tmpl.isNull(data.Data, '-');
+                if (asPlanText)
+                    return msg;
+                return "<span  class='label label-danger'>" + msg + "</span>";
+            }
+        };
+
+        self.validateAddress = function(sender, data, onlyCheck) {
+            self.setLoading('validating...');
+
+            data.onlyCheck = onlyCheck;
+            return $.ajax({
+                url: '@Url.Action(MVC.Mailing.CheckAddress())',
+                data: data,
+                success: function() {
+                    self.setLoading(null);
+                }
+            });
+        };
+
+        self.styleIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetStyleIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if(action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.errors = ko.validation.group(self);
+        self.isValid = ko.computed(function() {
+            return self.errors.length == 0;
+        });
+        self.onSubmit = function(data, e) {
+            console.log(data);
+            console.log(e);
+            console.log("generateButton click");
+
+            //var validator = $("#form").kendoValidator().data('kendoValidator');
+
+            //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+            //http://jsfiddle.net/KHFn8/3238/
+            if (self.errors().length == 0) { //validator.validate() &&
+                console.log("validate true");
+
+                self.create(data, e);
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                e.preventDefault();
+                return false;
+            }
+        };
+
+        self.getDataModel = function () {
+            var items = $.grep(self.orderItemList(), function (oi) {
+                return !dataUtils.isNullOrEmpty(oi.styleString());
+            });
+            var itemsDataModel = $.map(items, function(item) {
+                item.StyleString = item.styleString();
+                item.StyleId = item.styleId(),
+                item.StyleItemId = item.styleItemId();
+                item.Quantity = item.inputQuantity();
+                item.ItemPrice = item.inputPrice();
+
+                return item;
+            });
+
+            itemsDataModel = $.grep(itemsDataModel, function(item) {
+                return item.Quantity > 0;
+            });
+
+            console.log(itemsDataModel);
+
+            var dataModel = {
+                ToAddress: self.getAddressModel(false),
+
+                OrderId: self.orderNumber(),
+                OrderDate: self.orderDate(),
+                ShippingService: self.shippingService(),
+
+                Items: itemsDataModel
+            };
+
+            return dataModel;
+        };
+
+        self.create = function(data, e) {
+            var sender = $(e.target);
+
+            var dataModel = self.getDataModel();
+
+            var addressToCheck = dataModel.ToAddress;
+
+            self.validateAddress(sender,
+                addressToCheck,
+                true)
+            .then(function(result) {
+                var defer = $.Deferred();
+                if (result.IsSuccess) {
+                    defer.resolve();
+                } else {
+                    var message = self.getCheckAddressResult(result, false);
+                    Message.popupAsync({
+                        title: 'Confirm',
+                        message: 'Are you sure you want to create order the following address warnings:<br/>' + message,
+                        type: Message.YES_NO
+                    }).done(function() {
+                        defer.resolve();
+                    }).fail(function() {
+                        defer.reject();
+                    });
+                }
+                return defer;
+            })
+            .done(function() {
+                console.log('creating');
+                self.createOrder(dataModel, sender);
+            })
+            .fail(function() {
+                console.log('not created');
+                self.setLoading('');
+            });
+        };
+
+        self.createOrder = function(dataModel, sender) {
+            self.setLoading('creating...');
+
+            $.ajax({
+                method: "POST",
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                traditional: true,
+                async: true,
+                cache: false,
+                data: JSON.stringify(dataModel),
+
+                url: '@Url.Action(MVC.NewOrder.Create())',
+
+                success: function(data) {
+                    self.wasProcessed(true);
+
+                    self.printMessages(data.Messages);
+                },
+                complete: function(data) {
+                    self.setLoading(null);
+                },
+            });
+        };
+
+        self.setAddressFromModel = function(address) {
+            self.toAddressFullName(address.FullName);
+            self.toAddressAddress1(address.Address1);
+            self.toAddressAddress2(address.Address2);
+            self.toAddressCity(address.City);
+            self.toAddressUSAState(address.USAState);
+            self.toAddressNonUSAState(address.NonUSAState);
+            self.toAddressZip(address.Zip);
+            self.toAddressZipAddon(address.ZipAddon);
+            self.toAddressCountry(address.Country);
+            self.toAddressPhone(address.Phone);
+            self.toAddressEmail(address.Email);
+            self.toAddressMessage("");
+        };
+
+        self.getAddressModel = function() {
+            return {
+                FullName: self.toAddressFullName(),
+                Address1: self.toAddressAddress1(),
+                Address2: self.toAddressAddress2(),
+                City: self.toAddressCity(),
+                USAState: self.toAddressUSAState(),
+                NonUSAState: self.toAddressNonUSAState(),
+                Country: self.toAddressCountry(),
+                Zip: self.toAddressZip(),
+                ZipAddon: self.toAddressZipAddon(),
+                Phone: self.toAddressPhone(),
+                Email: self.toAddressEmail(),
+                IsCountryUSA: self.toAddressIsCountryUSA(),
+            };
+        };
+
+
+
+        //URL Computing
+        @*http://stackoverflow.com/questions/332872/encode-url-in-javascript*@
+        self.getGoogleAddressUrl = function(address) {
+            return "https://www.google.com/search?q=" +
+                tmpl.joinNotEmpty([
+                    tmpl.joinNotEmpty([address.Address1, address.Address2], " "),
+                    address.City,
+                    address.State,
+                    tmpl.joinNotEmpty([address.Zip, address.ZipAddon], " "),
+                    address.Country
+                ], ", ");
+        };
+
+        self.googleSearchToAddressUrl = ko.computed(function() {
+            return self.getGoogleAddressUrl(self.getAddressModel(false));
+        });
+
+        self.getMelissaAddressUrl = function(address) {
+            return "http://www.melissadata.com/Lookups/AddressVerify.asp?"
+                + "name=" + encodeURIComponent(address.FullName)
+                + "&company="
+                + "&address=" + encodeURIComponent(tmpl.joinNotEmpty([address.Address1, address.Address2], " "))
+                + "&city=" + encodeURIComponent(address.City)
+                + "&state=" + (address.IsCountryUS ? encodeURIComponent(address.USAState) : encodeURIComponent(address.USAState))
+                + "&zip=" + encodeURIComponent(tmpl.joinNotEmpty([address.Zip, address.ZipAddon], "-"));
+        };
+
+        self.melissaSearchToAddressUrl = ko.computed(function() {
+            return self.getMelissaAddressUrl(self.getAddressModel(false));
+        });
+    };
+
+</script>
+
+<div id="page-content">
+    <div id="windowContainer"></div>
+    <div id="MessagePopupWindow0" style="display: none;"></div>
+
+    <ol class="breadcrumb">
+        <li><a href="#">Orders</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="am-mail">
+        <div style="padding: 10px 0px 5px 7px">
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">Order General</div>
+            <div class="panel-body">
+                <div class="mailing-info">
+                    <div>
+                        <table>
+                            @*<tr>
+                                    <td>Order #:</td>
+                                    <td><span data-bind="value: orderNumber"></span></td>
+                                </tr>*@
+                            <tr>
+                                <td class="gray">Order Date:</td>
+                                <td style="padding-left: 5px"><span data-bind="textFormatted: orderDate, pattern: 'MM/dd/yyyy hh:mm tt', ifEmpty: '-'"></span></td>
+                            </tr>
+                            <tr>
+                                <td class="gray">Shipping Service:</td>
+                                <td style="padding-left: 5px">
+                                    <input style="width: 150px"
+                                           data-bind="kendoDropDownList: {data: shippingServiceList, value: shippingService, dataTextField: 'Text', dataValueField: 'Value' }" />
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">Items</div>
+            <div class="panel-body">
+                <div class="order-items"
+                     style="padding-bottom: 10px">
+                    <table style="padding-left: 5px; width: 500px">
+                        <tr>
+                            <th>Style Id</th>
+                            <th>Size/Color</th>
+                            <th>Qty</th>
+                            <th>Price</th>
+                        </tr>
+                        <tbody data-bind="foreach: orderItemList">
+                            <tr>
+                                <td>
+                                    <input style='width: 180px' class="k-textbox" data-bind="kendoAutoComplete: {
+                                                                    value: styleString,
+                                                                    data: {},
+                                                                    minLenght: 3,
+                                                                    dataSource: styleIdSource }" />
+                                    <div><span class="label label-danger" data-bind="text: styleErrorMessage"></span></div>
+                                </td>
+                                <td>
+                                    <input style="width: 100px"
+                                           data-bind="kendoDropDownList: {data: sizeList, value: styleItemId, dataTextField: 'Text', dataValueField: 'Value' }" />
+                                    <div><span class="gray">weight:</span> <span data-bind="text: weight"></span></div>
+                                </td>
+                                <td>
+                                    <input data-bind="value: inputQuantity, valueUpdate:'afterkeydown'"
+                                           style="width: 60px"
+                                           type="number"
+                                           class="k-textbox" />
+                                    <span data-bind="visible: isOutOfStock" class="red" style="display: none">Selected size is out of stock</span>
+                                </td>
+                                <td>
+                                    <input data-bind="value: inputPrice, valueUpdate:'afterkeydown'"
+                                           style="width: 60px"
+                                           type="number"
+                                           class="k-textbox" />
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div style="padding: 5px">
+                        <button type="button" class="k-button" style="width: 80px" data-bind="click: addItem">
+                            <span class="k-icon k-add am-icon"></span>Add
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">Customer</div>
+            <div class="panel-body">
+                <div class="mailing-info">
+                    <div class="address-block">
+                        <table>
+                            <tr>
+                                <td id="to" style="vertical-align: bottom; padding-left: 15px">
+                                    <div style="margin: 0px 0px 4px 0px">
+                                        <b>To:</b>
+                                    </div>
+                                    <table>
+                                        <tr>
+                                            <th>Full Name</th>
+                                            <td>
+                                                <input type="text"
+                                                       name="ToAddress.FullName"
+                                                       class="text-box k-textbox"
+                                                       data-bind="value: toAddressFullName" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Address 1</th>
+                                            <td>
+                                                <input type="text"
+                                                       name="ToAddress.Address1"
+                                                       class="text-box k-textbox"
+                                                       data-bind="value: toAddressAddress1" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Address 2</th>
+                                            <td>
+                                                <input type="text"
+                                                       name="ToAddress.Address2"
+                                                       class="text-box k-textbox"
+                                                       data-bind="value: toAddressAddress2" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>City</th>
+                                            <td>
+                                                <input type="text"
+                                                       name="ToAddress.City"
+                                                       class="text-box k-textbox"
+                                                       data-bind="value: toAddressCity" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>State</td>
+                                            <td>
+                                                <div data-bind="visible: toAddressIsCountryNonUSA">
+                                                    <input type="text"
+                                                           name="ToAddress.NonUSAState"
+                                                           class="text-box k-textbox"
+                                                           data-bind="value: toAddressNonUSAState" />
+                                                </div>
+                                                <div data-bind="visible: toAddressIsCountryUSA">
+                                                    <input name="ToAddress.USAState"
+                                                           data-bind="kendoDropDownList: {data: settings.stateList, value: toAddressUSAState, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'State...' }" />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Zip</th>
+                                            <td>
+                                                <input type="text"
+                                                       name="ToAddress.Zip"
+                                                       class="text-box k-textbox"
+                                                       style="width: 120px"
+                                                       data-bind="value: toAddressZip" />
+                                                -
+                                                <input type="text"
+                                                       name="ToAddress.ZipAddon"
+                                                       class="text-box k-textbox"
+                                                       style="width: 80px"
+                                                       data-bind="value: toAddressZipAddon" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Country</th>
+                                            <td>
+                                                <input name="ToAddress.Country"
+                                                       data-bind="kendoDropDownList: {data: settings.countryList, value: toAddressCountry, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Country...' }" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Phone</th>
+                                            <td>
+                                                <input type="text"
+                                                       name="ToAddress.Phone"
+                                                       class="text-box k-textbox"
+                                                       data-bind="value: toAddressPhone" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Email</th>
+                                            <td>
+                                                <input type="text"
+                                                       name="ToAddress.Email"
+                                                       class="text-box k-textbox"
+                                                       data-bind="value: toAddressEmail" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2">
+                                                <a data-bind="click: checkToAddress" style="width: 140px" href="javascript:;" class="k-button">Check Address</a>
+                                                <div style="padding-top: 5px">
+                                                    <a target="_blank" data-bind="attr: { href: melissaSearchToAddressUrl }">Address on Melissa</a>
+                                                    <a target="_blank" style="margin-left: 15px" data-bind="attr: { href: googleSearchToAddressUrl }">Address on Google</a>
+                                                </div>
+                                                <div data-bind="html: toAddressMessage" style="padding: 2px"></div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="buttons" style="padding-top: 15px; padding-left: 7px">
+                        <button type="button"
+                                id="createButton"
+                                name="Create"
+                                data-bind="click: onSubmit, enable: canCreate(), css: {'k-state-disabled': !canCreate() }"
+                                class="k-button"
+                                style="width: 120px">
+                            Create
+                        </button>
+                        <div data-bind="text: loadingText"></div>
+                        <div style="padding-top: 8px">
+                            <div class="text-danger"
+                                 data-bind="html: printError"></div>
+                            <div class="text-success"
+                                 data-bind="html: printSuccess"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        var settings = {
+            stateList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.States)),
+            countryList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.Countries)),
+            reasonList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(MailViewModel.Reasons)),
+            shippingServiceList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(MailViewModel.ShippingServiceList)),
+            defaultCountryCode: '@Constants.DefaultCountryCode',
+        };
+
+        newOrderVm = NewOrderViewModel("#grid", model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error-inline",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(newOrderVm, document.getElementById('page-content'));
+    });
+</script>

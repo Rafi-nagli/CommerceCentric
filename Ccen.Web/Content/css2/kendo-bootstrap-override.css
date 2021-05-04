@@ -1,0 +1,82 @@
+﻿.amz .panel-default>.panel-heading {
+    background-image: none;
+}
+
+.amz .btn-default {
+    background-image: none;
+}
+
+.amz .btn-primary {
+    background-image: none;
+}
+
+.amz .btn-success {
+    background-image: none;
+}
+
+.amz .alert-success {
+    background-image: none;
+}
+
+.amz .alert-warning {
+    background-image: none;
+}
+
+.amz .alert-danger {
+    background-image: none;
+}
+
+.amz .alert-info {
+    background-image: none;
+}
+
+.amz .breadcrumb {
+    margin-bottom: 4px;
+    margin-top: 20px;
+}
+
+.amz .panel {
+    margin-bottom: 10px;
+}
+
+/*Override kendo disabled */
+.amz textarea:disabled,
+.amz input:not([type]):disabled, 
+.amz input[type="color"]:disabled, 
+.amz input[type="date"]:disabled, 
+.amz input[type="datetime"]:disabled, 
+.amz input[type="datetime-local"]:disabled, 
+.amz input[type="email"]:disabled, 
+.amz input[type="month"]:disabled, 
+.amz input[type="password"]:disabled, 
+.amz input[type="number"]:disabled, 
+.amz input[type="search"]:disabled, 
+.amz input[type="tel"]:disabled, 
+.amz input[type="text"]:disabled, 
+.amz input[type="time"]:disabled, 
+.amz input[type="url"]:disabled, 
+.amz input[type="week"]:disabled {
+    background-color: rgb(235, 235, 228);
+}
+
+
+.amz .k-grid-toolbar {
+    margin: 2px 0px 2px 0px;
+}
+
+.amz .k-toolbar-title {
+    background-color: #e5e5e5;
+}
+
+.amz .k-flat-button {
+    -webkit-border-radius: 0px;
+    border-radius: 0px;
+}
+
+.amz .k-disabled {
+    color: gray;
+}
+
+.amz a.k-state-disabled {
+    pointer-events: none;
+}

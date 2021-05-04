@@ -1,0 +1,94 @@
+﻿<script type="text/javascript">
+    var FedexCloseoutInfoModel = function () {
+        var self = this;
+
+        self.fedexInfoes = ko.observableArray([]);
+
+        self.prepareRow = function(r) {
+            r.fedexOrdersCount = ko.observable(r.FedexOrdersCount);
+            r.fedexLabelsCount = ko.observable(r.FedexLabelsCount);
+            r.fedexOrdersWeight = ko.observable(r.FedexOrdersWeight);
+            r.fedexOrdersWeightLb = ko.computed(function () {
+                return r.fedexOrdersWeight() / 16;
+            });
+            r.isSuccess = ko.observable(r.IsSuccess);
+            r.name = ko.observable(r.Name);
+        }
+        
+        self.load = function () {
+            $.ajax({
+                cache: true,
+                url: '@Url.Action("GetInfo", "FedexCloseout")',
+                success: function (result) {
+                    if (result.IsSuccess)
+                    {
+                        for (var i = 0; i < result.Data.length; i++) {
+                            self.prepareRow(result.Data[i]);
+                        }
+
+                        self.fedexInfoes(result.Data);                        
+                    }
+                    else
+                    {
+                        self.fedexInfoes([]);
+                    }
+                }
+            });
+        };
+
+        self.load();
+    };
+
+    var fedexCloseoutInfoModel = null;
+    $(document).ready(function () {
+        fedexCloseoutInfoModel = new FedexCloseoutInfoModel();
+        ko.applyBindings(fedexCloseoutInfoModel, document.getElementById("fedex-closeout-block"));
+    });
+</script>
+
+
+<style>
+    .amz-dhl-closeout {
+        font-size: 12px;
+    }
+
+    .amz-dhl-closeout td {
+        padding: 2px;
+        border-collapse: collapse;
+        border-top: 1px solid #efefef;
+        border-bottom: 1px solid #efefef;
+        border-right: 1px solid #efefef;
+        border-left: 1px solid #efefef;
+    }
+
+    /*.amz-dhl-closeout tr:last-child td {
+        border-bottom: none;
+    }*/
+
+    /*.amz-dhl-closeout tr:nth-last-child(1) td {
+        border-bottom: none;
+    }*/
+</style>
+
+<div id="fedex-closeout-block" class="amz-dhl-closeout">
+    <table>
+        <thead>
+            <tr>
+                <td>Fedex</td>
+                <td>orders</td>
+                <td>labels</td>
+            </tr>
+        </thead>
+        <tbody  data-bind="foreach: fedexInfoes">
+            <tr>
+                <td><span data-bind="text: name"></span></td>
+                <td>
+                    <span data-bind<span data-bind="textFormatted: fedexOrdersCount, ifEmpty: '-'"></span>
+                </td>
+                <td>
+                    <span data-bind<span data-bind="textFormatted: fedexLabelsCount, ifEmpty: '-'"></span>
+                </td>
+            </tr>
+        </tbody>        
+    </table>
+</div>

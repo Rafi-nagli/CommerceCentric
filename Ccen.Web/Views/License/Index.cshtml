@@ -1,0 +1,71 @@
+﻿@using Amazon.Web.ViewModels
+@using Kendo.Mvc.UI
+
+@{
+    ViewBag.Title = "Licenses";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div id="page-content">
+    <ol class="breadcrumb">
+        <li><a href="#">System</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div>
+
+        @(Html.Kendo().Grid<LicenseViewModel>()
+              .Name("grid")
+              .Editable(e => e.Mode(GridEditMode.InLine).CreateAt(GridInsertRowPosition.Bottom))
+              .ToolBar(t => t.Create())
+              .Columns(c =>
+              {
+                  c.Bound(l => l.Id).Title("#").Width(25);
+                  c.Bound(l => l.Name);
+                  c.Bound(l => l.IsRequiredManufactureBarcode).Title("Manufacture barcode").Width(240);
+                  c.Command(com => com.Edit()).Width(200);
+              })
+              .ClientDetailTemplateId("itemsTemplate")
+              .DataSource(dataSource => dataSource
+                  .Ajax()
+                  .Model(conf =>
+                  {
+                      conf.Id(m => m.Id);
+                      conf.Field(m => m.Id).Editable(false);
+                      conf.Field(m => m.ParentId).Editable(false);
+                  })
+                  .Read(read => read.Action("GetAllParents", "License"))
+                  .Update(update => update.Action("UpdateParent", "License"))
+                  .Create(create => create.Action("AddParent", "License"))))
+    </div>
+</div>
+
+
+
+<script id="itemsTemplate" type="text/kendo-tmpl">
+    @(Html.Kendo().Grid<LicenseViewModel>()
+      .Name("SubLicenses_#=Id#")
+              .Editable(e => e.Mode(GridEditMode.InLine).CreateAt(GridInsertRowPosition.Bottom))
+      .ToolBar(t => t.Create())
+      .Columns(c =>
+      {
+          c.Bound(l => l.ParentId).Hidden(true);
+          c.Bound(l => l.Id).Width(25);
+          c.Bound(l => l.Name);
+          c.Bound(l => l.WMCharacter).Title("WM Character");
+          c.Bound(l => l.WMCharacterPermanent).Title("WM Character Permanent");
+          c.Command(l => l.Edit()).Width(200);
+      })
+          .DataSource(dataSource => dataSource
+                        .Ajax()
+                                .Model(conf =>
+                                {
+                                    conf.Id(m => m.Id);
+                                    conf.Field(m => m.Id).Editable(false);
+                                })
+                                                .Read(read => read.Action("GetChildren", "License", new { Id = "#=Id#" }))
+                                                .Update(update => update.Action("UpdateChild", "License"))
+                                                                .Create(create => create.Action("AddChild", "License", new { parentId = "#=Id#" }))).ToClientTemplate()
+    )
+
+</script>

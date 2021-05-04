@@ -1,0 +1,279 @@
+﻿@using Amazon.Core.Models
+@using Amazon.Web.ViewModels
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Products
+@using Kendo.Mvc.UI
+@{
+    ViewBag.Title = "Style Images";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+
+}
+
+<script>
+    var StyleImagesViewModel = function(settings) {
+        var self = this;
+
+        self.settings = settings;
+
+        self.grid = $(settings.gridId).data("kendoGrid");
+
+        ko.BaseViewModel.call(self);
+
+        self.searchFilters = {
+            styleId: ko.observable(''),
+            onlyIgnored: ko.observable(false),
+            styleWithLoRes: ko.observable(true),
+            withMarketHiRes: ko.observable(true)
+        };
+        
+        self.getGridParams = function () {
+            console.log("getGridParams");
+            
+            return {
+                styleId: self.searchFilters.styleId(),
+                onlyIgnored: self.searchFilters.onlyIgnored(),
+                styleWithLoRes: self.searchFilters.styleWithLoRes(),
+                withMarketHiRes: self.searchFilters.withMarketHiRes()
+            };
+        };
+
+        self.search = function () {
+            var params = self.getGridParams();
+
+            self.resetRowNumber(0);
+
+            //if (self.grid.dataSource.page() != 1) {
+            //    self.grid.dataSource.page(1); //May call read
+            //}
+            //self.grid.dataSource.read();
+            self.grid.dataSource.read(params);
+        };
+
+        self.clear = function() {
+            self.searchFilters.styleId('');
+            self.searchFilters.onlyIgnored(false);
+            self.searchFilters.styleWithLoRes(true);
+            self.searchFilters.withMarketHiRes(true);
+
+            self.search();
+        };
+
+        self.grid.bind("dataBinding", function(e) {
+            console.log("page=" + self.grid.dataSource.page());
+            self.resetRowNumber((self.grid.dataSource.page() - 1) * self.grid.dataSource.pageSize());
+            self.rowTotal(self.grid.dataSource.total());
+        });
+        
+        self.replaceStyleImage = function(sender, id) {
+            helper.ui.showLoading($(sender));
+            $.ajax({
+                url: self.settings.urls.replaceStyleImage,
+                data: { id: id },
+                success: function(result) {
+                    helper.ui.hideLoading($(sender));
+
+                    var row = kendo.helper.getRowById(self.grid, "Id", id);
+                    row.StyleImageThumbnail = row.MarketImageThumbnail;
+
+                    helper.ui.kendoFastRedrawRow(self.grid, row, $('tr[data-uid="' + row.uid + '"]'), [0]);
+                }
+            });
+        }
+
+        self.toggleIgnored = function(sender, id, isIgnored) {
+            console.log(isIgnored);
+
+            var toggledIgnored = isIgnored == "false" ? true : false;
+            console.log(toggledIgnored);
+
+           
+            helper.ui.showLoading($(sender));
+            $.ajax({
+                url: self.settings.urls.toggleIgnoreItemImage,
+                data: { id: id, isIgnored: toggledIgnored },
+                cache: false,
+                async: false,
+                success: function() {
+                    helper.ui.hideLoading($(sender));
+
+                    var row = kendo.helper.getRowById(self.grid, "Id", id);
+                    if (row != null) {
+                        row.ImagesIgnored = toggledIgnored;
+
+                        //var button = $(sender).closest('button');;
+                        //button.html(toggledIgnored ? "Enable" : "Ignore");
+
+                        helper.ui.kendoFastRedrawRow(self.grid, row, $('tr[data-uid="' + row.uid + '"]'), [0]);
+                    } else {
+                        console.log('row == null');
+                    }
+                }
+            });
+        };
+
+        helper.ui.addTopPager(self.grid);
+
+        //Init
+        self.search();
+    };
+</script>
+
+<div id="page-content">
+    <ol class="breadcrumb">
+        <li><a href="#">Images</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <div class="messages-block">
+                <div><span id="infoMessage" class="text-info"></span></div>
+                <div><span id="errorMessage" class="label label-danger"></span></div>
+                <div><span id="successMessage" class="label label-success"></span></div>
+            </div>
+
+            <table>
+                <tr>
+                    <th>Style Id:</th>
+                    <td>
+                        <input type="text"
+                               class="k-textbox"
+                               style="border-color: #2d2d2d"
+                               data-bind="value: searchFilters.styleId, valueUpdate:'afterkeydown'"/>
+                    </td>
+                </tr>
+            </table>
+            <table>
+                <tr>
+                    <td>
+                        <input type="checkbox" data-bind="checked: searchFilters.styleWithLoRes"/> Styles with Amazon Lo-Res image
+                    </td>
+                    <td style="padding-left: 20px">
+                        <input type="checkbox" data-bind="checked: searchFilters.withMarketHiRes" /> Exist Market Hi-Res image
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <div style="padding-top: 10px; text-align: left">
+                            <button class="k-button" style="margin: 0 10px 0 0; padding: 3px 20px 3px 20px" data-bind="click: search">Search</button>
+                            <button class="k-button" style="margin: 0 0 0 0; padding: 3px 20px 3px 20px" data-bind="click: clear">Clear</button>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div>
+        @(Html.Kendo().Grid<StyleImageViewModel>()
+              .Name("grid")
+              .Columns(columns =>
+              {
+                  columns.Bound(c => c.Id)
+                      .ClientTemplate("#= styleImagesModel.renderNumber(data) #")
+                      .Title("#")
+                      .Width(50)
+                      .Sortable(false);
+
+                  columns.Bound(c => c.MarketImageThumbnail)
+                      .Sortable(true)
+                      .Filterable(true)
+                      .Title("Hi-res (market) Image")
+                      .Width(180)
+                      .ClientTemplate("#if(HasMarketImage){# <div class='image-box-holder'><a href='#=MarketImage#' target='_blank'><img src='#=MarketImageThumbnail#' style='max-width: 75px' /></a></div> #} else {# <div>n/a</div> #}#");
+
+                  columns.Bound(c => c.StyleImageThumbnail)
+                        .Sortable(false)
+                        .Filterable(false)
+                        .Width(150)
+                        .ClientTemplate("#if(HasStyleImage){# <div class='image-box-holder'><a href='#=StyleImage#' target='_blank'><img src='#=StyleImageThumbnail#' style='max-width: 75px' /></a></div> #}#"
+                            + "<div class='remark'>#if(IsHiResStyleImage){# <span>hi-res</span> #} else {# <span>lo-res</span> #}#, diff: #=tmpl.isNullFormat(DiffWithStyleImage, '0.00%', '-')# </div>")
+                        .Title("Style Image");
+
+                  columns.Bound(c => c.StyleString)
+                    .Sortable(true)
+                    .Filterable(true)
+                    .Width(180)
+                    .ClientTemplate("<div><a target='_blank' href='#=StyleUrl#'>#=StyleString#</a></div>")
+                    .Title("Style Id");
+
+                  columns.Bound(c => c.RemainingQuantity)
+                      .Sortable(true)
+                      .Filterable(true)
+                      .ClientTemplate("#=tmpl.isNull(RemainingQuantity, '-')#")
+                      .Title("Remaining Qty");
+
+                  columns.Bound(c => c.Id)
+                      .Sortable(false)
+                      .Filterable(false)
+                      .Width(180)
+                      .ClientTemplate("#=tmpl.t('buttons-column-template', data)#")
+                      .Title("Actions");
+              })
+              //.Events(e => e.DataBound("dataBound"))
+              .Sortable(conf => conf.Enabled(true).SortMode(GridSortMode.SingleColumn))
+              .Filterable(conf => conf.Enabled(true))
+              .Navigatable(conf => conf.Enabled(false))
+              .Scrollable(conf => conf.Enabled(false))
+              .Selectable(conf => conf.Enabled(false))
+              .Pageable(conf => conf.Enabled(true).Refresh(true))
+              .AutoBind(false)
+              .DataSource(dataSource => dataSource
+                  .Ajax()
+                  .ServerOperation(true)
+                  .Sort(conf =>
+                  {
+                      conf.Add(s => s.StyleId).Descending();
+                  })
+                  .PageSize(200)
+                  .Model(conf => conf.Id(m => m.StyleId))
+                  .Read(read => read.Action("GetAllStyleImages", "Image").Data("GetGridParams")))
+              )
+    </div>
+</div>
+
+<script type="text/x-kendo-template" id="buttons-column-template">
+    <button class='k-button k-button-icontext'
+            id='resetWithParentButton'
+            style='display:block;margin-top:4px'
+            onclick='styleImagesModel.replaceStyleImage(this, "#=Id#")'>
+        Hi-res => Style
+    </button>
+</script>
+
+
+<script>
+    var styleImagesModel = null;
+
+    $(document).ready(function () {
+        var settings = {
+            gridId: "#grid",
+            urls: {
+                replaceStyleImage: '@Url.Action("ReplaceStyleImage", "Image")',
+            }
+        };
+
+        styleImagesModel = new StyleImagesViewModel(settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+        ko.applyBindings(styleImagesModel, document.getElementById('page-content'));
+    });
+
+    function GetGridParams() {
+        console.log("GetGridParams");
+        if (styleImagesModel != null)
+            return styleImagesModel.getGridParams();
+        return {};
+    }
+
+</script>

@@ -1,0 +1,77 @@
+﻿
+.folder {
+    
+}
+
+.folder a {
+    color: white;
+}
+
+.folder a:hover {
+    background: #888;
+    color: white;
+}
+
+.email-folder {
+    margin-right: 3px;
+    padding: 2px 4px 2px 4px;
+    background: #aaa;
+    font-size: 11px;
+    color: white;
+}
+
+.system-folder {
+    margin-right: 3px;
+    padding: 2px 4px 2px 4px;
+    background: orange;
+    font-size: 11px;
+    color: white;
+}
+
+.inbox-folder {
+    margin-right: 3px;
+    padding: 2px 4px 2px 4px;
+    background: #aaa;
+    font-size: 11px;
+    color: white;
+}
+
+.sent-folder {
+    margin-right: 3px;
+    padding: 2px 4px 2px 4px;
+    background: #337ab7;
+    font-size: 11px;
+    color: white;
+}
+
+.response-folder {
+    margin-right: 3px;
+    padding: 2px 4px 2px 4px;
+    background: #e51400;
+    font-size: 11px;
+    color: white;
+}
+
+.promise-folder {
+    margin-right: 3px;
+    padding: 2px 4px 2px 4px;
+    background: #e51400;
+    font-size: 11px;
+    color: white;
+}
+
+.due-date-folder {
+    margin-right: 3px;
+    padding: 2px 4px 2px 4px;
+    background: #cd665f;
+    font-size: 11px;
+    color: white;
+}
+
+.dismiss-folder {
+    background: #aaa !important;
+}
+
+.reviewed-folder {
+    background-color: darkorange !important;
+}

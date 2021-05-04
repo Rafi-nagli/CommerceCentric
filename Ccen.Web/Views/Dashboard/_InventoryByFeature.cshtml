@@ -1,0 +1,47 @@
+﻿@model Amazon.Web.ViewModels.Graph.FeatureGraphPageViewModel
+
+
+<div id="inventory-by-@Model.HtmlPrefix-graph">
+    <div class="graph-button-top-panel row">
+        <div class="col-lg-4">
+
+        </div>
+        <div class="col-lg-4" style="text-align: center">
+            <button type="button"
+                    class="btn btn-success"
+                    style="padding-top: 2px; width: 64px"
+                    data-bind="click: onBack, visible: selectedFeatureId() != null">
+                Back
+            </button>
+            <span style="margin-top: 4px" data-bind="text: selectedFeatureName"></span>
+        </div>
+        <div class="col-lg-4"
+             data-bind="foreach: types"
+             style="text-align:right">
+            <button type="button"
+                    class="btn btn-default"
+                    style="padding-top: 2px; width: 64px"
+                    data-bind="css: { 'btn-success': isSelected, 'btn-default': !isSelected() }, click: select">
+                <span data-bind="text: label"></span>
+            </button>
+        </div>
+    </div>
+
+    <div id="inventoryBy@(Model.HtmlPrefix)" style="min-width: 350px; height: 300px; max-width: 650px; margin: 0 auto"></div>
+</div>
+
+<script>
+    var inventoryBy@(Model.HtmlPrefix)GraphViewModel = null;
+    $(document).ready(function () {
+        var settings = {
+            featureId: @Model.FeatureId,
+            graphId: 'inventoryBy@(Model.HtmlPrefix)',
+            seriesName: '@Model.SeriesName',
+            getDataUrl: '@Url.Action("GetInventoryByFeature", "Dashboard")',
+            enableClick: @(Model.EnableSubFeature ? 1:0),
+        }
+
+        inventoryBy@(Model.HtmlPrefix)GraphViewModel = new InventoryByFeatureGraphViewModel(settings);
+        ko.applyBindings(inventoryBy@(Model.HtmlPrefix)GraphViewModel, document.getElementById("inventory-by-@Model.HtmlPrefix-graph"));
+    });
+</script>

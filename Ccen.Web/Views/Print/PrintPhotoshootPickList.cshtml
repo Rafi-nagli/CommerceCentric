@@ -1,0 +1,359 @@
+﻿@using Amazon.Common.Helpers
+@using Amazon.Core.Models.Settings
+@using Amazon.Web.ViewModels
+@using Amazon.Web.ViewModels.Pages
+@using Amazon.Web.ViewModels.Print
+@using Kendo.Mvc.UI
+@{
+    ViewBag.Title = "Photoshoot Pick List";
+    Layout = "~/Views/Shared/_PrintLayout.cshtml";
+}
+@model PickListPageViewModel
+
+<script>
+    var PickListModel = function(model, settings) {
+        var self = this;
+
+        self.settings = settings;
+        self.sortMode = ko.observable(0);
+
+        self.byLocation = ko.computed(function() {
+            return self.sortMode() == 0
+        });
+
+        self.bySoldQuantity = ko.computed(function() {
+            return self.sortMode() == 1;
+        });
+
+        self.sortByLocation = function() {
+            var grid = $('#' + self.settings.gridId).data("kendoGrid");
+            grid.dataSource.sort({ field: "Number", dir: "asc" });
+
+            self.sortMode(2);
+        }
+
+        self.sortBySoldQuantity = function () {
+            var grid = $('#' + self.settings.gridId).data("kendoGrid");
+            grid.dataSource.sort({ field: "SoldQuantity", dir: "desc" });
+
+            self.sortMode(1);
+        }
+    }
+
+
+    var pickListModel = null;
+
+    $(document).ready(function () {
+        console.log("begin ready");
+
+        var settings = {
+            gridId: 'grid'
+        };
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        pickListModel = new PickListModel(model, settings);
+        ko.applyBindings(pickListModel, document.getElementById("header-content"));
+    });
+</script>
+
+<script>
+    var itemCount = 0;
+    
+    function renderSoldSizes(sizes, isVariate) {
+        var render = "";
+
+        for (var i = 0; i < sizes.length; i++) {
+            var size = sizes[i];
+            var originalSize = "";
+            var noWeight = size.StyleSize == null;
+            var color = noWeight ? "yellow" : "none";
+
+            var styleSize = sizes[i].StyleSize || "- (no related style variation)";
+            
+            if (size.Sizes.length > 1 || size.StyleSize != size.Sizes[0]) {
+                originalSize = size.Sizes.join(', ');
+                originalSize = " (" + originalSize + ") ";
+            }
+            render += "<div style='font-size:13px; background-color: " + color + "'><b>" + styleSize + "</b>" + originalSize
+                + printColor(sizes[i].Color, isVariate)
+                + " - <b>" + sizes[i].Quantity + "</b></div>";
+            itemCount += sizes[i].Quantity;
+        }
+
+        return render;
+    }
+    
+    function renderAllSizesPrice(sizes, isVariate) {
+        var render = "";
+        for (var i = 0; i < sizes.length; i++) {
+            var size = sizes[i];
+
+            var styleSize = size.StyleSize || "- (no related style variation)";
+
+            render += "<div style='padding-bottom:2px'><b>"
+                + styleSize
+                + printColor(size.Color, isVariate)
+                + "</b> - ";
+
+            //console.log(size);
+            for (var j = 0; j < size.Prices.length; j++)
+            {
+                render += size.Prices[j].Currency + tmpl.f(size.Prices[j].Price, "0.00");
+                if (j < size.Prices.length - 1)
+                    render += "/ ";
+            }
+            
+            render += "</div>";
+        }
+        return render;
+    }
+    
+    function renderAllSizes(sizes, isVariate) {
+        var render = "";
+        for (var i = 0; i < sizes.length; i++) {
+            var size = sizes[i];
+            var noWeight = size.Weight == null && (size.Quantity > 0 || size.OrderedQuantity > 0);
+            var color = noWeight ? "yellow" : "none";
+            render += "<div style='padding:2px; background-color: " + color + "'><b>"
+                + sizes[i].StyleSize
+                + printColor(sizes[i].Color, isVariate)
+                + "</b> - " + sizes[i].Quantity + printPending(sizes[i].PendingQuantity) + "</div>";
+        }
+        return render;
+    }
+    
+    function renderLocations(locations) {
+        var render = "";
+
+        if (locations == null)
+            return render;
+        
+        for (var i = 0; i < locations.length; i++) {
+            if (render != "")
+                render += ", ";
+            render += locations[i].Isle + "/" + locations[i].Section + "/" + locations[i].Shelf + (locations[i].IsDefault ? " (def)" : "");
+        }
+        return "<div style='padding-bottom:4px'>" + render + "</div>";
+    }
+    
+    function printColor(color, isVariation) {
+        if (!isVariation)
+            return "";
+        
+        if (color != null && color != '') {
+            return " (" + color + ")";
+        }
+        return "";
+    }
+    
+    function printPending(quantity) {
+        if (quantity != null && quantity != '' && quantity != 0) {
+            return " (" + quantity + ")";
+        }
+        return "";
+    }
+</script>
+
+<script>
+    function orderDataBound() {
+        console.log("orderDataBound");
+
+        //Get all orders list
+        var dataView = $('#grid').data("kendoGrid").dataSource.data();
+
+        $('#total').text(itemCount + " items");
+    }
+</script>
+
+
+@*FOR PRINT*@
+<style type="text/css" media="print">
+    div.divFooter {
+        position: fixed;
+        bottom: 0;
+    }
+
+    .avoid {
+        page-break-inside: avoid;
+        -webkit-region-break-inside: avoid;
+    }
+
+    .k-header, .k-widget {
+        background-image: none;
+        background-color: #cccccc;
+        color: black;
+    }
+
+    .k-grid {
+        background: white;
+        color: black;
+    }
+
+    .k-grid .k-alt {
+        background: none; 
+    }
+
+    .k-grid .k-alt .avoid {
+        background-color: #ddd;
+        color: black;
+        /*border-left: 1px solid black !important;*/
+    }
+
+    .k-grid .k-alt td:first-child {
+        /*border-left: 1px solid black !important;*/
+    }
+
+    .k-grid tr {
+        page-break-inside: avoid;
+        -webkit-region-break-inside: avoid;
+    }
+
+    .k-grid td {
+        vertical-align: top;
+        /*border-left: 1px solid black;*/
+    }
+
+    .shipping-date {
+        font-size: 18px;
+        padding: 20px;
+    }
+
+    .picklist-link {
+        text-decoration: none;
+        color: black;
+    }
+
+    .no-print, .no-print *
+    {
+        display: none !important;
+    }
+</style>
+
+@*General*@
+<style type="text/css" media="screen">
+    
+    .pick-list {
+        /*width: 600px;*/
+    }
+
+    .k-header, .k-widget {
+        background-image: none;
+        background-color: #cccccc;
+        color: black;
+    }
+
+    table {
+        border: 1px solid black;
+        border-collapse: collapse;
+    }
+    table td {
+        border: none;
+        border-left: 1px solid black;
+    }
+
+    .k-grid .k-alt .avoid {
+        background-color: #ddd;
+    }
+
+    .k-grid {
+        background-color: white;
+        color: black;
+    }
+
+    .k-grid td {
+        vertical-align: top;
+    }
+
+    .shipping-date {
+        font-size: 18px;
+        padding: 20px;
+    }
+
+    .picklist-link {
+        text-decoration: none;
+        color: black;
+    }
+
+    .picklist-link:hover {
+        text-decoration: underline;
+    }
+
+    .pick-list .sort-links .selected {
+        background-color: #ccc;
+        color: black;
+    }
+
+    .pick-list .sort-links a {
+        color: #999;
+    }
+</style>
+
+
+
+<div class="pick-list" id="page-content">
+    <div class="shipping-date" id="header-content">
+        @if (Model.BatchId.HasValue)
+        {
+            <span>Photoshoot: @Model.BatchName</span>
+        }
+        else
+        {
+            <span>Today: @DateHelper.GetAppNowTime().ToString("MM/dd/yyyy HH:mm")</span>
+        }
+
+        <span class="sort-links no-print">
+            <a href='javascript:;' style="margin: 0px 10px;" data-bind="click: sortByLocation, css: { 'selected': byLocation }">By Location</a>
+            <a href='javascript:;' data-bind="click: sortBySoldQuantity, css: { 'selected': bySoldQuantity }">By Sold Quantity</a>
+        </span>
+    </div>
+
+    @(Html.Kendo().Grid<PickListItemViewModel>()
+          .Name("grid")
+          .Columns(columns =>
+          {
+              columns.Bound(c => c.Number).Title("#").Width(35);
+              columns.Bound(c => c.SoldQuantity).Title("Picture").Width(100);
+              columns.Bound(c => c.CuttedProductName).Title("Product Name");
+              columns.Bound(c => c.StyleId).Title("Prices").Width(120);
+              columns.Bound(c => c.StyleId).Title("Remaining qty").Width(130);
+          })
+          .ClientRowTemplate(
+              "<tr # if (Number % 2 == 1) { # class='k-alt' # } #><td colspan='5' style='padding:0px; vertical-align:top'>"
+              + "<div class='avoid'>"
+              + "<table cellspacing='0' cellpadding='0' style='width: 100%; border:none'>"
+              + "<colgroup>"
+              + "<col style='width:35px' />"
+              + "<col style='width:100px' />"
+              + "<col />"
+              + "<col style='width:120px' />"
+              + "<col style='width:130px' />"
+              + "</colgroup>"
+              + "<tr>"
+              + "<td>#= Number #</td>"
+              + "<td><a target='_blank' href='#=ProductStyleUrl#'><img height='75' src='#=Thumbnail#' /></a></td>"
+              + "<td><a target='_blank' href='#=MarketProductUrl#' class='picklist-link'>#=CuttedProductName#</a><br/>Style: <a href='#=StyleUrl#' target='_blank' style='color:black'>#=StyleString#</a><br/> #= renderSoldSizes(SoldSizes, HasColorVariation) # #= renderLocations(Locations) #</td>"
+              + "<td>#= renderAllSizesPrice(SoldSizes, HasColorVariation) #</td>"
+              + "<td>#= renderAllSizes(AllSizes, HasColorVariation) #</td>"
+              + "</tr>"
+              + "</table>"
+              + "</div>"
+              + "</td></tr>") 
+          .Events(e => e.DataBound("orderDataBound"))
+          .DataSource(dataSource => dataSource
+              .Ajax()
+              .ServerOperation(false)
+              .Model(conf => conf.Id(m => m.StyleId))
+              .Read(read => read.Action("GetPhotoshootPickListWithLocation", "Print", new { batchId = Model.BatchId })))
+          )
+
+    <div class="k-pager-wrap k-grid-pager k-widget">
+        <span class="k-pager-info k-label" id="total">0 items</span>
+    </div>
+    <hr/>
+</div>
+
+
+
+
+

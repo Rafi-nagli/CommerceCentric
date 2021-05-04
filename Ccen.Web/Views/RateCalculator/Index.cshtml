@@ -1,0 +1,751 @@
+﻿@using Amazon.Common.Helpers
+@using Amazon.Core.Entities
+@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Core.Models.Settings
+@using Amazon.DTO
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Pages.MailPageViewModel
+
+@{
+    ViewBag.Title = "Calculate";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/mail.ico" />
+}
+
+<style>
+    .k-master-row .k-hierarchy-cell .k-icon {
+        visibility: hidden;
+    }
+</style>
+
+
+<script type="text/javascript">
+
+    var MailingLabelViewModel = function(gridId, model, settings) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+
+        self.wasProcessed = ko.observable(false);
+        self.isLoading = ko.observable(false);
+        self.loadingText = ko.observable("");
+
+        self.printMessages = ko.observableArray([]);
+
+        self.printError = ko.computed(function() {
+            var array = $.grep(self.printMessages(), function(n) { return n.IsError; });
+            array = $.map(array, function(n) { return n.IsError ? "- " + n.Message : ""; });
+            return array.join('<br/>');
+        });
+
+        self.printSuccess = ko.computed(function() {
+            var array = $.grep(self.printMessages(), function(n) { return n.IsSuccess; });
+            array = $.map(array, function(n) { return n.IsSuccess ? "- " + n.Message : ""; });
+            return array.join('<br/>');
+        });
+
+        self.fromAddressFullName = ko.observable();
+        self.fromAddressAddress1 = ko.observable();
+        self.fromAddressAddress2 = ko.observable();
+        self.fromAddressCity = ko.observable();
+        self.fromAddressUSAState = ko.observable();
+        self.fromAddressNonUSAState = ko.observable();
+        self.fromAddressZip = ko.observable();
+        self.fromAddressZipAddon = ko.observable();
+        self.fromAddressCountry = ko.observable(self.settings.defaultCountryCode);
+        self.fromAddressPhone = ko.observable();
+        self.fromAddressEmail = ko.observable();
+        self.fromAddressIsCountryUSA = ko.computed(function() {
+            return self.fromAddressCountry() == "US";
+        });
+        self.fromAddressIsCountryNonUSA = ko.computed(function() {
+            return self.fromAddressCountry() != "US";
+        });
+        self.fromAddressMessage = ko.observable("");
+
+
+
+        self.toAddressFullName = ko.observable();
+        self.toAddressAddress1 = ko.observable();
+        self.toAddressAddress2 = ko.observable();
+        self.toAddressCity = ko.observable();
+        self.toAddressUSAState = ko.observable();
+        self.toAddressNonUSAState = ko.observable();
+        self.toAddressZip = ko.observable();
+        self.toAddressZipAddon = ko.observable();
+        self.toAddressCountry = ko.observable(self.settings.defaultCountryCode);
+        self.toAddressPhone = ko.observable();
+        self.toAddressEmail = ko.observable();
+        self.toAddressIsCountryUSA = ko.computed(function() {
+            return self.toAddressCountry() == "US";
+        });
+        self.toAddressIsCountryMX = ko.computed(function () {
+            return self.toAddressCountry() == "MX";
+        });
+        self.toAddressIsCountryNonUSA = ko.computed(function() {
+            return self.toAddressCountry() != "US";
+        });
+        self.toAddressMessage = ko.observable("");
+
+
+        self.weightLb = ko.observable(0)
+            .extend(ko.validation.patterns.requredNumber("*"));
+        //self.weightLb.subscribe(function () { self.updateShippingMethods(); });
+
+        self.weightOz = ko.observable(5)
+            .extend(ko.validation.patterns.requredNumber("*"));
+        //self.weightOz.subscribe(function () { self.updateShippingMethods(); });
+
+        self.packageWidth = ko.observable(1)
+            .extend(ko.validation.patterns.requredNumber("*"));
+        self.packageHeight = ko.observable(1)
+            .extend(ko.validation.patterns.requredNumber("*"));
+        self.packageLength = ko.observable(1)
+            .extend(ko.validation.patterns.requredNumber("*"));
+
+        self.shippingMethodList = ko.observableArray([]);
+
+        self.isRateLoading = ko.observable(false);
+        self.notIsRateLoading = ko.computed(function () {
+            return !self.isRateLoading();
+        });
+        self.getRateMessage = ko.observable("");
+
+        self.canCalculate = ko.computed(function () {
+            return (self.weightLb() > 0 || self.weightOz() > 0)
+                && (!dataUtils.isNullOrEmpty(self.toAddressZip()));
+        });
+
+        self.onCalculate = function() {
+            console.log("updateShippingMethods");
+
+            self.shippingMethodList.removeAll();
+
+            var dataModel = self.getDataModel();
+
+            self.isRateLoading(true);
+            self.getRateMessage("");
+
+            self.setLoading("calculate...");
+
+            $.ajax({
+                method: "POST",
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                traditional: true,
+                async: true,
+                cache: false,
+                data: JSON.stringify(dataModel),
+                url: '@Url.Action(MVC.RateCalculator.GetShippingOptions())',
+                success: function(result) {
+                    self.isRateLoading(false);
+                    self.setLoading(null);
+
+                    if (result.IsSuccess) {
+                        self.shippingMethodList.removeAll();
+                        var list = result.Data;
+                        if (list != null) {
+                            for (var i = 0; i < list.length; i++) {
+                                var method = list[i];
+                                var prefix = method.ProviderPrefix;
+                                if (!dataUtils.isEmpty(prefix))
+                                    prefix += " ";
+                                method.Title = prefix + method.Carrier + ": " + method.Name + ' - ' + (method.Rate == null ? "[none]" : tmpl.f(method.Rate, "$0.00"));
+                                self.shippingMethodList.push(method);
+                            }
+                        }
+                    } else {
+                        self.getRateMessage(result.Message);
+                    }
+                }
+            });
+        };
+
+        self.setLoading = function(message) {
+            if (message != null && message != '') {
+                self.isLoading(true);
+            } else {
+                self.isLoading(false);
+            }
+            self.loadingText(message);
+        }
+
+        self.checkFromAddress = function(data, e) {
+            var sender = $(e.target);
+            self.fromAddressMessage("");
+            self.validateAddress(sender,
+                    self.getAddressModel(true),
+                    false)
+                .done(function(data) {
+                    console.log(data);
+                    self.fromAddressMessage(self.getCheckAddressResult(data, false));
+                    if (data.Data != null)
+                        self.setAddressFromModel(data.Data, true);
+                });
+        };
+
+        self.checkToAddress = function(data, e) {
+            var sender = $(e.target);
+            self.toAddressMessage("");
+            self.validateAddress(sender,
+                    self.getAddressModel(false),
+                    false)
+                .done(function(data) {
+                    console.log(data);
+                    self.toAddressMessage(self.getCheckAddressResult(data, false));
+                    if (data.Data != null)
+                        self.setAddressFromModel(data.Data, false);
+                });
+        };
+
+        self.getCheckAddressResult = function(data, asPlanText) {
+            if (data.IsSuccess) {
+                var msg = "- Address successfully verified (by stamps.com)";
+                if (asPlanText)
+                    return msg;
+                return "<span class='label label-success'>" + msg + "</span>";
+            } else {
+                var msg = "- The address could not be verified (by stamps.com). Details: " + tmpl.isNull(data.Data, '-');
+                if (asPlanText)
+                    return msg;
+                return "<span  class='label label-danger'>" + msg + "</span>";
+            }
+        };
+
+        self.validateAddress = function(sender, data, onlyCheck) {
+            self.setLoading('validating...');
+
+            data.onlyCheck = onlyCheck;
+            return $.ajax({
+                url: '@Url.Action(MVC.Mailing.CheckAddress())',
+                data: data,
+                success: function() {
+                    self.setLoading(null);
+                }
+            });
+        };
+
+        self.clearPrintResult = function() {
+            self.printMessages([]);
+            self.wasProcessed(false);
+        };
+
+
+
+        self.getDataModel = function() {
+            var dataModel = {
+                FromAddress: self.getAddressModel(true),
+                ToAddress: self.getAddressModel(false),
+
+                WeightLb: self.weightLb(),
+                WeightOz: self.weightOz(),
+
+                PackageWidth: self.packageWidth(),
+                PackageHeight: self.packageHeight(),
+                PackageLength: self.packageLength(),
+            };
+
+            return dataModel;
+        };
+
+        self.setAddressFromModel = function(address, toFrom) {
+            if (toFrom) {
+                //self.fromAddressFullName(address.FullName);
+                self.fromAddressAddress1(address.Address1);
+                //self.fromAddressAddress2(address.Address2);
+                self.fromAddressCity(address.City);
+                self.fromAddressUSAState(address.USAState);
+                self.fromAddressNonUSAState(address.NonUSAState);
+                self.fromAddressZip(address.Zip);
+                self.fromAddressZipAddon(address.ZipAddon);
+                self.fromAddressCountry(address.Country);
+                //self.fromAddressPhone(address.Phone);
+                //self.fromAddressEmail(address.Email);
+                self.fromAddressMessage("");
+            } else {
+                //self.toAddressFullName(address.FullName);
+                self.toAddressAddress1(address.Address1);
+                //self.toAddressAddress2(address.Address2);
+                self.toAddressCity(address.City);
+                self.toAddressUSAState(address.USAState);
+                self.toAddressNonUSAState(address.NonUSAState);
+                self.toAddressZip(address.Zip);
+                self.toAddressZipAddon(address.ZipAddon);
+                self.toAddressCountry(address.Country);
+                //self.toAddressPhone(address.Phone);
+                //self.toAddressEmail(address.Email);
+                self.toAddressMessage("");
+            }
+        };
+
+        self.getAddressModel = function(isFrom) {
+            if (isFrom) {
+                return {
+                    FullName: self.fromAddressFullName(),
+                    Address1: self.fromAddressAddress1(),
+                    Address2: self.fromAddressAddress2(),
+                    City: self.fromAddressCity(),
+                    USAState: self.fromAddressUSAState(),
+                    NonUSAState: self.fromAddressNonUSAState(),
+                    Country: self.fromAddressCountry(),
+                    Zip: self.fromAddressZip(),
+                    ZipAddon: self.fromAddressZipAddon(),
+                    Phone: self.fromAddressPhone(),
+                    Email: self.fromAddressEmail(),
+                    IsCountryUSA: self.fromAddressIsCountryUSA(),
+                };
+            } else {
+                return {
+                    FullName: self.toAddressFullName(),
+                    Address1: self.toAddressAddress1(),
+                    Address2: self.toAddressAddress2(),
+                    City: self.toAddressCity(),
+                    USAState: self.toAddressUSAState(),
+                    NonUSAState: self.toAddressNonUSAState(),
+                    Country: self.toAddressCountry(),
+                    Zip: self.toAddressZip(),
+                    ZipAddon: self.toAddressZipAddon(),
+                    Phone: self.toAddressPhone(),
+                    Email: self.toAddressEmail(),
+                    IsCountryUSA: self.toAddressIsCountryUSA(),
+                };
+            }
+        };
+
+
+
+        //URL Computing
+        @*http://stackoverflow.com/questions/332872/encode-url-in-javascript*@
+        self.getGoogleAddressUrl = function(address) {
+            return "https://www.google.com/search?q=" +
+                tmpl.joinNotEmpty([
+                    tmpl.joinNotEmpty([address.Address1, address.Address2], " "),
+                    address.City,
+                    address.State,
+                    tmpl.joinNotEmpty([address.Zip, address.ZipAddon], " "),
+                    address.Country
+                ], ", ");
+        };
+
+        self.googleSearchFromAddressUrl = ko.computed(function() {
+            return self.getGoogleAddressUrl(self.getAddressModel(true));
+        });
+
+        self.googleSearchToAddressUrl = ko.computed(function() {
+            return self.getGoogleAddressUrl(self.getAddressModel(false));
+        });
+
+        self.getMelissaAddressUrl = function(address) {
+            return "http://www.melissadata.com/Lookups/AddressVerify.asp?"
+                + "name=" + encodeURIComponent(address.FullName)
+                + "&company="
+                + "&address=" + encodeURIComponent(tmpl.joinNotEmpty([address.Address1, address.Address2], " "))
+                + "&city=" + encodeURIComponent(address.City)
+                + "&state=" + (address.IsCountryUS ? encodeURIComponent(address.USAState) : encodeURIComponent(address.USAState))
+                + "&zip=" + encodeURIComponent(tmpl.joinNotEmpty([address.Zip, address.ZipAddon], "-"));
+        };
+
+        self.melissaSearchFromAddressUrl = ko.computed(function() {
+            return self.getMelissaAddressUrl(self.getAddressModel(true));
+        });
+
+        self.melissaSearchToAddressUrl = ko.computed(function() {
+            return self.getMelissaAddressUrl(self.getAddressModel(false));
+        });
+
+        self.setAddressFromModel(self.model.ReturnAddress, true);
+    };
+
+</script>
+
+<div id="page-content">
+    <div id="windowContainer"></div>
+    <div id="MessagePopupWindow0" style="display: none;"></div>
+
+    <ol class="breadcrumb">
+        <li><a href="#">Orders</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="am-mail">
+        <div style="padding: 10px 0px 5px 7px">
+            <div id="errorMessage" class="text-danger" data-bind="html: printError"></div>
+            <div id="successMessage" class="text-success" data-bind="html: printSuccess"></div>
+        </div>
+
+
+        <div class="panel panel-default">
+            <div class="panel-heading">Order Details</div>
+            <div class="panel-body">
+                <div class="mailing-info">
+                    <div class="lb">
+                        <table>
+                            <tr>
+                                <th>Weight *:</th>
+                                <td><input name="WeightLb" type="number" data-bind="value: weightLb" style="width: 65px" class="k-textbox" /> lb</td>
+                                <td><input name="WeightOz" type="number" data-bind="value: weightOz" style="width: 65px" class="k-textbox" /> oz</td>
+                            </tr>
+                            <tr>
+                                <th>Package Size (W x H x L) *:</th>
+                                <td><input name="PackageWidth" type="number" data-bind="value: packageWidth" style="width: 65px" class="k-textbox" /> in</td>
+                                <td><input name="PackageHeight" type="number" data-bind="value: packageHeight" style="width: 65px" class="k-textbox" /> in</td>
+                                <td><input name="PackageLength" type="number" data-bind="value: packageLength" style="width: 65px" class="k-textbox" /> in</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="address-block">
+                        <table>
+                            <tr>
+                                <td id="from" style="vertical-align: bottom">
+                                    <div style="margin: 0px 0px 4px 0px">
+                                        <b>From:</b>
+                                    </div>
+                                    <table>
+                                        @*<tr>
+                                                <th>Full Name</th>
+                                                <td>
+                                                    <input type="text"
+                                                           name="FromAddress.FullName"
+                                                           class="text-box k-textbox"
+                                                           data-bind="value: fromAddressFullName" />
+                                                </td>
+                                            </tr>*@
+                                        <tr>
+                                            <th>Address</th>
+                                            <td>
+                                                <input type="text"
+                                                       name="FromAddress.Address1"
+                                                       class="text-box k-textbox"
+                                                       data-bind="value: fromAddressAddress1" />
+                                            </td>
+                                        </tr>
+                                        @*<tr>
+                                                <th>Address 2</th>
+                                                <td>
+                                                    <input type="text"
+                                                           name="FromAddress.Address2"
+                                                           class="text-box k-textbox"
+                                                           data-bind="value: fromAddressAddress2" />
+                                                </td>
+                                            </tr>*@
+                                        <tr>
+                                            <td>City</td>
+                                            <td>
+                                                <input type="text"
+                                                       name="FromAddress.City"
+                                                       class="text-box k-textbox"
+                                                       data-bind="value: fromAddressCity" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>State</th>
+                                            <td>
+                                                <div data-bind="visible: fromAddressIsCountryNonUSA">
+                                                    <input type="text"
+                                                           name="FromAddress.NonUSAState"
+                                                           class="text-box k-textbox"
+                                                           data-bind="value: fromAddressNonUSAState" />
+                                                </div>
+                                                <div data-bind="visible: fromAddressIsCountryUSA">
+                                                    <input name="FromAddress.USAState"
+                                                           data-bind="kendoDropDownList: {data: settings.stateList, value: fromAddressUSAState, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'State...' }" />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Zip</th>
+                                            <td>
+                                                <input type="text"
+                                                       name="FromAddress.Zip"
+                                                       class="text-box k-textbox"
+                                                       style="width: 90px"
+                                                       data-bind="value: fromAddressZip" />
+                                                -
+                                                <input type="text"
+                                                       name="FromAddress.ZipAddon"
+                                                       class="text-box k-textbox"
+                                                       style="width: 72px"
+                                                       data-bind="value: fromAddressZipAddon" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Country</th>
+                                            <td>
+                                                <input name="FromAddress.Country"
+                                                       data-bind="kendoDropDownList: {data: settings.countryList, value: fromAddressCountry, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Country...' }" />
+                                            </td>
+                                        </tr>
+                                        @*<tr>
+                                                <th>Phone</th>
+                                                <td>
+                                                    <input type="text"
+                                                           name="FromAddress.Phone"
+                                                           class="text-box k-textbox"
+                                                           data-bind="value: fromAddressPhone" />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Email</th>
+                                                <td>
+                                                    <input type="text"
+                                                           name="FromAddress.Email"
+                                                           class="text-box k-textbox"
+                                                           data-bind="value: fromAddressEmail" />
+                                                </td>
+                                            </tr>*@
+                                        <tr>
+                                            <td colspan="2">
+                                                @*<a data-bind="click: checkFromAddress" style="width: 140px" href="javascript:;" class="k-button">Check Address</a>*@
+                                                <div style="padding-top: 5px">
+                                                    @*<a target="_blank" data-bind="attr: { href: melissaSearchFromAddressUrl }">Address on Melissa</a>*@
+                                                    <a target="_blank" style="margin-left: 15px" data-bind="attr: { href: googleSearchFromAddressUrl }">Address on Google</a>
+                                                </div>
+                                                <div data-bind="html: fromAddressMessage" style="padding: 2px"></div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                                <td id="to" style="vertical-align: bottom; padding-left: 15px">
+                                    <div style="margin: 0px 0px 4px 0px">
+                                        <b>To:</b>
+                                    </div>
+                                    <table>
+                                        @*<tr>
+                                                <th>Full Name</th>
+                                                <td>
+                                                    <input type="text"
+                                                           name="ToAddress.FullName"
+                                                           class="text-box k-textbox"
+                                                           data-bind="value: toAddressFullName" />
+                                                </td>
+                                            </tr>*@
+                                        <tr>
+                                            <th>Address</th>
+                                            <td>
+                                                <input type="text"
+                                                       name="ToAddress.Address1"
+                                                       class="text-box k-textbox"
+                                                       data-bind="value: toAddressAddress1" />
+                                            </td>
+                                        </tr>
+                                        @*<tr>
+                                                <th>Address 2</th>
+                                                <td>
+                                                    <input type="text"
+                                                           name="ToAddress.Address2"
+                                                           class="text-box k-textbox"
+                                                           data-bind="value: toAddressAddress2" />
+                                                </td>
+                                            </tr>*@
+                                        <tr>
+                                            <th>City</th>
+                                            <td>
+                                                <input type="text"
+                                                       name="ToAddress.City"
+                                                       class="text-box k-textbox"
+                                                       data-bind="value: toAddressCity" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>State</td>
+                                            <td>
+                                                <div data-bind="visible: toAddressIsCountryNonUSA">
+                                                    <input type="text"
+                                                           name="ToAddress.NonUSAState"
+                                                           class="text-box k-textbox"
+                                                           data-bind="value: toAddressNonUSAState" />
+                                                </div>
+                                                <div data-bind="visible: toAddressIsCountryUSA">
+                                                    <input name="ToAddress.USAState"
+                                                           data-bind="kendoDropDownList: {data: settings.stateList, value: toAddressUSAState, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'State...' }" />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Zip</th>
+                                            <td>
+                                                <input type="text"
+                                                       name="ToAddress.Zip"
+                                                       class="text-box k-textbox"
+                                                       style="width: 90px"
+                                                       data-bind="value: toAddressZip" />
+                                                -
+                                                <input type="text"
+                                                       name="ToAddress.ZipAddon"
+                                                       class="text-box k-textbox"
+                                                       style="width: 72px"
+                                                       data-bind="value: toAddressZipAddon" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Country</th>
+                                            <td>
+                                                <input name="ToAddress.Country"
+                                                       data-bind="kendoDropDownList: {data: settings.countryList, value: toAddressCountry, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Country...' }" />
+                                            </td>
+                                        </tr>
+                                        @*<tr>
+                                                <th>Phone</th>
+                                                <td>
+                                                    <input type="text"
+                                                           name="ToAddress.Phone"
+                                                           class="text-box k-textbox"
+                                                           data-bind="value: toAddressPhone" />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Email</th>
+                                                <td>
+                                                    <input type="text"
+                                                           name="ToAddress.Email"
+                                                           class="text-box k-textbox"
+                                                           data-bind="value: toAddressEmail" />
+                                                </td>
+                                            </tr>*@
+                                        <tr>
+                                            <td colspan="2">
+                                                @*<a data-bind="click: checkToAddress" style="width: 140px" href="javascript:;" class="k-button">Check Address</a>*@
+                                                <div style="padding-top: 5px">
+                                                    @*<a target="_blank" data-bind="attr: { href: melissaSearchToAddressUrl }">Address on Melissa</a>*@
+                                                    <a target="_blank" style="margin-left: 15px" data-bind="attr: { href: googleSearchToAddressUrl }">Address on Google</a>
+                                                </div>
+                                                <div data-bind="html: toAddressMessage" style="padding: 2px"></div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="buttons" style="padding-top: 15px; padding-left: 7px">
+                        <button type="button"
+                                id="calculateButton"
+                                name="Generate"
+                                data-bind="click: onCalculate, enable: canCalculate(), css: {'k-state-disabled': !canCalculate() }"
+                                class="k-button"
+                                style="width: 120px">
+                            Calculate
+                        </button>
+                        <div data-bind="text: loadingText"></div>
+                        <div style="padding-top: 8px">
+                            <div class="text-danger"
+                                 data-bind="html: printError"></div>
+                            <div class="text-success"
+                                 data-bind="html: printSuccess"></div>
+                        </div>
+                    </div>
+
+                    <div class="shipping">
+                        <div class="k-widget k-grid k-secondary grid-small">
+                            <table style="width: 100%;">
+                                <thead class="k-grid-header">
+                                    <tr>
+                                        <th class="k-header">Carrier</th>
+                                        <th class="k-header">Name</th>
+                                        <th class="k-header">Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody data-bind="foreach: shippingMethodList">
+                                    <tr class="k-master-row" data-bind="css: { 'k-alt': $index() % 2 == 1 }">
+                                        <td><span data-bind="text: Carrier"></span></td>
+                                        <td><span data-bind="text: Name"></span></td>
+                                        <td>$<span data-bind="text: Rate"></span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <div style="padding: 2px" data-bind="text: getRateMessage" class="red"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial(MVC.Shared.Views._TemplatesOrder)
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        var settings = {
+            stateList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.States)),
+            countryList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.Countries)),
+            reasonList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(MailViewModel.Reasons)),
+            defaultCountryCode: '@Constants.DefaultCountryCode',
+
+            markets: {
+                eBay: '@((int)MarketType.eBay)',
+                amazon: '@((int)MarketType.Amazon)',
+                amazonEU: '@((int)MarketType.AmazonEU)',
+                magento: '@((int)MarketType.Magento)',
+                walmart: '@((int)MarketType.Walmart)',
+                walmartCA: '@((int)MarketType.WalmartCA)',
+                jet: '@((int)MarketType.Jet)',
+            },
+
+            reasonCodes: {
+                replacementLabel: '@((int)MailLabelReasonCodes.ReplacementLabelCode)',
+                replacingLostDamaged: '@((int)MailLabelReasonCodes.ReplacingLostDamagedReasonCode)',
+                resendingOrder: '@((int)MailLabelReasonCodes.ResendingOrderCode)',
+                returnLabel: '@((int)MailLabelReasonCodes.ReturnLabelReasonCode)',
+                manualLabel: '@((int)MailLabelReasonCodes.ManualLabelCode)',
+                exchange: '@((int)MailLabelReasonCodes.ExchangeCode)',
+                other: '@((int)MailLabelReasonCodes.OtherCode)',
+            },
+
+            orderStatuses: {
+                shipped: '@OrderStatusEnumEx.Shipped',
+            },
+
+            shippingProviderList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(MailViewModel.ShippingProviderList)),
+            shippingProviderTypes: {
+                dhl: '@((int)ShipmentProviderType.Dhl)',
+                dhlECom: '@((int)ShipmentProviderType.DhlECom)',
+                ibc: '@((int)ShipmentProviderType.IBC)',
+                amazon: '@((int)ShipmentProviderType.Amazon)',
+                stamps: '@((int)ShipmentProviderType.Stamps)',
+                fedexOneRate: '@((int)ShipmentProviderType.FedexOneRate)',
+                fedexStandardRate: '@((int)ShipmentProviderType.FedexGeneral)'
+            },
+
+            shippingMethods: {
+                firstClass: '@((int)ShippingUtils.FirstClassShippingMethodId)',
+                intlFlat: '@((int)ShippingUtils.InternationalFlatShippingMethodId)',
+                intlRegular: '@((int)ShippingUtils.InternationalRegularShippingMethodId)',
+                amzFirstClass: '@((int)ShippingUtils.AmazonFirstClassShippingMethodId)',
+
+                dhlExpressWorldWide: '@((int)ShippingUtils.DhlExpressWorldWideShippingMethodId)',
+                dhlExpressMx: '@((int)ShippingUtils.AmazonDhlExpressMXShippingMethodId)',
+                dynamexPtpSame: '@((int)ShippingUtils.DynamexPTPSameShippingMethodId)',
+            }
+        };
+
+        mailingVm = MailingLabelViewModel("#grid", model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error-inline",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(mailingVm, document.getElementById('page-content'));
+    });
+</script>

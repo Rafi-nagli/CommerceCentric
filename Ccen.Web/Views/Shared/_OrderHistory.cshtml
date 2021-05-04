@@ -1,0 +1,231 @@
+﻿@model Amazon.Web.ViewModels.Pages.OrderHistoryControlViewModel
+
+<script type="text/javascript">
+
+    var OrderHistoryViewModel = function(model, settings) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+
+        self.wasProcessed = ko.observable(false);
+        self.isMessageMode = ko.observable(false);
+        self.messageText = ko.observable("");
+
+        self.changes = ko.observable([]);
+        self.anotherOrders = ko.observable([]);
+        self.hasAnotherOrders = ko.computed(function() {
+            return self.anotherOrders().length > 0;
+        });
+
+        self.isCollapsed = ko.observable(model.IsCollapsed);
+        self.orderId = ko.observable();
+        self.orderEntityId = ko.observable(null);
+
+        self.orderUrl = ko.observable(null);
+
+        self.hasOrder = ko.computed(function() {
+            return self.orderEntityId() != null;
+        });
+
+        self.setHistoryOrderNumber = function(orderId) {
+            console.log("history. setOrderNumber, orderId=" + orderId);
+
+            if (self.orderId() == orderId) {
+                console.log("skip. order number the same");
+                return;
+            }
+
+            self.clear();
+            self.orderId(orderId);
+
+            self.init();
+        }
+
+        self.init = function() {
+            console.log("history.init");
+            Message.clear();
+
+            self.setMessage('Loading...');
+            $.ajax({
+                url: '@Url.Action("GetOrderHistory", "OrderInfo")',
+                data: {
+                    orderId: self.orderId()
+                },
+                success: function(result) {
+                    if (result.IsSuccess) {
+                        console.log("history.success");
+                        self.showModel(result.Data);
+                        self.setMessage(null);
+                    } else {
+                        self.setMessage("Order not found");
+                    }
+                }
+            });
+        };
+
+        self.clear = function() {
+            self.orderId(null);
+            self.orderEntityId(null);
+            self.orderUrl(null);
+
+            self.changes([]);
+            self.anotherOrders([]);
+        }
+
+        self.showModel = function(model) {
+            console.log("history.showModel");
+            console.log(model);
+
+            if (model.Changes != null && model.Changes.length > 0) {
+                $.each(model.Changes, function(i, n) {
+                    n.ChangeDate = ko.observable(kendo.parseDate(n.ChangeDate)).extend({
+                        format: "MM/dd/yyyy HH:mm"
+                    });
+                    n.hasLink = ko.observable(!dataUtils.isEmpty(n.ValueUrl));
+                    n.hasInfo = ko.observable(!dataUtils.isEmpty(n.Value) || !dataUtils.isEmpty(n.Message));
+                    n.number = model.Changes.length - i;
+                });
+
+                $.each(model.AnotherOrders, function(i, n) {
+                    n.OrderDate = ko.observable(kendo.parseDate(n.OrderDate)).extend({
+                        format: "MM/dd/yyyy HH:mm"
+                    });
+                });
+
+                self.orderId(model.OrderID);
+                self.orderEntityId(model.OrderEntityId);
+                self.orderUrl(model.OrderUrl);
+
+                self.changes(model.Changes);
+
+                self.anotherOrders(model.AnotherOrders);
+            } else {
+                self.messageText('Order not found');
+            }
+        };
+
+        self.onToggle = function() {
+            self.isCollapsed(!self.isCollapsed());
+        }
+
+        self.setMessage = function(message) {
+            if (message != null && message != '') {
+                self.isMessageMode(true);
+            } else {
+                self.isMessageMode(false);
+            }
+            self.messageText(message);
+        }
+
+        self.setHistoryOrderNumber(model.OrderNumber);
+
+        $.subscribe('ordernumber-changed', function(e, orderId) { self.setHistoryOrderNumber(orderId); });
+    };
+</script>
+
+
+<!-- ko stopBinding: true -->
+
+<div id="order-history-content">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a style="color: #333"
+               href="javascript:;"
+               data-bind="click: onToggle">
+                Order's History #</a>
+            <a href="#"
+                data-bind="attr: { href: orderUrl }"
+                target="_blank"><span data-bind="text: orderId"></span></a>
+
+            <span class="pull-right clickable">
+                <a style="color: #333"
+                    href="javascript:;"
+                    data-bind="click: onToggle">
+                    <i class="glyphicon glyphicon-chevron-down" data-bind="css: { 'glyphicon-chevron-down' : !isCollapsed(), 'glyphicon-chevron-up' : isCollapsed()}"></i>
+                </a>
+            </span>
+        </div>
+        <div id="collapseOrderHistoryContent" data-bind="css: { 'collapse' : isCollapsed }">
+            <div class="panel-body">
+                <div style="padding: 15px" data-bind="visible: isMessageMode">
+                    <span data-bind="text: messageText"></span>
+                </div>
+
+                <div style="font-size: 13px; min-height: 250px">
+                    <details data-bind="visible: hasAnotherOrders" style="padding: 0px 0px 12px 4px; display: none">
+                        <summary>Buyer has other <span data-bind="text: anotherOrders().length"></span> order(s)</summary>
+                        <div data-bind="foreach: anotherOrders">
+                            <div style="padding: 2px 0px 2px 18px">
+                                <a target="_blank"
+                                   data-bind="attr: { 'href': OrderUrl }">
+                                    <span data-bind="text: OrderNumber"></span>
+                                </a>
+                                <a target="_blank"
+                                   style="margin-left: 4px"
+                                   data-bind="attr: { 'href': OrderHistoryUrl }">
+                                    <span class='glyphicon glyphicon-new-window am-icon'></span>
+                                </a>
+                                - <span data-bind="text: OrderDate"></span>
+                                - <span data-bind="text: OrderStatus"></span>
+                            </div>
+                        </div>
+                    </details>
+
+                    <table data-bind="foreach: changes">
+                        <tr>
+                            <td style="padding-bottom: 6px; padding-right: 4px; padding-top: 3px; vertical-align: top">
+                                <span style="font-size: 100%; font-weight: normal; border: 1px solid #ddd; background: #efefef; border-radius: 15px; padding: 5px 9px"><span data-bind="text: number"></span></span>
+                            </td>
+                            <td style="padding-right: 5px; padding-bottom: 6px">
+                                <div>
+                                    <span style="font-size: 115%;">
+                                        <span style="color: #333" data-bind="textFormatted: FormattedChangeType, ifEmpty: '-'"></span></span><span class="gray">
+                                        <span data-bind="visible: hasInfo">: </span>
+                                        <span data-bind="visible: hasLink">
+                                            <a target="_blank" data-bind="attr: { 'href': ValueUrl }"><span data-bind="textFormatted: Value, ifEmpty: '-'"></span></a>
+                                        </span>
+                                        <span data-bind="visible: !hasLink()">
+                                            <span data-bind="textFormatted: Value, ifEmpty: ''"></span>
+                                        </span>
+                                        <span data-bind="textFormatted: Message, ifEmpty: ''"></span>
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="gray">at: </span><span data-bind="textFormatted: ChangeDate"></span><span class="gray"> - by: </span><span data-bind="textFormatted: ChangedByName, ifEmpty: 'system'"></span>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- /ko -->
+
+<script type="text/javascript">
+    var orderHistoryVm = null;
+
+    $(document).ready(function () {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        var settings = {
+        };
+
+        orderHistoryVm = new OrderHistoryViewModel(model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error-inline",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(orderHistoryVm, document.getElementById('order-history-content'));
+    });
+</script>

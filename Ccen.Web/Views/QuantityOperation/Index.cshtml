@@ -1,0 +1,450 @@
+﻿@using Amazon.Core.Models
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels
+@using Amazon.Web.ViewModels.Inventory
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Pages.QuantityOperationPageViewModel
+@{
+    ViewBag.Title = "Inventory Special Cases";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<script>
+    var QuantityOperationModel = function (model, settings) {
+        var self = this;
+
+        ko.BaseViewModel.call(self);
+
+        self.settings = settings;
+        self.model = model;
+        self.grid = $("#" + settings.gridId).data("kendoGrid");
+
+        self.grid.bind("dataBound", function (e) {
+            self.resetRowNumber();
+            self.rowTotal(self.grid.dataSource.total());
+        });
+
+        self.onAddOperation = function (e) {
+            self.addOperation("");
+        };
+
+        self.addOperation = function(query) {
+            popupWindow.initAndOpen('@Url.Action(MVC.QuantityOperation.AddOperation())' + query, "Quantity Operation", 450);
+        };
+
+        self.deleteOperation = function(sender, operationId) {
+            $.ajax({
+                url: '@Url.Action(MVC.QuantityOperation.Delete())',
+                data: { operationId: operationId },
+                async: false,
+                success: function() {
+                    self.resetRowNumber();
+                    self.grid.dataSource.read();
+                }
+            });
+        };
+
+
+        //Search
+        self.orderNumber = ko.observable('');
+        self.styleString = ko.observable('');
+        self.styleItemId = ko.observable('');
+        self.sizeList = ko.observable([]);
+
+        self.users = ko.observableArray(model.Users);
+        self.userId = ko.observable('');
+
+        self.typeId = ko.observable('');
+        self.types = ko.observable(model.Types);
+
+        self.minDate = new Date(2000, 1, 1);
+        self.maxDate = new Date();
+        self.maxDate.setHours(23);
+        self.maxDate.setMinutes(59);
+
+        self.enableSizeList = ko.computed(function () {
+            console.log(self.sizeList());
+            return self.sizeList().length > 1;
+        });
+
+        self.dateFrom = ko.observable('');
+        self.dateTo = ko.observable('');
+
+        self.search = function (isSearch) {
+            var params = self.getGridParams();
+
+            self.resetRowNumber(0);
+
+            if (self.grid.dataSource.page() != 1) {
+                self.grid.dataSource.page(1); //May call read
+            }
+            
+            self.grid.dataSource.read(params);
+        };
+
+        self.searchByKeyCmd = function (data, event) {
+            if (event.keyCode == 13)
+                self.search(true);
+            return true;
+        };
+
+        self.getGridParams = function () {
+            console.log("getGridParams");
+
+            var params = {
+                orderNumber: self.orderNumber(),
+                styleString: self.styleString(),
+                styleItemId: self.styleItemId(),
+                userId: self.userId(),
+                typeId: self.typeId(),
+                dateFrom: self.dateFrom(),
+                dateTo: self.dateTo()
+            };
+            console.log(params);
+            return params;
+        };
+
+        self.orderIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetOrderIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if (action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.styleIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetStyleIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if (action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.styleErrorMessage = ko.observable([]);
+        self.styleIdLoading = ko.observable(false);
+        self.styleString.subscribe(function () {
+            self.styleErrorMessage('');
+            self.styleIdLoading(true);
+            $.ajax({
+                url: '@Url.Action("GetStyleSizes", "AutoComplete")',
+                data: { styleString: self.styleString(), onlyWithQty: false },
+                cache: false,
+                success: function (data) {
+                    self.styleIdLoading(false);
+                    if (data.Data != null && data.Data.length > 0) {
+                        data.Data.unshift({ Text: 'Select...', Value: '' });
+                        self.sizeList(data.Data);
+                    } else {
+                        self.styleErrorMessage('StyleId is not found');
+                        self.sizeList([{ Text: 'Select...', Value: '' }]);
+                    }
+                }
+            });
+        });
+
+
+        self.clear = function () {
+            self.orderNumber('');
+            self.styleString('');
+            self.styleItemId('');
+            self.userId('');
+            self.typeId('');
+            self.dateFrom('');
+            self.dateTo('');
+        };
+
+        self.clearAndSearch = function () {
+            self.clear();
+            self.search(false);
+        };
+
+        self.searchByButton = function () {
+            self.search(true);
+        };
+
+        self.startupOpen = function() {
+            var params = [];
+            if (self.model.Type != '' && self.model.Type != null)
+                params.push("type=" + self.model.Type);
+            if (self.model.StyleId != '' && self.model.StyleId != null)
+                params.push("styleId=" + self.model.StyleId);
+            var query = params.join("&");
+            if (params.length > 0)
+                query = "?" + query;
+
+            if (params.length > 0)
+                self.addOperation(query);
+        }
+
+        helper.ui.addTopPager(self.grid);
+
+        self.startupOpen();
+    };
+
+    function showChanges(type, changes) {
+        if (changes == null)
+            return "[no quantity changes]";
+
+        var render = "";
+        for (var i = 0; i < changes.length; i++) {
+            var quantityPart = "";
+            if (changes[i].Quantity < 0) {
+                if (changes[i].InActive == 1)
+                    quantityPart = Math.abs(changes[i].Quantity) + " (on hold)";
+                else
+                    quantityPart = Math.abs(changes[i].Quantity) + " (back to inventory)";
+            }
+            else {
+                quantityPart = changes[i].Quantity;
+            }
+
+            render += "<div style='padding-bottom: 2px'><span class='gray'>StyleId:</span> "
+                + "<a href='" + changes[i].StyleUrl + "' target='blank'>" + changes[i].StyleString + "</a>"
+                + " - <span class='gray'> size:</span> " + changes[i].Size
+                + " - <span class='gray'> quantity:</span> " + quantityPart + "</div>";
+        }
+        return render;
+    }
+</script>
+
+
+<div id="page-content">
+
+    <ol class="breadcrumb">
+        <li><a href="#">Inventory</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <div class="messages-block">
+                <div><span id="infoMessage" class="text-info"></span></div>
+                <div><span id="errorMessage" class="label label-danger"></span></div>
+                <div><span id="successMessage" class="label label-success"></span></div>
+            </div>
+
+            <table>
+                <colgroup>
+                    <col style="width: 100px" />
+                    <col style="width: 210px" />
+                    <col style="width: 100px" />
+                    <col style="width: 210px" />
+                </colgroup>
+                <tr>
+                    <th class="a-right">Order Id: </th>
+                    <td>
+                        <input type="text"
+                               style="width: 200px"
+                               data-bind="kendoAutoComplete: {
+                           value: orderNumber,
+                           data: {},
+                           minLenght: 3,
+                           highlightFirst: true,
+                           dataSource: orderIdSource },
+                        valueUpdate: 'afterkeydown',
+                        event: { keypress: searchByKeyCmd }" class="k-textbox" />
+                    </td>
+                    <th class="a-right">Style Id:</th>
+                    <td>
+                        <input type="text"
+                               style="width: 200px"
+                               data-bind="kendoAutoComplete: {
+                           value: styleString,
+                           data: {},
+                           minLenght: 3,
+                           highlightFirst: true,
+                           dataSource: styleIdSource },
+                        valueUpdate: 'afterkeydown',
+                        event: { keypress: searchByKeyCmd }" class="k-textbox" />
+                    </td>
+                    <th class="a-right">Size/Color:</th>
+                    <td>
+                        <input id="StyleItemId"
+                               name="StyleItemId"
+                               style="width: 100px"
+                               data-bind="kendoDropDownList: {data: sizeList, value: styleItemId, dataTextField: 'Text', dataValueField: 'Value', enabled: enableSizeList }" />
+                    </td>
+                    <th class="a-right">User:</th>
+                    <td>
+                        <input id="UserId"
+                               name="UserId"
+                               style="width: 150px"
+                               data-bind="kendoDropDownList: {data: users, value: userId, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+                    </td>
+                </tr>
+            </table>
+            <table>
+                <tr>
+                    <th class="right-content">Operation Date: </th>
+                    <td>
+                        <table>
+                            <tr>
+                                <th>From</th>
+                                <td>
+                                    <input data-bind="kendoDatePicker: { value: dateFrom, format: 'MM/dd/yyyy', min: minDate, max: maxDate }" />
+                                </td>
+                                <th>To</th>
+                                <td>
+                                    <input data-bind="kendoDatePicker: { value: dateTo, format: 'MM/dd/yyyy', min: minDate, max: maxDate }" />
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                    <th class="a-right">Type:</th>
+                    <td>
+                        <input id="TypeId"
+                               name="TypeId"
+                               style="width: 250px"
+                               data-bind="kendoDropDownList: {data: types, value: typeId, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+                    </td>
+                </tr>                
+            </table>
+            <div style="padding-left: 20px; padding-top: 10px">
+                <button class="k-button"
+                        style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                        data-bind="click: searchByButton">
+                    <span class='glyphicon glyphicon-search am-icon'></span>Search
+                </button>
+                <button class="k-button"
+                        style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                        data-bind="click: clearAndSearch">
+                    <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="k-toolbar k-grid-toolbar">
+        <a href="#"
+           class="k-button k-button-icontext k-grid-add"
+           data-bind="click: onAddOperation">
+            <span class="k-icon k-add"></span>
+            Add Operation
+        </a>
+    </div>
+
+    <div class="grid-small">
+        @(Html.Kendo().Grid<QuantityOperationViewModel>()
+          .Name("quantityOperationGrid")
+          .Editable(e => e.Mode(GridEditMode.PopUp))
+          .Columns(columns =>
+          {
+              columns.Bound(c => c.Id)
+                  .Title("#")
+                  .ClientTemplate("#=operationVm.renderNumber(data)#")
+                  .Width(25)
+                  .Filterable(false);
+              columns.Bound(c => c.Type)
+                  .Width(100)
+                  .ClientTemplate("#=TypeAsString#")
+                  .Title("Type")
+                  .Filterable(false)
+                  .Sortable(false);
+              columns.Bound(c => c.OrderId)
+                  .Width(175)
+                  .ClientTemplate("#if (OrderId != null) {# <a href='#=SellerUrl#' target='_blank'>#=OrderId#</a> #} else {# - #}#")
+                  .Title("OrderId")
+                  .Filterable(false)
+                  .Sortable(false);
+
+              columns.Bound(c => c.Id)
+                  .Title("Quantity Changes")
+                  .ClientTemplate("#=showChanges(Type, QuantityChanges)#")
+                  .Filterable(false);
+
+              columns.Bound(c => c.CreateDate)
+                  .Width(140)
+                  .Sortable(true)
+                  .Format("{0:MM.dd.yyyy HH:mm}")
+                  .Title("Date");
+              columns.Bound(c => c.CreatedByName)
+                  .Width(70)
+                  .Sortable(true)
+                  .Title("User");
+              columns.Bound(c => c.Id)
+                  .Width(40)
+                  .Title("")
+                  .ClientTemplate("<a href='javascript: void(0)' class='k-button' style='min-width: 25px' onclick='operationVm.deleteOperation(this, \"${Id}\")'><span class='glyphicon glyphicon-remove am-icon'></span></a>")
+                  .Filterable(false)
+                  .Sortable(false);
+          })
+                  .Sortable(conf => conf.Enabled(true).SortMode(GridSortMode.SingleColumn))
+                  .Filterable(conf => conf.Enabled(true))
+          .Pageable(conf => conf.Enabled(true).Refresh(true))
+          .AutoBind(false)
+          .DataSource(dataSource => dataSource
+              .Ajax()
+              
+              .ServerOperation(true)
+              .Model(conf =>
+              {
+                  conf.Id(m => m.Id);
+                  conf.Field(m => m.CreateDate);
+              })
+              .Sort(conf => conf.Add(m => m.CreateDate).Descending())
+              .PageSize(100)
+              
+              .Read(read => read.Action("GetAll", "QuantityOperation").Data("GetGridParams"))))
+
+    </div>
+</div>
+
+<script>
+    var operationVm = null;
+
+    function GetGridParams() {
+        console.log("GetGridParams");
+        if (operationVm != null)
+            return operationVm.getGridParams();
+        return {};
+    }
+
+    $(document).ready(function () {
+        var settings = {
+            gridId: "quantityOperationGrid"
+        };
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        operationVm = new QuantityOperationModel(model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+        ko.applyBindings(operationVm, document.getElementById('page-content'));
+
+        operationVm.search();
+    });
+</script>

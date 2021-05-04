@@ -1,0 +1,201 @@
+﻿@using Amazon.Core.Models
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Products.EditParentItemsViewModel
+@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var CommentModel = function(comments) {
+        var self = this;
+
+        if (comments == null)
+            comments = [];
+
+        if (comments.length == 0)
+            comments.push({
+                Id: 0,
+                Comment: ''
+            });
+
+        self.comments = ko.observableArray(comments);
+
+        self.addComment = function() {
+            self.comments.push({
+                Id: 0,
+                Comment: ''
+            });
+        };
+
+        self.removeComment = function(comment) {
+            self.comments.remove(comment);
+        };
+    };
+</script>
+
+<script>
+    var ItemModel = function(model, settings) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+
+        self.parentItems = ko.observableArray(model.ParentItems);
+        self.selectedItemId = ko.observable(model.SelectedItemId);
+
+        self.isVisible = function(itemId) {
+            return self.selectedItemId() == itemId;
+        };
+
+        self.parentItems().forEach(function(entry) {
+            console.log('parentitem init');
+            console.log(entry);
+
+            entry.isActive = ko.computed(function() {
+                return entry.Id == self.selectedItemId();
+            });
+
+            entry.comment = new CommentModel(entry.Comments);
+
+            entry.switchToMarket = function(entry) {
+                self.selectedItemId(entry.Id);
+            };
+
+            entry.hasLinkQty = ko.computed(function() {
+                return marketUtils.hasLinkQty(entry.MarketplaceId);
+            });
+
+            entry.flagCss = ko.computed(function() {
+                return "flag-" + entry.MarketShortName;
+            });
+        });
+    };
+
+    $(document).ready(function() {
+        console.log("onready");
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+            actionUpdateItem: '@Url.Action(MVC.Item.OnUpdateParent())',
+            markets: marketUtils.getAllMarkets(),
+            marketplaceIds: marketUtils.getAllMarketplaceIds(),
+        };
+
+        var itemModel = new ItemModel(model, settings);
+        ko.applyBindings(itemModel, document.getElementById('edit-container'));
+    });
+</script>
+
+
+<div id="edit-container" class="item-popup">
+    <div style="position: relative; background: #e5e5e5; border: 1px solid #ccc; text-align: right; margin: -9px 0px -12px 0px;">
+        <div data-bind="foreach: parentItems">
+            <div style="float: right; margin-right: 10px; padding-bottom: 4px" data-bind="css: { 'btn-red-line' : isActive }">
+                <button class="k-button k-flat-button flag-button" data-bind="click: switchToMarket, css: flagCss">
+                </button>
+            </div>
+        </div>
+        <div style="float:right; padding: 6px 10px 0px 0px;">Switch market</div>
+        <div class="clear"></div>
+    </div>
+
+    <div class="k-edit-form-container" style="padding-top: 20px;">
+        @Html.HiddenFor(m => m.SelectedItemId)
+
+        <div data-bind="foreach: parentItems">
+            <div data-bind="visible: $root.isVisible(Id)">
+                <input type="hidden" name="Id" data-bind="value: Id, attr: { name: 'ParentItems[' + $index() + '].Id' }" />
+                <input type="hidden" name="ASIN" data-bind="value: ASIN, attr: { name: 'ParentItems[' + $index() + '].ASIN' }" />
+                <input type="hidden" name="Market" data-bind="value: Market, attr: { name: 'ParentItems[' + $index() + '].Market' }" />
+                <input type="hidden" name="MarketplaceId" data-bind="value: MarketplaceId, attr: { name: 'ParentItems[' + $index() + '].MarketplaceId' }" />
+
+                <div class="editor-label">ASIN</div>
+                <div class="editor-field editor-as-text">
+                    <a target="_blank" data-bind="attr: { href: ProductUrl }, text: ASIN"></a>
+                </div>
+
+                <div class="editor-label">Amazon Name</div>
+                <div class="editor-field editor-as-text">
+                    <span data-bind="text: AmazonName"></span>
+                </div>
+
+
+                <div class="editor-label">Manual Image</div>
+                <div class="editor-field">
+                    <input type="text"
+                           data-bind='value: ManualImage, attr: { name: "ParentItems[" + $index() + "].ManualImage" }'
+                           class="k-textbox" />
+                </div>
+
+                <div class="editor-label">SKU</div>
+                <div class="editor-field">
+                    <input type="text"
+                           data-bind='value: SKU, attr: { name: "ParentItems[" + $index() + "].SKU" }'
+                           class="k-textbox" />
+                </div>
+
+                <div class="editor-label">On Hold</div>
+                <div class="editor-field">
+                    <div data-bind="visible: !hasLinkQty()">
+                        <input type="checkbox"
+                               class="cmn-toggle cmn-toggle-round"
+                               data-bind='checked: OnHold, attr: { name: "ParentItems[" + $index() + "].OnHold", id: "ParentItems_" + $index() + "_OnHold" }' />
+                        <label data-bind='attr: { for: "ParentItems_" + $index() + "_OnHold" }'></label>
+                    </div>
+                    <div data-bind="visible: hasLinkQty" class="note">
+                        Quantity tied to US, can’t be onHold separately
+                    </div>
+                </div>
+                <div class="editor-label">Lock Market Update</div>
+                <div class="editor-field">
+
+                    <input type="checkbox"
+                           class="cmn-toggle cmn-toggle-round"
+                           data-bind='checked: LockMarketUpdate, attr: { name: "ParentItems[" + $index() + "].LockMarketUpdate", id: "ParentItems_" + $index() + "_LockMarketUpdate" }' />
+                    <label data-bind='attr: { for: "ParentItems_" + $index() + "_LockMarketUpdate" }'></label>
+
+                </div>
+
+                <div class="clear"></div>
+                <div style="text-align: left; padding: 15px 0 5px 0; margin-left: 20px; font-weight: bold">Prices:</div>
+
+                <div class="editor-label">Price Range</div>
+                <div class="editor-field editor-as-text">
+                    <span data-bind="html: PriceRange"></span>
+                </div>
+
+                <div class="editor-label">Shift child prices, +$:</div>
+                <div class="editor-field editor-as-text">
+                    <input type="text"
+                           data-bind='value: ChangePriceOffset, attr: { name: "ParentItems[" + $index() + "].ChangePriceOffset" }'
+                           class="k-textbox" />
+                </div>
+
+                <div class="clear"></div>
+                <div style="text-align: left; padding: 15px 0 5px 0; margin-left: 20px; font-weight: bold">Comments:</div>
+
+                <div data-bind="with: comment" style="padding-top: 2px; padding-bottom: 12px">
+                    <div data-bind='foreach: comments'>
+                        <div class="editor-label">#<span data-bind='text: $index() + 1'></span></div>
+                        <div class="editor-field">
+                            <table style="margin-bottom: 5px; margin-top: 5px">
+                                <tr>
+                                    <td>
+                                        <input type="hidden" data-bind='value: Id, attr: { name: "ParentItems[" + $parentContext.$index() + "].Comments[" + $index() + "].Id" }' />
+                                        <textarea style="min-height: 20px; width:auto" rows="3" cols="30" class="k-textbox" data-bind='value: Comment, attr: { name: "ParentItems[" + $parentContext.$index() + "].Comments[" + $index() + "].Comment" }'></textarea>
+                                    </td>
+                                    <td><a href="#" data-bind='click: $parent.removeComment' class="barcode-remove"><span class="k-icon k-delete"></span></a></td>
+                                </tr>
+
+                            </table>
+                        </div>
+                        <div class="clear"></div>
+
+                    </div>
+                    <div class="editor-label"></div>
+                    <div class="editor-field" style="text-align: right"><button type="button" style="width: 80px" class="k-button" data-bind='click: addComment'>Add</button></div>
+                    <div class="clear"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

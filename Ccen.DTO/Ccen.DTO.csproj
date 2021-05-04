@@ -1,0 +1,292 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{8342451D-92AB-4B34-80DC-ED20FBBE6A32}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ccen.DTO</RootNamespace>
+    <AssemblyName>Ccen.DTO</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+    <TargetFrameworkProfile />
+    <AssemblyVersion>2016.5.1553.15</AssemblyVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="AutoMapper">
+      <HintPath>..\packages\AutoMapper.4.1.1\lib\net40\AutoMapper.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Audits\AuditEntryPropertyDTO.cs" />
+    <Compile Include="BulkEdit\BulkEditHistoryDTO.cs" />
+    <Compile Include="BulkEdit\BulkEditOperationDTO.cs" />
+    <Compile Include="BulkEdit\BulkEditResult.cs" />
+    <Compile Include="BuyerDTO.cs" />
+    <Compile Include="Categories\CustomCategoryDTO.cs" />
+    <Compile Include="Categories\CustomCategoryToStyleDTO.cs" />
+    <Compile Include="Categories\CustomCategoryFilterDTO.cs" />
+    <Compile Include="Contracts\ISortableByShippingMethod.cs" />
+    <Compile Include="CustomBarcodeDTO.cs" />
+    <Compile Include="Customers\CustomerDTO.cs" />
+    <Compile Include="CustomFeeds\CustomFeedDTO.cs" />
+    <Compile Include="CustomFeeds\CustomFeedFieldDTO.cs" />
+    <Compile Include="CustomFeeds\CustomFeedScheduleDTO.cs" />
+    <Compile Include="CustomReports\CustomReportDTO.cs" />
+    <Compile Include="CustomReports\CustomReportPredefinedFieldDTO.cs" />
+    <Compile Include="CustomReports\CustomReportFieldDTO.cs" />
+    <Compile Include="CustomReports\CustomReportFilterDTO.cs" />
+    <Compile Include="DropShippers\DropShipperDTO.cs" />
+    <Compile Include="DropShippers\DSFileDTO.cs" />
+    <Compile Include="DropShippers\DSItemDTO.cs" />
+    <Compile Include="DropShippers\DSFileLineDTO.cs" />
+    <Compile Include="DropShippers\DSFileLineMessageDTO.cs" />
+    <Compile Include="DropShippers\DSFileMessageDTO.cs" />
+    <Compile Include="DropShippers\StyleDSHistoryDTO.cs" />
+    <Compile Include="Exports\AmazonProductRelationshipExportDto.cs" />
+    <Compile Include="Exports\AmazonProductImageExportDto.cs" />
+    <Compile Include="Graphs\ChartDTO.cs" />
+    <Compile Include="Graphs\ChartPointDTO.cs" />
+    <Compile Include="Inventory\ShipmentStatuses.cs" />
+    <Compile Include="Inventory\SealedBoxTrackingDTO.cs" />
+    <Compile Include="Inventory\OpenBoxTrackingDTO.cs" />
+    <Compile Include="Inventory\PhotoshootPickListDTO.cs" />
+    <Compile Include="Inventory\PhotoshootPickListEntryDTO.cs" />
+    <Compile Include="Inventory\StyleAdditionDto.cs" />
+    <Compile Include="Inventory\StyleItemAttributeDTO.cs" />
+    <Compile Include="Inventory\StyleToGroupDTO.cs" />
+    <Compile Include="Inventory\StyleItemActionHistoryDTO.cs" />
+    <Compile Include="Inventory\StyleGroupDTO.cs" />
+    <Compile Include="Inventory\WalmartBrandInfoDto.cs" />
+    <Compile Include="Listings\ItemAdditionDTO.cs" />
+    <Compile Include="Listings\ItemChangeHistoryDTO.cs" />
+    <Compile Include="Listings\ItemPackageDTO.cs" />
+    <Compile Include="Listings\ListingOrderDTO.cs" />
+    <Compile Include="MarketIdentifier.cs" />
+    <Compile Include="Orders\MissingOrderDTO.cs" />
+    <Compile Include="Orders\ShipmentReportItemDTO.cs" />
+    <Compile Include="Orders\PaymentInfoDTO.cs" />
+    <Compile Include="Orders\ReturnRequestItemDTO.cs" />
+    <Compile Include="Rates\SkyPostalRateDTO.cs" />
+    <Compile Include="Rates\IBCRateDTO.cs" />
+    <Compile Include="Remote\RemoteOrdersStatus.cs" />
+    <Compile Include="SaleEvents\SaleEventDTO.cs" />
+    <Compile Include="SaleEvents\SaleEventFeedDTO.cs" />
+    <Compile Include="SaleEvents\SaleEventSizeHoldInfoDTO.cs" />
+    <Compile Include="SaleEvents\SaleEventEntryDTO.cs" />
+    <Compile Include="Exports\AmazonProductExportDto.cs" />
+    <Compile Include="FeedbackBlackListDto.cs" />
+    <Compile Include="BuyerBlackListDto.cs" />
+    <Compile Include="Caches\BaseCacheDto.cs" />
+    <Compile Include="Caches\ItemCacheDTO.cs" />
+    <Compile Include="Caches\ListingCacheDTO.cs" />
+    <Compile Include="Caches\StyleItemCacheDTO.cs" />
+    <Compile Include="CommentDTO.cs" />
+    <Compile Include="Contracts\IStampsAuthInfo.cs" />
+    <Compile Include="Emails\EmailAttachmentDTO.cs" />
+    <Compile Include="Emails\EmailOrderDTO.cs" />
+    <Compile Include="Emails\EmailDTO.cs" />
+    <Compile Include="Emails\EmailToOrderDTO.cs" />
+    <Compile Include="Feeds\FeedItemDTO.cs" />
+    <Compile Include="Feeds\FeedMessageDTO.cs" />
+    <Compile Include="Graphs\PurchaseByDateDTO.cs" />
+    <Compile Include="InventoryReportDTO.cs" />
+    <Compile Include="Inventory\Counting\OpenBoxCountingDto.cs" />
+    <Compile Include="Inventory\Counting\OpenBoxCountingItemDto.cs" />
+    <Compile Include="Inventory\Counting\SealedBoxCountingDto.cs" />
+    <Compile Include="Inventory\Counting\SealedBoxCountingItemDto.cs" />
+    <Compile Include="Inventory\FBAPickListDTO.cs" />
+    <Compile Include="Inventory\FBAPickListEntryDTO.cs" />
+    <Compile Include="Inventory\FeatureDTO.cs" />
+    <Compile Include="Inventory\FeatureValueDTO.cs" />
+    <Compile Include="Inventory\StyleChangeHistoryDTO.cs" />
+    <Compile Include="Inventory\StyleImageDTO.cs" />
+    <Compile Include="Inventory\OpenBoxDto.cs" />
+    <Compile Include="Inventory\OpenBoxItemDto.cs" />
+    <Compile Include="Inventory\ItemToStyleDTO.cs" />
+    <Compile Include="Inventory\QuantityChangeDTO.cs" />
+    <Compile Include="Inventory\QuantityOperationDTO.cs" />
+    <Compile Include="Inventory\SealedBoxDto.cs" />
+    <Compile Include="Inventory\StyleEntireDto.cs" />
+    <Compile Include="Inventory\StyleInfoDto.cs" />
+    <Compile Include="Inventory\StyleItemQuantityHistoryDTO.cs" />
+    <Compile Include="Inventory\StyleItemReferenceDTO.cs" />
+    <Compile Include="Inventory\StyleItemSaleDTO.cs" />
+    <Compile Include="Inventory\StyleItemSaleToListingDTO.cs" />
+    <Compile Include="Inventory\StyleItemSaleToMarketDTO.cs" />
+    <Compile Include="Inventory\StyleReferenceDTO.cs" />
+    <Compile Include="Inventory\VendorInvoiceDTO.cs" />
+    <Compile Include="Listings\CategoryDTO.cs" />
+    <Compile Include="Listings\ImageDTO.cs" />
+    <Compile Include="Listings\ItemErrorDTO.cs" />
+    <Compile Include="Feeds\FeedDTO.cs" />
+    <Compile Include="Feeds\WalmartFeedItemDTO.cs" />
+    <Compile Include="Listings\ItemSearchFiltersDTO.cs" />
+    <Compile Include="Listings\ItemShortInfoDTO.cs" />
+    <Compile Include="Listings\ItemSizeMapping.cs" />
+    <Compile Include="Listings\ListingSizeIssueDTO.cs" />
+    <Compile Include="Listings\ListingDefectDTO.cs" />
+    <Compile Include="Listings\ItemImageDTO.cs" />
+    <Compile Include="Listings\ItemMarketInfoDTO.cs" />
+    <Compile Include="Listings\ListingQuantityDTO.cs" />
+    <Compile Include="Listings\QuantityHistoryDTO.cs" />
+    <Compile Include="Listings\SaleDTO.cs" />
+    <Compile Include="Listings\SkuMappingDTO.cs" />
+    <Compile Include="Listings\ViewListingDTO.cs" />
+    <Compile Include="Listings\ViewListingSaleDTO.cs" />
+    <Compile Include="MarketplaceDTO.cs" />
+    <Compile Include="Messages\NotificationDTO.cs" />
+    <Compile Include="Orders\AddressDTO.cs" />
+    <Compile Include="Inventory\BarcodeDTO.cs" />
+    <Compile Include="BuyBoxes\BuyBoxStatusCode.cs" />
+    <Compile Include="BuyBoxes\BuyBoxStatusDTO.cs" />
+    <Compile Include="Caches\ParentItemCacheDTO.cs" />
+    <Compile Include="Caches\StyleCacheDTO.cs" />
+    <Compile Include="Comparers.cs" />
+    <Compile Include="Contracts\ISortableByLocation.cs" />
+    <Compile Include="Contracts\ISortableByName.cs" />
+    <Compile Include="Contracts\ISortableByStyle.cs" />
+    <Compile Include="Contracts\ISortableEntity.cs" />
+    <Compile Include="Orders\DTOMarketOrder.cs" />
+    <Compile Include="Orders\OrderInvoiceDTO.cs" />
+    <Compile Include="Orders\OrderReportItemDTO.cs" />
+    <Compile Include="Orders\OrderValidationDTO.cs" />
+    <Compile Include="Orders\QuickBookExportDTO.cs" />
+    <Compile Include="Rates\DhlECommerceRateDTO.cs" />
+    <Compile Include="Orders\RateByCountry.cs" />
+    <Compile Include="Rates\DhlRateCodePriceDTO.cs" />
+    <Compile Include="Rates\DhlRateCodeDTO.cs" />
+    <Compile Include="Orders\DuplicateOrdersDTO.cs" />
+    <Compile Include="Emails\EmailInfoDTO.cs" />
+    <Compile Include="Inventory\SealedBoxItemDto.cs" />
+    <Compile Include="Listings\ItemInfoDTO.cs" />
+    <Compile Include="Listings\ItemExDTO.cs" />
+    <Compile Include="LabelPrintPackDTO.cs" />
+    <Compile Include="Listings\ListingDTO.cs" />
+    <Compile Include="Listings\ListingFBAEstFeeDTO.cs" />
+    <Compile Include="Listings\ListingFBAInvDTO.cs" />
+    <Compile Include="Orders\MailLabelItemDTO.cs" />
+    <Compile Include="Orders\OrderChangeHistoryDTO.cs" />
+    <Compile Include="Orders\OrderToBatchDTO.cs" />
+    <Compile Include="Orders\OrderItemDTO.cs" />
+    <Compile Include="Orders\OrderBatchDTO.cs" />
+    <Compile Include="Orders\OrderEmailNotifyDto.cs" />
+    <Compile Include="Orders\OrderNotifyDto.cs" />
+    <Compile Include="Orders\OrderSearchDTO.cs" />
+    <Compile Include="Orders\OrderSettlementDTO.cs" />
+    <Compile Include="Orders\OrderToTrackDTO.cs" />
+    <Compile Include="Orders\ReturnRequestDTO.cs" />
+    <Compile Include="Orders\ScanFormDTO.cs" />
+    <Compile Include="Orders\ScheduledPickupDTO.cs" />
+    <Compile Include="Orders\TrackingNumberToCheckDto.cs" />
+    <Compile Include="Rates\ZipCodeZoneDTO.cs" />
+    <Compile Include="Rates\ZipCodeZoneRangeDTO.cs" />
+    <Compile Include="PackingListDTO.cs" />
+    <Compile Include="PriceHistoryDTO.cs" />
+    <Compile Include="ProxyInfoDto.cs" />
+    <Compile Include="ReportDTO.cs" />
+    <Compile Include="ReportRequestDTO.cs" />
+    <Compile Include="Orders\SecondDayOrderDTO.cs" />
+    <Compile Include="Reports\SalesReportDTO.cs" />
+    <Compile Include="ScanOrders\ScanItemDTO.cs" />
+    <Compile Include="ScanOrders\ScanOrderDTO.cs" />
+    <Compile Include="Shippings\BookPickupDTO.cs" />
+    <Compile Include="Shippings\DhlInvoiceDTO.cs" />
+    <Compile Include="Shippings\GetLabelDTO.cs" />
+    <Compile Include="Shippings\LabelDTO.cs" />
+    <Compile Include="Shippings\LabelFileInfo.cs" />
+    <Compile Include="Shippings\ShippingChargeDTO.cs" />
+    <Compile Include="Sizes\PackingSlipSizeMappingDTO.cs" />
+    <Compile Include="SystemActionDTO.cs" />
+    <Compile Include="Trackings\CustomTrackingNumberDTO.cs" />
+    <Compile Include="Trackings\TrackingNumberStatus.cs" />
+    <Compile Include="Users\CompanyAddressDTO.cs" />
+    <Compile Include="Users\CompanyDTO.cs" />
+    <Compile Include="Users\SQSAccountDTO.cs" />
+    <Compile Include="Users\EmailAccountDTO.cs" />
+    <Compile Include="Users\RoleDTO.cs" />
+    <Compile Include="Shippings\ShippingDTO.cs" />
+    <Compile Include="Sizes\ItemTypeDTO.cs" />
+    <Compile Include="Sizes\SizeGroupDTO.cs" />
+    <Compile Include="Inventory\StyleFeatureValueDTO.cs" />
+    <Compile Include="IReportItemDTO.cs" />
+    <Compile Include="Listings\ItemDTO.cs" />
+    <Compile Include="Orders\DTOOrder.cs" />
+    <Compile Include="Orders\DTOOrderItem.cs" />
+    <Compile Include="Orders\MailLabelDTO.cs" />
+    <Compile Include="Shippings\OrderShippingInfoDTO.cs" />
+    <Compile Include="Listings\ParentItemDTO.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Shippings\RateDTO.cs" />
+    <Compile Include="SalesPerformanceDTO.cs" />
+    <Compile Include="Shippings\ShippingMethodDTO.cs" />
+    <Compile Include="Sizes\SizeDTO.cs" />
+    <Compile Include="Inventory\StyleDTO.cs" />
+    <Compile Include="Inventory\StyleItemDTO.cs" />
+    <Compile Include="Inventory\StyleLocationDTO.cs" />
+    <Compile Include="Sizes\SizeMappingDTO.cs" />
+    <Compile Include="Shippings\UnshippedInfoDTO.cs" />
+    <Compile Include="Users\AddressProviderDTO.cs" />
+    <Compile Include="Users\ShipmentProviderDTO.cs" />
+    <Compile Include="Users\UserDTO.cs" />
+    <Compile Include="Vendors\VendorOrderItemSizeDTO.cs" />
+    <Compile Include="Vendors\VendorOrderAttachmentDTO.cs" />
+    <Compile Include="Vendors\VendorOrderDTO.cs" />
+    <Compile Include="Vendors\VendorOrderItemDTO.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Ibc\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
+  </Target>
+  <Import Project="..\packages\Microsoft.Bcl.Build.1.0.14\tools\Microsoft.Bcl.Build.targets" Condition="Exists('..\packages\Microsoft.Bcl.Build.1.0.14\tools\Microsoft.Bcl.Build.targets')" />
+  <Target Name="EnsureBclBuildImported" BeforeTargets="BeforeBuild" Condition="'$(BclBuildImported)' == ''">
+    <Error Condition="!Exists('..\packages\Microsoft.Bcl.Build.1.0.14\tools\Microsoft.Bcl.Build.targets')" Text="This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=317567." HelpKeyword="BCLBUILD2001" />
+    <Error Condition="Exists('..\packages\Microsoft.Bcl.Build.1.0.14\tools\Microsoft.Bcl.Build.targets')" Text="The build restored NuGet packages. Build the project again to include these packages in the build. For more information, see http://go.microsoft.com/fwlink/?LinkID=317568." HelpKeyword="BCLBUILD2002" />
+  </Target>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

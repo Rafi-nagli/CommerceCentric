@@ -1,0 +1,48 @@
+﻿@model Amazon.Web.ViewModels.LogOnModel
+
+@{
+    ViewBag.Title = "Log On";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div id="page-content">
+    <ol class="breadcrumb">
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    @Html.ValidationSummary(true, "Login was unsuccessful.")
+
+    <div class="center-block">
+        @using (Html.BeginForm("LogOn", "Account", FormMethod.Post, new { @class = "center-block" }))
+        {
+            @Html.AntiForgeryToken()
+            <div class="panel panel-default center-block" style="max-width: 350px;">
+                <div class="panel-heading">Account Information</div>
+                <div class="panel-body">
+                    @Html.HiddenFor(m => m.ReturnUrl)
+
+                    <div class="form-group">
+                        <label>User Name:</label>
+                        @Html.TextBoxFor(m => m.UserName, new { @class = "form-control", placeholder = "UserName" })
+                        @Html.ValidationMessageFor(m => m.UserName)
+                    </div>
+
+                    <div class="form-group">
+                        <label>Password</label>
+                        @Html.PasswordFor(m => m.Password, new { @class = "form-control", placeholder = "Password" })
+                        @Html.ValidationMessageFor(m => m.Password)
+                    </div>
+
+                    <div class="checkbox">
+                        <label>
+                            @Html.CheckBoxFor(m => m.RememberMe) Remember Me
+                        </label>
+                    </div>
+
+                    <input type="submit" class="k-button" value="Log On" />
+
+                </div>
+            </div>
+        }
+    </div>
+</div>

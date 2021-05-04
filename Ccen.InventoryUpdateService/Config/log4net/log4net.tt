@@ -1,0 +1,270 @@
+﻿<#@ template language="C#" debug="false" hostspecific="true"#>
+<#@ output extension=".config" #>
+<#@ Assembly Name="System.Core.dll" #>
+<#@ Assembly Name="EnvDTE" #>
+<#@ Assembly Name="System.Configuration"#>
+<#@ Import Namespace="System" #>
+<#@ Import Namespace="System.IO" #>
+<#@ Import Namespace="System.Configuration" #>
+<# string namespaceName = System.Runtime.Remoting.Messaging.CallContext.LogicalGetData("NamespaceHint").ToString(); #>
+<# string templateFileName = Path.GetFileNameWithoutExtension(Host.TemplateFile);#>
+<# string baseDirectory = "D:\\ccen.services.output\\Logs"; #>
+<# 
+string[] threadList = new string[] {
+	"UpdateEBayAll4KidsListingData",
+	"UpdateEBayPAListingData",
+	"UpdateMagentoListingData",
+	"UpdateWalmartListingData",
+	"UpdateWalmartCAListingData",
+	"UpdateJetListingData",
+
+	"UpdateListingsDataOnAmazonAU",
+	"UpdateListingsImageOnAmazonAU",
+	"UpdateListingsDataOnAmazonUK",
+	"UpdateListingsImageOnAmazonUK",
+	"UpdateListingsDataOnAmazonCOM",
+	"UpdateListingsImageOnAmazonCOM",
+
+	"eBayAll4KidsRepublish",
+	"eBayPARepublish",
+
+	"RestartService",
+	"UpdateChartInfo",
+	"RefreshRates",
+	"ReValidateAddress",
+	"CheckSupportNotifications",
+
+	"ReadListingWalmartInfoFromMarket",
+	"ReadListingWalmartCAInfoFromMarket",
+	"ReadListingeBayAll4KidsInfoFromMarket",
+	"ReadListingeBayPAInfoFromMarket",
+	"ReadListingOverstockInfoFromMarket",
+
+	"UpdateListingsReportCOM",
+	"UpdateListingsReportCA",
+	"UpdateListingsReportMX",
+	"UpdateListingsReportUK",
+	"UpdateListingsReportAU",
+
+	"UpdateListingsDefectReportCOM",
+	"UpdateListingsDefectReportCA",
+	"UpdateListingsDefectReportMX",
+	"UpdateListingsDefectReportUK",
+	"UpdateListingsDefectReportAU",
+
+	"UpdateReturnsDataReportCOM",
+	"ReadReturnWalmartInfoFromMarket",
+
+	"UpdateFBAListingsReport",
+	"UpdateFBAListingsFeeReport",
+	"UpdateBuyBoxStatus",
+	"UpdateSalesEnd",
+	"UpdateQuantityPriceFixup",
+	"ListingsFixup",
+	"UpdateCaches",
+	"UpdateRecounting",
+	
+	"PrintLabels",
+	"PurchaseLabelsForOverdue",
+	"PurchaseLabelsForSameDay",
+	"PurchaseLabelsForPrime",
+	"PurchaseLabelsForAmazonNextDay",
+
+	"UpdateQuantityDistibution",
+	"UpdateOrderTrackingStatus",
+	"UpdateAmazonImage",
+	"UpdateFulfillmentData",
+	"UpdateAcknowledgementData",
+	"UpdateCancellationData",
+
+	"UpdateWalmartOrderAcknowledgment",
+	"UpdateWalmartCAOrderAcknowledgment",
+	"UpdateJetOrderAcknowledgment",
+	"UpdateGrouponOrderAcknowledgement",
+
+	"UpdateWalmartCancellationData",
+	"UpdateWalmartCACancellationData",
+	"UpdateGrouponOrderCancellation",
+
+	"CheckWalmartListingStatus",
+
+	"UpdateAdjustmentData",
+	"UpdateWalmartOrderAdjustmentData",
+	"UpdateWalmartCAOrderAdjustmentData",
+	"UpdateJetOrderReturnData",
+
+	"UpdateEBayOrderData",
+	"UpdateMagentoOrderData",
+
+	"UpdateDropShipperDSMBGOrderData",
+	"UpdateWalmartOrderData",
+	"UpdateWalmartCAOrderData",
+	"UpdateJetOrderData",
+	"UpdateGrouponOrderData",
+	"UpdateOverstockOrderData",
+
+	"UpdateListingsRelationshipOnAmazonCOM",
+	"UpdateListingsRelationshipOnAmazonCA",
+	"UpdateListingsRelationshipOnAmazonUK",
+	"UpdateListingsRelationshipOnAmazonAU",
+
+	"UpdateListingsPriceOnAmazonCOM",
+	"UpdateListingsPriceOnAmazonCA",
+	"UpdateListingsPriceOnAmazonUK",
+	"UpdateListingsPriceOnAmazonAU",
+
+	"UpdateWalmartListingPrice",
+	"UpdateWalmartCAListingPrice",
+	"UpdateJetListingPrice",
+	"UpdateEBayAll4KidsListingPrice",
+	"UpdateEBayPAListingPrice",
+	
+	"UpdateEBayAll4KidsListingQty",
+	"UpdateEBayPAListingQty",
+	"UpdateMagentoListingQty",
+	"UpdateWalmartListingQty",
+	"UpdateWalmartCAListingQty",
+	"UpdateJetListingQty",
+	"UpdateListingsQtyOnAmazonCOM",
+	"UpdateListingsQtyOnAmazonCA",
+	"UpdateListingsQtyOnAmazonUK",
+	"UpdateListingsQtyOnAmazonAU",
+	"UpdateDSListingQty",
+	"UpdateOverstockListingQty",
+
+	"UpdateListingsPriceRuleOnAmazonCOM",
+	"UpdateListingsPriceRuleOnAmazonCA",
+	"UpdateListingsPriceRuleOnAmazonUK",
+	"UpdateListingsPriceRuleOnAmazonAU",
+	"AmazonReadPrice",
+
+	"UpdateOrdersFromOrderApiCOM",
+	"UpdateOrdersFromOrderApiCA",
+	"UpdateOrdersFromOrderApiAU",
+	"UpdateOrdersFromOrderApiMX",
+	"UpdateOrdersFromOrderApiUK",
+	"UpdateOrdersFromOrderApiDE",
+	"UpdateOrdersFromOrderApiES",
+	"UpdateOrdersFromOrderApiFR",
+	"UpdateOrdersFromOrderApiIT",
+	"UpdateOrdersFromOrderApiEBayAll4Kids",
+	"UpdateOrdersFromOrderApiEBayPA",
+	"UpdateOrdersFromOrderApiWmart",
+	"UpdateOrdersFromOrderApiWmartCA",
+	"UpdateOrdersFromOrderApiJet",
+	"UpdateOrdersFromOrderApiShopify",
+	"UpdateOrdersFromOrderApiWooCommerce",
+	"UpdateOrdersFromOrderApiGroupon",
+	"UpdateOrdersFromOrderApiDropShipperMBG",
+	"UpdateOrdersFromOrderApiOverstock",
+
+	"UpdateStampsBalance",
+	"SendEmails",
+	"SystemActions",
+	"CheckSameDay",
+	"CheckSizeMapping",
+	"CheckOverdueStatus",
+	"CheckEmailStatus",
+	"CheckKioskBarcode",
+	"CheckDhlInvoice",
+	"BatchArchive",
+	"OrderFixup",
+	"AutoCreateListings",
+	"DhlECommerceSwitch",
+	"UpdateEmails",
+
+	"UpdateDemoTimeStamps",
+
+	"ImportWooCommerceListingData",
+
+	"ImportShopifyListingData",
+	"ReadShopifyListingInfo",
+	"UpdateShopifyPaymentStatus",
+	"UpdateShopifyOrderRefundData",
+	"UpdateShopifyCancellationData",
+	"UpdateShopifyOrderData"
+};
+#>
+<?xml version="1.0" encoding="utf-8" ?>
+<log4net>
+	<# foreach(var threadName in threadList){ #>
+    <appender name="<#= threadName #>" type="log4net.Appender.RollingFileAppender">
+		<param name="File" value="<#= baseDirectory #>\\<#= threadName #>\\<#= threadName #>.log"/>
+		<param name="AppendToFile" value="true"/>
+		<rollingStyle value="Size"/>
+		<maxSizeRollBackups value="25"/>
+		<maximumFileSize value="10MB"/>
+		<staticLogFileName value="true"/>
+		<lockingModel type="log4net.Appender.FileAppender+MinimalLock"/>
+		<layout type="log4net.Layout.PatternLayout">
+			<param name="ConversionPattern" value="%-7level%date{yyyy-MM-dd HH:mm:ss} [%thread] - %logger - %message%newline"/>
+		</layout>
+    </appender>
+
+	<#}#>
+
+	
+	<appender name="LogFileAppender" type="log4net.Appender.RollingFileAppender">
+		<param name="File" value="<#= baseDirectory #>\PA.Service.log"/>
+		<param name="AppendToFile" value="true"/>
+		<rollingStyle value="Size"/>
+		<maxSizeRollBackups value="25"/>
+		<maximumFileSize value="10MB"/>
+		<staticLogFileName value="true"/>
+		<lockingModel type="log4net.Appender.FileAppender+MinimalLock"/>
+		<layout type="log4net.Layout.PatternLayout">
+		  <param name="ConversionPattern" value="%-7level%date{yyyy-MM-dd HH:mm:ss} [%thread] - %logger - %message%newline"/>
+		</layout>
+	</appender>
+
+	<appender name="DBLogFileAppender" type="log4net.Appender.RollingFileAppender">
+		<param name="File" value=".\Logs\Amazon.DBRequest.log" />
+		<param name="AppendToFile" value="true" />
+		<rollingStyle value="Size" />
+		<maxSizeRollBackups value="25" />
+		<maximumFileSize value="10MB" />
+		<staticLogFileName value="true" />
+		<lockingModel type="log4net.Appender.FileAppender+MinimalLock" />
+		<layout type="log4net.Layout.PatternLayout">
+			<param name="ConversionPattern" value="%-7level%date{yyyy-MM-dd HH:mm:ss} [%thread] - %logger - %message%newline" />
+		</layout>
+	</appender>
+
+	<appender name="SmtpAppender" type="log4net.Appender.SmtpAppender">
+		<to value="ildar@dgtex.com" />
+		<from value="support@dgtex.com" />
+		<subject value="PA Service Error" />
+		<smtpHost value="smtp.gmail.com" />
+		<authentication value="Basic" />
+		<port value="587" />
+		<username value="support@dgtex.com" />
+		<password value="BestSupport4ever" />
+		<bufferSize value="1" />
+		<EnableSsl value="true" />
+		<lossy value="true" />
+		<evaluator type="log4net.Core.LevelEvaluator">
+		  <threshold value="FATAL" />
+		  <!--ERROR-->
+		</evaluator>
+		<layout type="log4net.Layout.PatternLayout">
+		  <conversionPattern value="%newline%date [%thread] %-5level %logger[%property{NDC}] - %message%newline%newline%newline" />
+		</layout>
+	</appender>
+
+	<root>
+		<level value="DEBUG"/>
+		<appender-ref ref="LogFileAppender"/>
+		<appender-ref ref="DBLogFileAppender"/>
+		<appender-ref ref="SmtpAppender"/>
+	</root>
+
+
+	<# foreach(var threadName in threadList){ #>
+  <logger additivity="false" name="<#= threadName #>">
+    <level value="DEBUG"/>
+    <appender-ref ref="<#= threadName #>" />
+  </logger>
+
+	<#}#>
+
+</log4net>

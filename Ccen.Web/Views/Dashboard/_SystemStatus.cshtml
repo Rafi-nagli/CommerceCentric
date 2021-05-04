@@ -1,0 +1,135 @@
+﻿<script>
+    var SystemStatusViewModel = function() {
+        var self = this;
+        self.isLoading = ko.observable(true);
+
+        self.marketplaces = ko.observableArray([]);
+
+        self.init = function() {
+            $.ajax({
+                cache: false,
+                url: '@Url.Action("GetSystemStatus", "Dashboard")',
+                success: function(result) {
+                    if (result.IsSuccess) {
+                        var marketplaces = result.Data.Marketplaces;
+                        self.prepareData(marketplaces);
+                        self.marketplaces(marketplaces);
+                    }
+                    self.isLoading(false);
+                }
+            });
+        }
+
+        self.prepareData = function(items) {
+            $.each(items, function(i, n) {
+
+            });
+        }
+
+        self.init();
+    };
+
+    $(document).ready(function () {
+        systemStatusViewModel = new SystemStatusViewModel();
+        ko.applyBindings(systemStatusViewModel, document.getElementById("system-status-panel"));
+    });
+</script>
+
+<div id="system-status-panel">
+    <div data-bind="visible: isLoading" class="loading">
+        <span class="glyphicon glyphicon-refresh glyphicon-refresh-animate"></span>
+        <span>Loading...</span>
+    </div>
+    <div data-bind="visible: !isLoading()">
+        <div class="status-line">
+            <span class="caption">Orders sync:</span>
+
+            <span data-bind="foreach: marketplaces">
+                <span data-bind="css: { 'label label-danger': OrdersSyncAfterIsOvertime }">
+                    <span data-bind="html: OrdersSyncAgoDateFormatted"></span>
+                </span>
+                (<span data-bind="html: MarketShortName"></span>)
+            </span>
+            <span> ago</span>
+
+            <div data-bind="foreach: marketplaces">
+                <div data-bind="if: OrderCountInDb != OrderCountOnMarket">
+                    <span class='red'>
+                        missed <span data-bind="text: OrderCountOnMarket - OrderCountInDb"></span> orders
+                        (<span data-bind="text: MarketShortName"></span>)
+                    </span>
+                </div>
+            </div>
+
+            <div class='gray'>
+                <span class="caption">total unshipped:</span>
+                <span data-bind="foreach: marketplaces">
+                    <span data-bind="text: OrderCountOnMarket"></span>/<span data-bind="text: OrderCountInDb"></span>
+                    (<span data-bind="text: MarketShortName"></span>)
+                </span>
+            </div>
+        </div>
+
+        <div class="status-line">
+            <span class="caption">Orders fulfmnt:</span>
+            <span data-bind="foreach: marketplaces">
+                <span data-bind="text: OrdersFulfillmentAgoDateFormatted"></span>
+                (<span data-bind="text: MarketShortName"></span>)
+            </span>
+            ago
+        </div>
+
+        <div class="status-line">
+            <span class="caption">Items sync:</span>
+            <span data-bind="foreach: marketplaces">
+                <span data-bind="css: { 'label label-danger': ListingsSyncAfterIsOvertime }">
+                    <span data-bind="html: ListingsSyncAgoDateFormatted"></span>
+                </span>
+                (<span data-bind="html: MarketShortName"></span>)
+            </span>
+            <span> ago</span>
+        </div>
+
+        <div class="status-line">
+            <span class="caption">Price sync:</span>
+            <span data-bind="foreach: marketplaces">
+                <span data-bind="css: { 'label label-danger': ListingsPriceSyncAfterIsOvertime }">
+                    <span data-bind="html: ListingsPriceSyncAgoDateFormatted"></span>
+                </span>
+                (<span data-bind="html: MarketShortName"></span>)
+            </span>
+            <span> ago</span>
+        </div>
+
+        <div class="status-line">
+            <span class="caption">Qty sync:</span>
+            <span data-bind="foreach: marketplaces">
+                <span data-bind="css: { 'label label-danger': ListingsQuantitySyncAfterIsOvertime }">
+                    <span data-bind="html: ListingsQuantitySyncAgoDateFormatted"></span>
+                </span>
+                (<span data-bind="html: MarketShortName"></span>)
+            </span>
+            <span> ago</span>
+        </div>
+
+        <div class="status-line">
+            <span class="caption">Listing Qty Alerts:</span>
+            <span data-bind="foreach: marketplaces">
+                <span data-bind="css: { 'label label-danger': ListingQtyAlert > 0 }">
+                    <span data-bind="html: ListingQtyAlert"></span>
+                </span>
+                (<span data-bind="html: MarketShortName"></span>)
+            </span>
+        </div>
+
+        <div class="status-line">
+            <span class="caption">Listing Price Alerts:</span>
+            <span data-bind="foreach: marketplaces">
+                <span data-bind="css: { 'label label-danger': ListingPriceAlert > 0 }">
+                    <span data-bind="html: ListingPriceAlert"></span>
+                </span>
+                (<span data-bind="html: MarketShortName"></span>)
+            </span>
+        </div>
+    </div>
+</div>

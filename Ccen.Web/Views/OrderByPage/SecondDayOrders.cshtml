@@ -1,0 +1,178 @@
+﻿@using Amazon.Web.ViewModels
+@using Kendo.Mvc.UI
+
+@{
+    ViewBag.Title = "Second Day";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<script type="text/javascript">
+    var SecondDayOrdersViewModel = function(settings) {
+        var self = this;
+
+        self.gridId = settings.gridId;
+        self.grid = $("#" + self.gridId).data("kendoGrid");
+
+        self.minDate = new Date(2000, 1, 1);
+        self.maxDate = new Date();
+        self.maxDate.setHours(23);
+        self.maxDate.setMinutes(59);
+
+        self.dateFrom = ko.observable();
+        self.dateTo = ko.observable();
+
+        self.total = ko.observable(0);
+        self.lateCount = ko.observable(0);
+        self.latePercent = ko.observable(0);
+
+
+
+        self.dataBound = function() {
+            var grid = $("#grid").data("kendoGrid");
+            var data = grid.dataSource.data();
+            var total = grid.dataSource.total();
+            var lateCount = 0;
+            this.expandRow(this.tbody.find("tr.k-master-row"));
+            $.each(data, function (i, row) {
+                //total++;
+                var late = row.IsLate;
+                if (late == true) {
+                    $('tr[data-uid="' + row.uid + '"] td:nth-child(1)').addClass('not-in-time');
+                    lateCount++;
+                }
+            });
+            var percent = ((lateCount * 100) / total).toFixed(2);
+
+            self.total(total);
+            self.lateCount(lateCount);
+            self.latePercent(percent);
+        }
+
+        self.search = function() {
+            var fromStr = kendo.toString(self.dateFrom(), "MM/dd/yyyy");
+            var toStr = kendo.toString(self.dateTo(), "MM/dd/yyyy");
+
+            self.grid.dataSource.read({
+                dateFrom: fromStr,
+                dateTo: toStr
+            });
+        }
+
+        self.clear = function () {
+            self.dateTo(null);
+            self.dateFrom(null);
+
+            self.grid.dataSource.read({
+                dateFrom: "",
+                dateTo: ""
+            });
+        }
+
+        self.grid.bind("dataBound", self.dataBound);
+
+        helper.ui.addTopPager(self.grid);
+    }
+</script>
+
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/orders.ico" />
+}
+
+
+<div id="page-content">
+    <ol class="breadcrumb">
+        <li><a href="#">Reports</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <table>
+                <colgroup>
+                    <col style="width: 100px"/>
+                    <col style="width: 210px"/>
+                    <col style="width: 100px"/>
+                    <col style="width: 450px"/>
+                </colgroup>
+                <tr>
+                    <th class="a-right">Order Date: </th>
+                    <td>
+                        <table>
+                            <tr>
+                                <th>From</th>
+                                <td>
+                                    <input data-bind="kendoDatePicker: { value: dateFrom, format: 'MM/dd/yyyy', min: minDate, max: maxDate }"/>
+                                </td>
+                                <th>To</th>
+                                <td>
+                                    <input data-bind="kendoDatePicker: { value: dateTo, format: 'MM/dd/yyyy', min: minDate, max: maxDate }"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            <button class="k-button"
+                    style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                    data-bind="click: search">
+                <span class='glyphicon glyphicon-search am-icon'></span>Search
+            </button>
+            <button class="k-button"
+                    style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                    data-bind="click: clear">
+                <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+            </button>
+        </div>
+    </div>
+    <div class="k-toolbar k-grid-toolbar">
+        <span class="toolbar-label">
+            <span>total:</span>
+            <span data-bind="text: total" class="count">0</span>
+            <span>late:</span>
+            <span data-bind="text: lateCount" class="count">0</span>
+            <span>late %:</span>
+            <span data-bind="text: latePercent" class="count">0</span>
+        </span>
+    </div>
+
+    <div>
+        @(Html.Kendo().Grid<SecondDayViewModel>()
+          .Name("grid")
+          .Columns(columns =>
+          {
+              columns.Bound(c => c.OrderNumber)
+                  .ClientTemplate("<div><a class='order-num' target='_blank' href='#=MarketOrderUrl#'>#=OrderNumber#</a></div>");
+              columns.Bound(c => c.PersonName)
+                  .Title("Buyer name");
+              columns.Bound(c => c.OrderDate)
+                  .Format("{0:MM.dd.yyyy HH:mm}");
+              columns.Bound(c => c.EstDeliveryDate)
+                  .Format("{0:MM.dd.yyyy HH:mm}");
+              columns.Bound(c => c.ActualDeliveryDate)
+                  .Format("{0:MM.dd.yyyy HH:mm}");
+              columns.Bound(c => c.TrackingNumber)
+                  .ClientTemplate("<a target='_blank' href='#=TrackingUrl#'>#=TrackingToDisplay#</a>");
+          })
+          .Pageable(conf => conf.Enabled(true).Refresh(true))
+          .DataSource(dataSource => dataSource
+              .Ajax()
+              .Sort(conf => conf.Add(s => s.OrderDate).Descending())
+              .PageSize(50)
+              .Read(read => read.Action(MVC.Order.ActionNames.GetSecondDay, MVC.Order.Name))))
+    </div>
+</div>
+
+
+<script>
+    var secondDayOrdersVm = null;
+
+    $(document).ready(function () {
+        console.log("onReady");
+        var settings = {
+            gridId: "grid",
+        }
+        secondDayOrdersVm = new SecondDayOrdersViewModel(settings);
+        ko.applyBindings(secondDayOrdersVm, document.getElementById('page-content'));
+    });
+</script>

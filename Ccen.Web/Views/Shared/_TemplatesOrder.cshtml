@@ -1,0 +1,673 @@
+﻿ @using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Common.Helpers
+@using Amazon.Core.Models.Settings
+@using Amazon.Core.Models.Stamps
+@using Amazon.Web.Models
+@using eBay.Api
+
+<script>
+    //CONSTS
+    var caMarketplaceId = '@(MarketplaceKeeper.AmazonCaMarketplaceId)';
+    var mxMarketplaceId = '@(MarketplaceKeeper.AmazonMxMarketplaceId)';
+    var fulfillmentChannelAFN = '@(FulfillmentChannelTypeEx.AFN)';
+    var amazonMarket = @((int)MarketType.Amazon);
+    var amazonEUMarket = @((int)MarketType.AmazonEU);
+    var amazonAUMarket = @((int)MarketType.AmazonAU);
+    var ebayMarket = @((int)MarketType.eBay);
+    var magentoMarket = @((int)MarketType.Magento);
+    var walmartMarket = @((int)MarketType.Walmart);
+    var walmartCAMarket = @((int)MarketType.WalmartCA);
+    var jetMarket = @((int)MarketType.Jet);
+    var dsMarket = @((int)MarketType.DropShipper);
+    var overstockMarket = @((int)MarketType.OverStock);
+    var today = new Date();
+    today.setHours(0, 0, 0);
+</script>
+
+<script>
+    //ORDERS GENERAL
+    function getStatusClass(status) {
+        switch (status) {
+            case @((int)TrackingNumberStatusEnum.Green):
+                return "green";
+            case @((int)TrackingNumberStatusEnum.Yellow):
+                return "yellow";
+            case @((int)TrackingNumberStatusEnum.Red):
+                return "red";
+            case @((int)TrackingNumberStatusEnum.Black):
+                return "black";
+        }
+        return "black";
+    }
+
+    function paintOrderRow(row, qtyCol, orderDateCol, buyerCol, cellCount) {
+        var quantity = row.Quantity;
+        var itemCount = row.ItemCount;
+        if (itemCount > 0 && quantity > 0 && itemCount != quantity) {
+            $('tr[row-uid="' + row.uid + '"]:first td:nth-child(' + orderDateCol + ')').addClass('not-one-quantity'); //10
+        }
+
+        if (quantity > 1 && itemCount == 0) {
+            $('tr[row-uid="' + row.uid + '"]:first td:nth-child(' + buyerCol + ')').addClass('not-one-quantity'); //3
+        }
+
+        var service = row.ShippingTypeCode;
+        var isInternational = row.IsInternational;
+
+        var colorCss = '';
+        if (service == '@((int)ShippingTypeCode.Priority)'
+            || service == '@((int)ShippingTypeCode.IPriority)') {
+            if (isInternational) {
+                colorCss = 'not-standard-i';
+            } else {
+                colorCss = 'not-standard';
+            }
+        }
+        if (service == '@((int)ShippingTypeCode.PriorityExpress)'
+            || service == '@((int)ShippingTypeCode.IPriorityExpress)') {
+            colorCss = 'priority-express';
+        }
+        if (row.InitialServiceType == 'NextDay') {
+            colorCss = 'next-day';
+        }
+        if (service == '@((int)ShippingTypeCode.SameDay)') {
+            colorCss = 'same-day';
+        }
+
+        $('tr[row-uid="' + row.uid + '"]:first td:nth-child(' + qtyCol + ')').addClass(colorCss); //4
+        $('tr[row-uid="' + row.uid + '"]:first td:nth-child(' + orderDateCol + ')').addClass(colorCss); //10
+
+        if (row.InBlackList) {
+            console.log("InBlackList, id=" + row.uid);
+            console.log(row);
+            for (var i = 0; i < cellCount; i++) {
+                $('tr[row-uid="' + row.uid + '"]:first td:nth-child(' + i + ')').addClass('in-blacklist');
+            }
+        }
+    }
+</script>
+
+
+<script type="text/x-kendo-template" id="order-info-column-template">
+    #if (Market == amazonEUMarket) {#
+        <div class='order-sales-channel order-europe-channel'>#=MarketName#</div>
+    #}#
+
+    #if (Market == amazonMarket) {#
+        #if (MarketplaceId == caMarketplaceId) {#
+            <div class='order-sales-channel order-canada-channel'>#=MarketName#</div>
+        #} else {#
+            #if (MarketplaceId == mxMarketplaceId) {#
+                <div class='order-sales-channel order-mexico-channel'>#=MarketName#</div>
+            #} else {#
+                <div class='order-sales-channel order-us-channel'>#=MarketName#</div>
+            #}#
+        #}#
+    #}#
+    #if (Market == ebayMarket) {#
+        <div class='order-sales-channel order-ebay-market'>#=MarketName#</div>
+    #}#
+    #if (Market == magentoMarket) {#
+        <div class='order-sales-channel order-magento-market'>#=MarketName#</div>
+    #}#
+    #if (Market == walmartMarket || Market == walmartCAMarket) {#
+        <div class='order-sales-channel order-walmart-market'>#=MarketName#</div>
+    #}#
+    #if (Market == jetMarket) {#
+        <div class='order-sales-channel order-jet-market'>#=MarketName#</div>
+    #}#
+    #if (Market == dsMarket) {#
+        <div class='order-sales-channel order-ds-market'>#=MarketName#</div>
+    #}#
+    #if (Market == overstockMarket) {#
+        <div class='order-sales-channel order-overstock-market'>#=MarketName#</div>
+    #}#
+
+    <div>
+        #if (IsPossibleDuplicate) {#
+        <div class="warn-rect">Duplicate <div class="remark">#=PossibleDuplicateReason#</div></div>
+        #}#
+        #if (InBlackList) {#
+        <div class="warn-rect">Black List</div>
+        #}#
+        #if (IsOverchargedShipping && ShippingPriceInUSD + TotalExcessiveShipmentThreshold < StampsShippingCost) {#
+         <div class="warn-rect #=!OnHold ? 'dismiss-warn' : ''#">Excess. Ship.</div>
+        #}#
+        #if (FutureShippingDate != null && FutureShippingDate > today) {#
+        <div class="warn-rect dismiss-warn">
+            Future Ship
+            <div class="gray">#=tmpl.isNullFormat(FutureShippingDate, 'MM.dd.yyyy', '-')#</div>
+        </div>
+        #}#
+        #if (AddressValidationStatus >= @((int) AddressValidationStatus.Invalid)) {#
+            #if (IsDismissAddressValidation) {#
+                <div class="warn-rect dismiss-warn">Address Warn</div>
+            #} else {#
+                #if (AddressValidationStatus == @((int) AddressValidationStatus.ExceptionCommunication)) {#
+                    <div class="warn-rect">Address API unavailable</div>
+                #} else {#
+                    <div class="warn-rect">Address Warn</div>
+                #}#
+            #}#
+        #}#
+        #if (HasAddressLengthIssue) {#
+            <div class="warn-rect">Address length issue</div>
+        #}#
+        #if (HasAddressInvalidSymbols) {#
+            <div class="warn-rect">Address has invalid symbols</div>
+        #}#
+        #if (PersonName == null || PersonName.length < 2) {#
+        <div class="warn-rect">Name is too short</div>
+        #}#
+        #if (IsInternational && !HasPhoneNumber) {#
+            <div class="warn-rect">W/o phone number</div>
+        #}#
+        #if (HasOversoldItems) {#
+            <div class="warn-rect">Oversold</div>
+        #}#
+        #if (IsPostalService) {#
+            <div class="warn-rect">Postal Service</div>
+        #}#
+        #if (IsPrime) {#
+        <div class="warn-rect">Prime</div>
+        #}#
+        #if (IsInternationalExpress) {#
+        <div class="warn-rect">Intl Express</div>
+        #}#
+        #if (IsSameDay) {#
+        <div class="warn-rect">Same Day</div>
+        #}#
+        #if (HasCancelationRequest) {#
+            #if (OrderStatus == '@OrderStatusEnumEx.Canceled') {#
+                <div class="warn-rect dismiss-warn">Has cancellation</div>
+            #} else {#
+                #if ((Market == walmartMarket || Market == walmartCAMarket) && CancelationRequestCount < Items.length) {#
+                    <div class="warn-rect">Has Partial cancellation #=CancelationRequestCount#/#=Items.length#</div>
+                #} else {#
+                    <div class="warn-rect">Has cancellation</div>
+                #}#
+            #}#
+        #}#
+        
+        #if (!dataUtils.isNullOrEmpty(AttachedToOrderString)) {#
+            <div class="warn-rect">Attached to: #=AttachedToOrderString#</div>
+        #}#
+    </div>
+
+
+</script>
+
+<script type="text/x-kendo-template" id="orderid-column-template">
+    <div>
+        #if (Market == ebayMarket) {#
+        <div class='order-num'><span class='gray'>#=CustomerOrderId#</span></div>
+        #}#
+
+
+        <div style="padding-bottom: 3px">
+            <a class='order-num' style="font-size: 110%; font-weight: bold"
+                                             target='_blank'
+                                             href='#=SellerUrl#'>#=FormattedOrderId#</a>
+            
+            #if (Market == walmartMarket || Market == walmartCAMarket) {#
+             / <span class='order-num'><span class='gray'>#=FormattedCustomerOrderId#</span></span>
+            #}#
+        </div>
+    </div>
+</script>
+
+<script type="text/x-kendo-template" id="buyer-column-template">
+    
+    <div><span class="gray">Recipient:</span> #: PersonName #</div>
+
+
+</script>
+
+<script type="text/x-kendo-template" id="tracking-column-template">
+    #for (var i=0; i < Labels.length; i++) {#
+        #if (Labels[i].IsPrinted) {#
+            <div>
+                <span class="gray">Tracking \\#:</span> <a class='tr-num #=getStatusClass(Labels[i].TrackingNumberStatus)#'
+                   target='_blank'
+                   href='#=Labels[i].TrackingUrl#'>#=Labels[i].TrackingNumber#</a>
+                <span class="gray remark">
+                 #if (Labels[i].IsCanceled) {#
+                    (canceled)
+                 #} else {#
+                            #if (Labels[i].FromType == '@((int) LabelFromType.Mail)') {#
+                                (#=Labels[i].MailReasonName#)
+                            #} else {#
+                            #}#
+                        #}#
+                 - #=tmpl.isNullFormat(Labels[i].PurchaseDate, 'MM.dd.yyyy HH:mm', '-')#
+                </span>
+            </div>
+        #}#
+    #}#
+</script>
+
+<script type="text/x-kendo-template" id="blacklist-orderid-column-template">
+    #if (Market == amazonEUMarket) {#
+    <div class='order-sales-channel order-europe-channel'>#=MarketName#</div>
+    #}#
+
+    #if (Market == amazonMarket) {#
+        #if (MarketplaceId == caMarketplaceId) {#
+            <div class='order-sales-channel order-canada-channel'>#=MarketName#</div>
+        #} else {#
+            #if (MarketplaceId == mxMarketplaceId) {#
+                <div class='order-sales-channel order-mexico-channel'>#=MarketName#</div>
+            #} else {#
+                <div class='order-sales-channel order-us-channel'>#=MarketName#</div>
+            #}#
+        #}#
+    #}#
+    #if (Market == ebayMarket) {#
+    <div class='order-sales-channel order-ebay-market'>#=MarketName#</div>
+    #}#
+    #if (Market == magentoMarket) {#
+    <div class='order-sales-channel order-magento-market'>#=MarketName#</div>
+    #}#
+
+    <div>
+        #if (Market == amazonMarket) {#
+        <a class='order-num'
+           target='_blank'
+           href='#=SellerUrl#'>#=OrderId#</a>
+        #}#
+        #if (Market == amazonEUMarket) {#
+        <a class='order-num'
+           target='_blank'
+           href='#=SellerUrl#'>#=OrderId#</a>
+        #}#
+        #if (Market == ebayMarket) {#
+        <div class='order-num'><span class='gray'>#=CustomerOrderId#</span></div>
+        <div>
+            <a class='order-num'
+               target='_blank'
+               href="#=SellerUrl#">#=OrderId#</a>
+        </div>
+        #}#
+        #if (Market == magentoMarket) {#
+        <a class='order-num'
+           target='_blank'
+           href='#=SellerUrl#'>#=OrderId#</a>
+        #}#
+    </div>
+
+</script>
+
+<script type="text/x-kendo-template" id="weight-column-template">
+    #if (WeightString == '' || WeightString == null) {#
+    <div style='font-size:14px; font-weight:normal' class="red">[no weight]</div>
+    #} else {#
+    <div style='font-size:14px; font-weight:bold'>#=WeightString#</div>
+    #}#
+</script>
+
+<script type="text/x-kendo-template" id="status-column-template">
+
+    <div class='order-status'>
+        #=OrderStatus#
+        #if (FulfillmentChannel == fulfillmentChannelAFN) {#
+            #if (Market == walmartMarket) {#
+                <span>(WFS)</span>
+            #} else {#
+                <span>(FBA)</span>
+            #}#
+        #}#
+        #if (data.DropShipperName == 'MBG') {#
+            <span class="order-sales-channel order-mbg">MBG</span>
+        #}#
+    </div>
+
+</script>
+
+<script type="text/x-kendo-template" id="servicetype-column-template">
+    #if (InitialServiceType != ActualAmazonService) {#
+        #=ActualAmazonService#
+        <br />
+        <span class='orig-service'>(source: 
+            #if (SourceServiceType == '@(ShippingUtils.FreeEconomyServiceType)') {#<span>Free Economy</span>#} else {# #=InitialServiceType# #}#)
+        </span>
+    #} else {#
+        #if (SourceServiceType == '@(ShippingUtils.FreeEconomyServiceType)') {#<span>Free Economy</span>#} else {# #=InitialServiceType# #}#
+    #}#
+
+</script>
+
+<script type="text/x-kendo-template" id="price-column-template">
+    <div>#=tmpl.f(ItemPrice, Currency + "0.00")#</div>
+    #if (ItemDiscount > 0) {#
+    <div class="promo">-#=tmpl.f(ItemDiscount, Currency + "0.00")# (promo)</div>
+    #}#
+    #if (HasItemRefund) {#
+        <div class="refund">-#=tmpl.f(RefundItemPrice, Currency + "0.00")#</div>
+    #}#
+    <div>+#=tmpl.f(ShippingPrice, Currency + "0.00")#</div>
+    #if (ShippingDiscount > 0) {#
+        <div class="promo">-#=tmpl.f(ShippingDiscount, Currency + "0.00")# (promo)</div>
+    #}#
+    #if (HasShippingRefund) {#
+        <div class="refund">-#=tmpl.f(RefundShippingPrice, Currency + "0.00")#</div>
+    #}#
+</script>
+
+<script type="text/x-kendo-template" id="fba-price-column-template">
+    <div><span class='remark'>FBA Fee: </span> #tmpl.isNullFormat(FBAFee, Currency + '0.00', '-')# </div>
+    <div><span class='remark'>Non FBA Listing Price:</span> #tmpl.isNullFormat(SimilarNonFBAPrice, Currency + '0.00', '-')# </div>
+</script>
+
+
+<!--ORDER ITEM-->
+
+<script type="text/x-kendo-template" id="order-item-image-column-template">
+    <a href='#=ProductStyleUrl#' target='_blank'><img src='#=Thumbnail#' style='border:0; max-width: 75px; max-height: 75px' /></a>
+</script>
+
+<script type="text/x-kendo-template" id="order-item-price-column-template">
+    <div>#=tmpl.f(ItemPrice, Currency + "0.00")#</div>
+    #if (HasItemRefund) {#
+        <div class="refund">refund: -#=tmpl.f(RefundItemPrice, Currency + "0.00")#</div>
+    #}#
+    #if (HasShippingPrice) {#
+        <div>+#=tmpl.f(ShippingPrice, Currency + "0.00")#</div> 
+        #if (HasShippingRefund) {#
+            <div class="refund">-#=tmpl.f(RefundShippingPrice, Currency + "0.00")#</div>
+        #}#
+    #}#
+</script>
+
+<script type="text/x-kendo-template" id="order-item-buyer-column-template">
+    <div>
+        #if (Quantity == 0) {#
+        <span class="warn-rect dismiss-warn">Canceled</span>
+        #}#
+        <a class='asin'
+           target='_blank'
+           href='#=MarketUrl#'>#=ASIN#</a> #=Title#
+    </div>
+
+    <div>
+        <span class='gray'>Style ID:</span> 
+        #if (SourceStyleString != null && StyleID != SourceStyleString) {#
+            <span class="red">changed: </span><a class='asin gray'
+               target='_blank'
+               href='#=SourceStyleUrl#' data-poload="#=SourceStylePopoverInfoUrl#">#=SourceStyleString#</a> -> 
+        #}#
+        <a class='asin'
+            target='_blank'
+            href='#=StyleUrl#' data-poload="#=StylePopoverInfoUrl#">#=StyleID#</a>
+    </div>
+
+    <div>
+        <span class='gray'>Size:</span> 
+        #if (SourceStyleSize != null && StyleSize != SourceStyleSize) {#
+        <span class="red">changed: </span><span class='size-num gray'>#=SourceStyleSize#</span> ->
+        #}#
+        <span class='size-num'>#=tmpl.isNull(Size, '-')#</span>
+    </div>
+</script>
+
+<script type="text/x-kendo-template" id="stampscost-column-template">
+    <div class="gray">#=ShipmentProviderName# - #=tmpl.isNullOrEmpty(ShipmentCarrier, "-")#</div>
+    #if(HasShippingOptions) {#
+        <div class="shipping-options" style="padding-bottom: 5px; font-size: 11px"></div>
+        #if (InsuranceCost > 0 && IsInsured) {#
+            <span>(include insurance)</span>
+        #}#
+        #if (SignConfirmationCost != null && IsSignConfirmation) {#
+            <span>(include sign confirm)</span>
+        #}#
+    #}# 
+    
+    #{#
+        #if (StampsShippingCost == 0) {#
+            <div>$0.00</div>
+        #} else {#
+            <div>#=tmpl.f(FormattedShippingMethodName, '-')# - #=tmpl.isNullFormat(StampsShippingCost, "$" + "0.00", '$n/a')#</div>
+        #}#
+
+        #if (InsuranceCost > 0 && IsInsured) {#
+            <div>+ ins: #=tmpl.f(InsuranceCost, "$" + "0.00")#</div>
+        #}#
+        #if (SignConfirmationCost != null && IsSignConfirmation) {#
+            <div>+ sign: #=tmpl.f(SignConfirmationCost, "$" + "0.00")#</div>
+        #}#
+    #}#
+
+    #if (IsInsured) {#
+    <div class="warn-rect dismiss-warn" style="margin-top: 4px">Insured</div>
+    #}#
+    #if (UpgradeLevel > 0) {#
+    <div class="warn-rect dismiss-warn" style="margin-top: 4px">Upgraded</div>
+    #}#
+    #if (GetRateResult == '@((int)GetRateResultType.Error)') {#
+    <div class="remark" style="padding-top: 4px">Last attempt result:</div>
+    <div class="remark error">#=GetRateMessageToUI#</div>
+    #}#
+    #if (ShippingCalculationStatus == '@((int) ShippingCalculationStatusEnum.FullWithNoRateCalculation)') {#
+    <div class="remark error">Current provider hasn't suitable rates</div>
+    #}#
+</script>
+
+
+<script type="text/x-kendo-template" id="view-buttons-column-template">
+    <a target='_blank'
+       class='k-button k-button-icontext'
+       style='display:block;margin-top:4px; width:95px;'
+       href='@Url.Action(MVC.Print.GetPackingSlip())?orderId=#=EntityId#'>Packing Slip</a>
+    
+    <div>
+        <a target="_blank"
+           class="k-button k-button-icontext"
+           style='display:block;margin-top:8px'
+           href='#=OrderEmailsUrl#'>
+            <span class='glyphicon glyphicon-envelope am-icon'></span>Email
+        </a>
+    </div>
+</script>
+
+
+<script type="text/x-kendo-template" id="buttons-column-template">
+    
+    
+    #if (OrderStatus == '@OrderStatusEnumEx.Unshipped'
+        || OrderStatus == '@OrderStatusEnumEx.PartiallyShipped'
+        || OrderStatus == '@OrderStatusEnumEx.Shipped'
+        || OrderStatus == '@OrderStatusEnumEx.Canceled') {#
+        
+        #if (OrderStatus != '@OrderStatusEnumEx.Canceled' && FulfillmentChannel != fulfillmentChannelAFN) {#
+            <a target='_blank'
+               class='k-button k-button-icontext'
+               style='display:block; width:95px; margin-top: 8px'
+               href='@Url.Action(MVC.Mailing.Index())?orderId=#=OrderId#'>Buy Shipping</a>
+            <a target='_blank'
+               class='k-button k-button-icontext'
+               style='display:block;margin-top:4px; width:95px;'
+               href='@Url.Action(MVC.Print.GetPackingSlip())?orderId=#=EntityId#'>Packing Slip</a>
+
+            <button class='k-button k-button-icontext'
+                    id='recalculateButton'
+                    style='display:block;margin-top:4px'
+                    onclick='batch.onReCalcShippingServiceForOrder(this, "#=EntityId#")'>
+                <span class='glyphicon glyphicon-calc am-icon'></span>Recalc
+            </button>
+        #}#    
+
+            <div style='padding-top:8px;' id='row-action'>
+                #if (FulfillmentChannel != fulfillmentChannelAFN){#
+                    <button class='k-button k-button-icontext'
+                            id='holdButton'
+                            style='display:block;margin-top:4px'
+                            onclick='batch.toggleHold("#=EntityId#", "#=OnHold#")'>
+                        #if(OnHold) {# UnHold #} else {# <span class='glyphicon glyphicon-ban-circle am-icon'></span>Hold #}#
+                    </button>
+                    #if (OnHold) {#
+                    <div class="remark"><span class="gray">at</span> #=tmpl.isNullFormat(OnHoldUpdateDate, 'MM.dd.yyyy hh:mm', '-')#</div>
+                    #}#
+                #}#
+                <button class='k-button k-button-icontext'
+                        id='editOrderButton'
+                        style='margin: 4px 0px 0px 0px; min-width: 55px'
+                        onclick='batch.onEditOrder("#=EntityId#")'>
+                    <span class='glyphicon glyphicon-pencil am-icon'></span>Edit
+                </button>
+                <a class='k-button k-button-icontext'
+                   id='historyOrderButton'
+                   style='margin: 4px 0px 0px 0px; min-width: 20px'
+                   target="_blank"
+                   href="@Url.Action("OrderHistory", "Order")?orderId=#=OrderId#">
+                    <span class='glyphicon glyphicon-new-window am-icon'></span>
+                </a>
+            </div>
+    
+        <div style='padding-top:8px; display:#if(batch != null && batch.isSearchResult()) {# block #} else {# none #}#' id='search-result-action'>
+            #if (OrderStatus != '@OrderStatusEnumEx.Canceled') {#
+            <a target='_blank'
+               class='k-button k-button-icontext'
+               style='display:block;margin-top:4px'
+               href='@Url.Action(MVC.ReturnOrder.Index())?orderId=#=OrderId#'>
+                <span class='glyphicon glyphicon-arrow-left am-icon'></span>Return
+            </a>
+            #}#
+
+            #if (Market == amazonMarket) {#
+            <a target='_blank'
+               class='k-button k-button-icontext'
+               style='display:block;margin-top:4px'
+               href='https://sellercentral.amazon.com/gp/communication-manager/inbox.html/ref=ag_cmin_head_home?searchBoxText=#=OrderId#&folder=inbox&dateFilter=90d'>
+                <span class='glyphicon glyphicon-envelope am-icon'></span>Messages
+            </a>
+            #}#
+
+            #if (Market == amazonEUMarket) {#
+            <a target='_blank'
+                class='k-button k-button-icontext'
+                style='display:block;margin-top:4px'
+                href='https://sellercentral.amazon.co.uk/gp/communication-manager/inbox.html/ref=ag_cmin_head_home?searchBoxText=#=OrderId#&folder=inbox&dateFilter=90d'>
+                <span class='glyphicon glyphicon-envelope am-icon'></span>Messages
+            </a>
+            #}#
+        </div>
+
+        <div>
+            <a target="_blank"
+               class="k-button k-button-icontext"
+               id='emailButton'
+               style='display:block;margin-top:4px'
+               href='#=OrderEmailsUrl#'>
+                <span class='glyphicon glyphicon-envelope am-icon'></span>Email
+            </a>
+        </div>
+    #}#
+
+    #if (OrderStatus == '@OrderStatusEnumEx.Pending' && FulfillmentChannel != fulfillmentChannelAFN) {#
+        <button class='k-button k-button-icontext'
+                id='holdButton'
+                style='display:block;margin-top:4px'
+                onclick='batch.toggleHold("#=EntityId#", "#=OnHold#")'>
+            #if(OnHold) {# UnHold #} else {# <span class='glyphicon glyphicon-ban-circle am-icon'></span>Hold #}#
+        </button>
+        #if (OnHold) {#
+            <div class="remark"><span class="gray">at</span> #=tmpl.isNullFormat(OnHoldUpdateDate, 'MM.dd.yyyy hh:mm', '-')#</div>
+        #}#
+    #}#
+
+</script>
+
+<script type="text/x-kendo-template" id="view-label-column-template">
+    <span>
+        #for (var i = 0; i < Labels.length; i++) {#
+        #if (Labels[i].IsPrinted) {#
+        #for (var f = 0; f < Labels[i].Files.length; f++) {#
+            #if (Labels[i].Files[f] == '\\#')
+            {#
+                <a href="javascript:;"
+                   style="margin-top: 4px; width: 100px; cursor: default; color: gray; text-decoration: none"
+                   disable="disabled"
+                   class="k-button k-button-icontext k-state-disabled k-disabled">
+                    View label
+                </a>
+            #} else {#
+                <a target='_blank'
+                   class='k-button k-button-icontext'
+                   style="margin-top: 4px; width: 100px"
+                   href='@(Url.Action(MVC.Order.GetFile()))?fileName=#=encodeURI(Labels[i].Files[f])#'>
+                    View label
+                    <span class="gray remark">
+                        #if (Labels[i].IsCanceled) {#
+                        (c)
+                        #} else {#
+                        #if (Labels[i].FromType == '@((int)LabelFromType.Mail)') {#
+                        (m)
+                        #} else {#
+                        #}#
+                        #}#
+                    </span>
+                </a>
+            #}#
+        #}#
+        #}#
+        #}#
+    </span>
+</script>
+
+
+<script type="text/x-kendo-template" id="get-label-column-template">
+    #if (!HasAllLabels && !HasMailLabel) {
+        if(StampsShippingCost > 0 && FulfillmentChannel != fulfillmentChannelAFN) {#
+            @if (AccessManager.CanViewSystemInfo())
+            {
+                <a target='_blank'
+                   onclick='return confirm("Are you sure you want to buy this postage?");'
+                   class='k-button k-button-icontext'
+                   href='@(Url.Action(MVC.AmazonSync.GetLabel()))?orderId=#=EntityId#'>
+                    #if (HasLabel) {#
+                    Get rest of labels
+                    #} else {#
+                    Get label
+                    #}#
+                </a>
+            }
+        #} else {#
+            <span>[No stamps price]</span>
+        #}
+    }#
+
+    #if (Labels != null) {#
+        #for (var i = 0; i < Labels.length; i++) {#           
+            #if (Labels[i].PurchaseResult == @((int)LabelPurchaseResultType.Error)) {#
+                <div class="remark">Label print message:</div>
+                <div class="error remark">#=Labels[i].PurchaseMessage#</div>
+            #}#
+        #}#
+    #}#
+</script>
+
+<script type="text/x-kendo-template" id="batchname-column-template">
+    #if (BatchId != null) {#
+    <div class="remark gray" style="padding-top:5px">batch:</div>
+    <div><a target="_blank" href="#=BatchUrl#">#=BatchString#</a></div>
+    #for (var i = 0; i < Labels.length; i++) {#
+    #if (Labels[i].NumberInBatch != null) {#
+    <div><span class="remark gray">label\\#:</span> #=tmpl.isNull(Labels[i].NumberInBatch, '-' )#</div>
+    #}#
+    #}#
+    #}#
+
+</script>
+
+<script type="text/x-kendo-template" id="comment-column-template">
+    #if (LastCommentMessage != null) {#
+        <div class='remark'>\\##=LastCommentNumber#: #=dataUtils.substring(LastCommentMessage, 90, "...")#</div>
+        <div class="remark gray">
+            at: #=tmpl.isNullFormat(LastCommentDate, 'MM.dd.yyyy HH:mm', '-')#
+            by: #=tmpl.isNull(LastCommentByName, 'system')#
+        </div>
+        #if (LastCommentNumber > 1) {#
+            <a href="javascript:;" onclick='batch.onViewComments("#=EntityId#")'>view all</a>   
+        #}#
+    #}#
+</script>

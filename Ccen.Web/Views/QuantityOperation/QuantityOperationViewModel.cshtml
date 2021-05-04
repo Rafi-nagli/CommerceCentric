@@ -1,0 +1,440 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.ViewModels.Inventory
+@model Amazon.Web.ViewModels.Inventory.QuantityOperationViewModel
+@{
+    Layout = null;
+}
+
+
+<script type="text/javascript">
+    var OperationModel = function(model, settings) {
+        var self = this;
+
+        self.isLoaded = ko.observable(false);
+
+        self.settings = settings;
+        self.model = model;
+
+        self.typeList = settings.typeList;
+        self.type = ko.observable(model.Type);
+        self.type.subscribe(function() {
+            console.log(self.type());
+        });
+
+        self.users = ko.observableArray(model.Users);
+        self.userId = ko.observable('');
+
+        self.visibleOrderId = ko.computed(function() {
+            return self.type() == '@((int)QuantityOperationType.Exchange)'
+                || self.type() == '@((int)QuantityOperationType.Return)'
+                || self.type() == '@((int)QuantityOperationType.ReturnOnHold)'
+                || self.type() == '@((int)QuantityOperationType.ExchangeOnHold)'
+                || self.type() == '@((int)QuantityOperationType.Replacement)'
+                || self.type() == '@((int)QuantityOperationType.CompensationGift)';
+        });
+
+        self.visibleOrderItemsDDL = ko.computed(function() {
+            return self.type() == '@((int)QuantityOperationType.Exchange)';
+        });
+
+        self.visibleOrderItemsList = ko.computed(function() {
+            return self.type() == '@((int)QuantityOperationType.Return)';
+        });
+
+        self.visibleStyleSize = ko.computed(function() {
+            return self.type() == '@((int)QuantityOperationType.Exchange)'
+                || self.type() == '@((int)QuantityOperationType.Lost)'
+                || self.type() == '@((int)QuantityOperationType.Damaged)'
+                || self.type() == '@((int)QuantityOperationType.SoldOutside)'
+                || self.type() == '@((int)QuantityOperationType.StoreManual)'
+                || self.type() == '@((int)QuantityOperationType.Wholesale)'
+                || self.type() == '@((int)QuantityOperationType.CompensationGift)'
+                || self.type() == '@((int)QuantityOperationType.InvalidBox)';
+        });
+
+        self.visibleInvalidBox = ko.computed(function() {
+            return self.type() == '@((int)QuantityOperationType.InvalidBox)';
+        });
+
+        self.orderErrorMessage = ko.observable('');
+        self.orderId = ko.observable("");
+        self.orderIdLoading = ko.observable(false);
+        self.orderId.subscribe(function() {
+            self.orderErrorMessage('');
+            if (self.visibleOrderItemsDDL() || self.visibleOrderItemsList()) {
+                self.orderIdLoading(true);
+                $.ajax({
+                    url: '@Url.Action("GetOrderItems", "QuantityOperation")',
+                    data: { orderId: self.orderId() },
+                    cache: false,
+                    success: function(data) {
+                        self.orderIdLoading(false);
+                        if (data.Data != null && data.Data.length > 0) {
+                            self.orderItemList(data.Data);
+                            if (data.Data.length > 0)
+                                self.orderItemId(data.Data[0].ItemOrderId);
+                        } else {
+                            self.orderErrorMessage('OrderId is not found');
+                            self.orderItemList([]);
+                        }
+                        self.isEditQuantity(self.canEditQuantity());
+                    }
+                });
+            }
+        });
+
+        self.styleErrorMessage = ko.observable('');
+        self.styleId = ko.observable("");
+        self.styleIdLoading = ko.observable(false);
+        self.styleId.subscribe(function() {
+            self.styleErrorMessage('');
+            self.styleIdLoading(true);
+            $.ajax({
+                url: '@Url.Action("GetStyleSizes", "AutoComplete")',
+                data: { styleString: self.styleId(), onlyWithQty: false },
+                cache: false,
+                success: function(data) {
+                    self.styleIdLoading(false);
+                    if (data.Data != null && data.Data.length > 0) {
+                        self.sizeList(data.Data);
+                    } else {
+                        self.styleErrorMessage('StyleId is not found');
+                        self.sizeList([]);
+                    }
+                }
+            });
+        });
+
+        self.styleItemId = ko.observable(model.StyleItemId);
+        self.sizeList = ko.observable([]);
+
+        self.quantity = ko.observable(model.Quantity);
+
+        self.orderItemList = ko.observable([]);
+        self.orderItemId = ko.observable(model.OrderItemId);
+        self.orderItemId.subscribe(function() {
+            console.log("orderItemId changed");
+            var items = self.orderItemList().filter(function(n) { return n.ItemOrderId == self.orderItemId(); });
+            if (items.length > 0)
+            {
+                self.styleId(items[0].StyleString);
+                self.quantity(1);
+            }
+        });
+
+        self.isEditQuantity = ko.observable(false);
+        self.canEditQuantity = function() {
+            if (self.orderItemList().length > 1)
+                return true;
+            if (self.orderItemList().length == 1)
+                if (self.orderItemList()[0].Quantity > 1)
+                    return true;
+            return false;
+        };
+
+        self.orderIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetOrderIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if(action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.styleIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetStyleIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if(action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.orderItemsForDDL = ko.computed(function() {
+            return $.map(self.orderItemList(), function(n, i) {
+                return {
+                    Text: n.StyleString + " - " + n.Size,
+                    Value: n.ItemOrderId
+                };
+            });
+        });
+
+        //To Remove
+        self.styleToRemoveErrorMessage = ko.observable('');
+        self.styleIdToRemove = ko.observable("");
+        self.styleIdToRemove.subscribe(function() {
+            self.styleErrorMessage('');
+            $.ajax({
+                url: '@Url.Action("GetStyleSizes", "AutoComplete")',
+                data: { styleId: self.styleId(), onlyWithQty: false },
+                cache: false,
+                success: function(data) {
+                    if (data.Data != null && data.Data.length > 0) {
+                        self.sizeListToRemove(data.Data);
+                    } else {
+                        self.styleToRemoveErrorMessage('StyleId is not found');
+                        self.sizeListToRemove([]);
+                    }
+                }
+            });
+        });
+
+        self.styleItemIdToRemove = ko.observable(model.styleItemIdToRemove);
+        self.sizeListToRemove = ko.observable([]);
+
+        self.quantityToRemove = ko.observable(model.QuantityToRemove);
+
+
+        if (model.OrderId != null && model.OrderId != '')
+            self.orderId(model.OrderId);
+        if (model.StyleId != null && model.StyleId != '')
+            self.styleId(model.StyleId);
+
+        if (model.StyleIdToRemove != null && model.styleIdToRemove != '')
+            self.styleIdToRemove(model.StyleIdToRemove);
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function() {
+            return self.errors.length == 0;
+        });
+        self.onSubmit = function(e) { // function(data, e) {
+            //console.log(data);
+            console.log(e);
+            console.log("save click");
+
+            //var validator = $("#form").kendoValidator().data('kendoValidator');
+
+            //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+            //http://jsfiddle.net/KHFn8/3238/
+            if (self.errors().length == 0) { //validator.validate() &&
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                e.preventDefault();
+                return false;
+            }
+        };
+
+        self.isLoaded(true);
+    };
+
+    $(document).ready(function() {
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+            amazonMarket: '@((int)MarketType.Amazon)',
+            amazonUKMarket: '@((int)MarketType.AmazonEU)',
+            amazonAUMarket: '@((int)MarketType.AmazonAU)',
+            typeList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(QuantityOperationViewModel.TypeList)),
+        };
+
+        var viewModel = new OperationModel(model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        var node = document.getElementById('operation-container');
+        ko.applyBindings(viewModel, node);
+
+        $('#operation-container').parent().next().find("#submit").click(viewModel.onSubmit);
+    });
+</script>
+
+<div id="operation-container" class="inventory-popup">
+    @Html.ValidationSummary(true)
+
+    @Html.HiddenFor(m => m.Id)
+
+    <div class="k-edit-form-container">
+
+
+        <div style="padding-bottom: 15px">
+            <div>
+                <div class="editor-label" style="width:30%">Type:</div>
+                <div class="editor-field" style="padding-top:5px">
+                    <input id="Type"
+                           name="Type"
+                           style="width:180px"
+                           data-bind="kendoDropDownList: {data: typeList, value: type, dataTextField: 'Text', dataValueField: 'Value' }" />
+                </div>
+            </div>
+            
+            <div data-bind="visible: visibleOrderId">
+                <div class="editor-label" style="width:30%">Order Id:</div>
+                <div class="editor-field" style="padding-top:5px">
+                    <input style='width: 180px' 
+                           class="k-textbox" 
+                           name="OrderId" 
+                           data-bind="kendoAutoComplete: {
+                           value: orderId,
+                           data: {},
+                           minLenght: 3,
+                           dataSource: orderIdSource }" />
+                    <div data-bind="text: orderErrorMessage" class="red"></div>
+                    <div data-bind="visible: orderIdLoading" style="display: none">loading...</div>
+                </div>
+            </div>
+
+            <div data-bind="visible: visibleOrderItemsDDL">
+                <div>
+                    <div class="editor-label" style="width: 30%">Order Items:</div>
+                    <div class="editor-field" style="padding-top: 5px">
+                        <input id="OrderItemId"
+                               name="OrderItemId"
+                               style="width: 180px"
+                               data-bind="kendoDropDownList: {data: orderItemsForDDL, value: orderItemId, dataTextField: 'Text', dataValueField: 'Value' }"/>
+                    </div>
+                </div>
+                <div>
+                    <div class="editor-label" style="width: 30%"></div>
+                    <div class="editor-field" style="padding-top: 5px;">Exchange to:</div>
+                </div>
+            </div>
+
+            <div data-bind="visible: visibleOrderItemsList">
+                <div>
+                    <div class="editor-label" style="width:30%">Return Items:</div>
+                    <div class="editor-field" style="padding-top: 5px">
+                        <table data-bind="foreach: orderItemList">
+                            <tr>
+                                <td style="padding-right: 5px">
+                                    <a data-bind='attr: { href: ProductUrl }' 
+                                       target='_blank'>
+                                        <img height='75' data-bind='attr: { src: Thumbnail }' style='border:0' />
+                                    </a>
+                                </td>
+                                <td>
+                                    <a data-bind='attr: { href: StyleUrl }' 
+                                       target='_blank'>
+                                        <span data-bind="text: StyleString"></span>
+                                    </a> - <span data-bind="text: Size"></span>
+                                    <input type="hidden" data-bind="value: ItemOrderId, attr: { name: 'InputOrderItems[' + $index() + '].ItemOrderId' }" />
+                                </td>
+                                <td>
+                                    <input data-bind="value: Quantity, attr: { name: 'InputOrderItems[' + $index() + '].Quantity' }" 
+                                           style="width: 40px" 
+                                           class="k-textbox" />
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div data-bind="visible: visibleInvalidBox">
+                <div>
+                    <div class="editor-label" style="width:30%"></div>
+                    <div class="editor-field" style="padding-top:5px;">To Add:</div>
+                </div>
+            </div>
+            
+            <div data-bind="visible: visibleStyleSize">
+                <div>
+                    <div class="editor-label" style="width:30%">Style Id:</div>
+                    <div class="editor-field" style="padding-top:5px">
+                        <input style='width: 180px' class="k-textbox" name="StyleId" data-bind="kendoAutoComplete: {
+                           value: styleId,
+                           data: {},
+                           minLenght: 3,
+                           dataSource: styleIdSource }" />
+                        <div data-bind="text: styleErrorMessage" class="red"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="editor-label" style="width:30%">Size/Color:</div>
+                    <div class="editor-field" style="padding-top:5px">
+                        <input id="StyleItemId"
+                                name="StyleItemId"
+                                style="width:100px"
+                                data-bind="kendoDropDownList: {data: sizeList, value: styleItemId, dataTextField: 'Text', dataValueField: 'Value' }" />
+                    </div>
+                </div>
+                <div>
+                    <div class="editor-label" style="width:30%">Quantity:</div>
+                    <div class="editor-field" style="padding-top:5px">
+                        <input style='width: 80px' class="k-textbox" data-bind='value: quantity, attr: { name: "Quantity" }' />
+                    </div>
+                </div>
+            </div>
+
+            <div class="clear"></div>
+            <div data-bind="visible: visibleInvalidBox">
+                <div>
+                    <div class="editor-label" style="width:30%"></div>
+                    <div class="editor-field" style="padding-top:5px;">To Remove:</div>
+                </div>
+                <div>
+                    <div class="editor-label" style="width:30%">Style Id:</div>
+                    <div class="editor-field" style="padding-top:5px">
+                        <input style='width: 180px' class="k-textbox" data-bind='value: styleIdToRemove, attr: { name: "StyleIdToRemove" }' />
+                        <div data-bind="text: styleToRemoveErrorMessage" class="red"></div>
+                        <div data-bind="visible: styleIdLoading" style="display: none">loading...</div>
+                    </div>
+                </div>
+                <div>
+                    <div class="editor-label" style="width:30%">Size/Color:</div>
+                    <div class="editor-field" style="padding-top:5px">
+                        <input id="StyleItemIdToRemove"
+                                name="StyleItemIdToRemove"
+                                style="width:100px"
+                                data-bind="kendoDropDownList: {data: sizeListToRemove, value: styleItemIdToRemove, dataTextField: 'Text', dataValueField: 'Value' }" />
+                    </div>
+                </div>
+                <div>
+                    <div class="editor-label" style="width:30%">Quantity:</div>
+                    <div class="editor-field" style="padding-top:5px">
+                        <input style='width: 80px' class="k-textbox" data-bind='value: quantityToRemove, attr: { name: "QuantityToRemove" }' />
+                    </div>
+                </div>
+            </div>
+
+            <div class="clear"></div>
+            <div>
+                <div class="editor-label" style="width:30%">User:</div>
+                <div class="editor-field" style="padding-top:5px">
+                    <input id="users"
+                           name="users"
+                           style="width:100px"
+                           data-bind="kendoDropDownList: {data: users, value: userId, dataTextField: 'Text', dataValueField: 'Value' }" />
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>

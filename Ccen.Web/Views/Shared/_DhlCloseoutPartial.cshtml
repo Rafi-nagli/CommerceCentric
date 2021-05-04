@@ -1,0 +1,59 @@
+﻿<script type="text/javascript">
+    var DhlCloseoutInfoModel = function () {
+        var self = this;
+
+        self.toCloseoutCount = ko.observable(0);
+
+        self.onDhlCloseout = function (m, e) {
+            $(e.target).showLoading("processing...");
+            $.ajax({
+                cache: false,
+                url: '@Url.Action("GetCloseoutForm", "DhlCloseout")',
+                success: function (result) {
+                    if (result.IsSuccess) {
+                        window.open(result.Data, "_blank", "");
+                        //$(e.target).hide();
+                        self.toCloseoutCount(0);
+                        Message.popup("Closeout form has been successfully generated", Message.POPUP_INFO);
+                    } else {
+                        Message.popup(result.Message, Message.POPUP_INFO);
+                    }
+                    $(e.target).hideLoading();
+                }
+            });
+        }
+
+        self.hasToCloseoutLabels = ko.computed(function() {
+            return self.toCloseoutCount() > 0;
+        });
+
+        self.init = function () {
+            $.ajax({
+                cache: true,
+                url: '@Url.Action("GetInfo", "DhlCloseout")',
+                success: function (result) {
+                    if (result.IsSuccess)
+                        self.toCloseoutCount(result.Data.ToCloseoutCount);
+                    else
+                        self.toCloseoutCount(null);
+                }
+            });
+        };
+
+        self.init();
+    };
+
+    var dhlCloseoutInfoModel = null;
+    $(document).ready(function () {
+        dhlCloseoutInfoModel = new DhlCloseoutInfoModel();
+        ko.applyBindings(dhlCloseoutInfoModel, document.getElementById("dhl-closeout-block"));
+    });
+</script>
+
+
+<div id="dhl-closeout-block" class="amz-dhl-closeout">
+    Dhl Сloseout: <span data-bind="textFormatted: toCloseoutCount, ifEmpty: '-'"></span> labels
+    <div data-bind="visible: hasToCloseoutLabels">
+        <button class="k-button" data-bind="click: onDhlCloseout">Get DHL Closeout Form</button>
+    </div>
+</div>

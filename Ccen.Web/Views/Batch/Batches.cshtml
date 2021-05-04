@@ -1,0 +1,118 @@
+﻿@using Amazon.Web.ViewModels
+@using Kendo.Mvc.UI
+
+
+@{
+    ViewBag.Title = "Batches";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<script type="text/javascript">
+    var BatchesViewModel = function (settings) {
+        var self = this;
+
+        self.gridName = settings.gridId;
+        self.showArchive = ko.observable(false);
+        self.showArchive.subscribe(function () { self.search(); });
+
+        self.grid = $(self.gridName).data('kendoGrid');
+
+        self.search = function () {
+            var grid = self.grid;
+
+            grid.dataSource.transport.options.read.data = {
+                showArchive: self.showArchive()
+            };
+            grid.dataSource.page(1);
+        };
+
+        self.toggleArchive = function(batchId) {
+            //Find button
+            var button = null;
+
+            var grid = self.grid;
+            var gridData = grid.dataSource.data();
+            $.each(gridData, function (i, row) {
+                if (row.Id == batchId) {
+                    var $tr = $('tr[data-uid="' + row.uid + '"]');
+                    button = $tr.find("#archiveButton");
+                }
+            });
+
+            helper.ui.showLoading(button);
+
+            $.ajax({
+                url: '@Url.Action("ToggleArchive", "Batch")',
+                data: { batchId: batchId },
+                cache: false,
+                async: true,
+                success: function (data) {
+                    button.html(data ? "UnArchive" : "Archive");
+                    helper.ui.hideLoading(button);
+                }
+            });
+        }
+    };
+</script>
+
+<div id="page-content">
+    <ol class="breadcrumb">
+        <li><a href="#">Batches</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <input type='checkbox' data-bind="checked: showArchive"/> Show Archived Batches
+        </div>
+    </div>
+
+    <div>
+        @(Html.Kendo().Grid<OrderBatchViewModel>()
+              .Name("grid")
+              .Editable(e => e.Mode(GridEditMode.InLine))
+              .Columns(columns =>
+              {
+                  columns.Bound(b => b.Id).Width(100).Title("Batch Id");
+                  columns.Bound(b => b.Name).ClientTemplate("<a target='_blank' href='" + @Url.Action("ActiveBatches", "Batch") + "?batchId=#=Id#'>#=Name#</a>");
+                  columns.Bound(b => b.OrdersCount).Title("Count").Width(100);
+                  columns.Bound(b => b.LabelPrintPackId).Title("Label").ClientTemplate("#if (CanArchive){# <a target='_blank' href='#=PrintPackUrl#'>View</a> #}#").Width(100);
+                  columns.Bound(b => b.CreateDate).Format("{0:MM.dd.yyyy HH:mm}").Width(150);
+                  columns.Bound(b => b.Archive).Sortable(false)
+                      .ClientTemplate("#if (CanArchive){# <button class='k-button k-button-icontext' id='archiveButton' style='margin-top:4px' onclick='batchesVm.toggleArchive(\"#=Id#\")'>#if(Archive) {# UnArchive #} else {# Archive #}#</button> #} else {#<span style='color:red'>Has unshipped</span> #}#").Width(150);
+                  columns.Command(command => command.Edit()).Width(200);
+
+              })
+
+              .Pageable(conf => conf.Enabled(true).Refresh(true))
+              //.Events(e => e.DataBound("onDataBound"))
+              .DataSource(dataSource => dataSource
+                  .Ajax()
+                  .PageSize(50)
+                  .Model(conf =>
+                  {
+                      conf.Id(m => m.Id);
+                      conf.Field(m => m.OrdersCount).Editable(false);
+                      conf.Field(m => m.LabelPrintPackId).Editable(false);
+                      conf.Field(m => m.CreateDate).Editable(false);
+                      conf.Field(m => m.Archive).Editable(false);
+                  })
+                  .Read(read => read.Action("GetBatches", "Batch"))
+                  .Update(update => update.Action("UpdateBatch", "Batch"))))
+    </div>
+</div>
+
+
+<script type="text/javascript">
+    var batchesVm = null;
+
+    $(document).ready(function () {
+        var settings = {
+            gridId: '#grid'
+        }
+
+        batchesVm = new BatchesViewModel(settings);
+
+        ko.applyBindings(batchesVm, document.getElementById('page-content'));
+    });
+</script>

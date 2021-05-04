@@ -1,0 +1,51 @@
+﻿@using Amazon.Core.Models
+@using Amazon.Core.Models.Stamps
+
+@model Amazon.Web.ViewModels.Pages.OrderHistoryControlViewModel
+
+@{
+    ViewBag.Title = "View History";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+    
+}
+
+<style>
+    .am-mail .block {
+        padding: 10px;
+    }
+
+    .am-mail .block .title {
+        font-weight: bold;
+        font-size: 16px;
+        padding-bottom: 5px;
+    }
+
+    .am-mail .block .list {
+    }
+
+    .am-mail .block .list tr {
+        border-bottom: 1px solid lightgrey;
+    }
+</style>
+
+<div id="page-content">
+
+    <ol class="breadcrumb">
+        <li><a href="@Url.Action("Orders", "Order")">Orders</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="am-mail">
+        <table style="margin: 8px">
+            <tr>
+                <td style="vertical-align: top; min-width: 500px; padding-right: 20px">
+                    @Html.Partial("_OrderHistory", Model)
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,347 @@
+﻿@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var FBAPickListEditModel = function(model, settings) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+
+        self.id = ko.observable(model.Id);
+        self.shipmenttype = ko.observable(model.ShipmentType);
+
+        self.prepareRow = function(n) {
+            n.styleItemId = ko.observable(null);
+            n.sizeList = ko.observable([]);
+            n.sizeName = ko.observable("");
+
+            n.quantity = ko.observable(n.Quantity).extend({
+                required: {
+                    message: '*'
+                },
+                pattern: {
+                    message: '*',
+                    params: '^([-,0-9][-,0-9]*)$'
+                }
+            });
+
+            n.styleErrorMessage = ko.observable('');
+            n.styleString = ko.observable("");
+            n.styleStringLoading = ko.observable(false);
+            n.styleString.subscribe(function() {
+                n.styleErrorMessage('');
+                n.styleStringLoading(true);
+                n.styleItemId(null);
+                $.ajax({
+                    url: '@Url.Action("GetStyleSizes", "AutoComplete")',
+                    data: { styleString: n.styleString(), onlyWithQty: false },
+                    cache: false,
+                    success: function(data) {
+                        n.styleStringLoading(false);
+                        if (data.Data != null && data.Data.length > 0) {
+                            n.sizeList(data.Data);
+                            if (n.styleItemId() == null) {
+                                n.styleItemId(data.Data[0].Value);
+                            }
+                        } else {
+                            n.styleErrorMessage('StyleId is not found');
+                            n.sizeList([]);
+                            n.styleItemId(null);
+                        }
+                    }
+                });
+            });
+
+            if (n.StyleString != null)
+                n.styleString(n.StyleString);
+
+            n.listingId = ko.observable(n.ListingId);
+                //.extend(ko.validation.patterns.requred("*"));
+            n.listingList = ko.observable([]);
+            n.listingIdLoading = ko.observable(false);
+            n.listingErrorMessage = ko.observable("");
+            n.styleItemId.subscribe(function() {
+                n.listingIdLoading(true);
+                n.listingErrorMessage("");
+
+                var previousListingId = n.listingId();
+                n.listingId(null);
+
+                var selectedSize = $.grep(n.sizeList(), function(s) {
+                    return s.Value == n.styleItemId();
+                });
+                if (selectedSize.length > 0)
+                    n.sizeName(selectedSize[0].Text);
+
+                if (n.styleItemId() != null) {
+                    console.log("prev listing Id=" + previousListingId);
+                    $.ajax({
+                        url: '@Url.Action("GetListingByStyleSize", "Shipment")',
+                        data: {
+                            styleItemId: n.styleItemId(),
+                            selectedListingId: previousListingId,
+                            shipmenttype: self.shipmenttype
+                        },
+                        cache: false,
+                        success: function(data) {
+                            n.listingIdLoading(false);
+                            if (data.Data != null && data.Data.length > 0) {
+                                n.listingList(data.Data);
+                            } else {
+                                n.listingErrorMessage('no listings');
+                                n.listingList([]);
+                            }
+                        }
+                    });
+                } else {
+                    n.listingErrorMessage('no listings');
+                    n.listingList([]);
+                }
+            });
+
+            if (n.StyleItemId != null)
+                n.styleItemId(n.StyleItemId);
+
+            if (n.ListingId != null) //NOTE: set after, styleItemId, it reset listingId
+                n.listingId(n.ListingId);
+        }
+
+        model.Entries.forEach(function(n) {
+            self.prepareRow(n);
+        });
+
+        self.entries = ko.observableArray(model.Entries);
+
+        self.addEntry = function() {
+            var newRow = {
+                Id: 0,
+                StyleString: null,
+                StyleId: null,
+                StyleItemId: null,
+                ListingId: null,
+            };
+            self.prepareRow(newRow);
+            self.entries.push(newRow);
+        }
+
+        self.removeEntry = function(row) {
+            self.entries.remove(row);
+        }
+
+        self.styleIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetStyleIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if(action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function() {
+            return self.errors.length == 0;
+        });
+
+        
+        self.customValidationAsync = function() {
+            var defer = $.Deferred();
+
+            var duplicateList = [];
+            for (var i = 0; i < self.entries().length; i++) {
+                var item = self.entries()[i];
+                for (var j = i + 1; j < self.entries().length; j++) {
+                    if (self.entries()[j].ListingId == item.ListingId) {
+                        duplicateList.push(item);
+                        break;
+                    }
+                }
+            }
+            if (duplicateList.length > 0) {
+                var message = "";
+                for (var i = 0; i < duplicateList.length; i++) {
+                    message += "<br/>" + duplicateList[i].styleString() + " - " + duplicateList[i].sizeName();
+                }
+                
+                Message.popupAsync({
+                    title: 'Confirm',
+                    message: 'Are you sure you want save duplicate records for the following style/size combinations: ' + message,
+                    type: Message.YES_NO
+                }).done(function() {
+                    defer.resolve();
+                }).fail(function() {
+                    defer.reject();
+                });
+            } else {
+                defer.resolve();
+            }
+
+            return defer;
+        }
+
+        self.canSubmit = ko.computed(function() {
+            var loadingInProgressList = $.grep(self.entries(), function(n) {
+                return n.styleStringLoading() || n.listingIdLoading();
+            });
+
+            return loadingInProgressList.length == 0;
+        });    
+
+        self.onSave = function(e) {
+            self.customValidationAsync().done(function() {
+                if (self.onSubmit()) {
+                    $('#submit').click();
+                }
+            });
+        }
+
+        self.onSubmit = function() { 
+            if (self.errors().length == 0) { 
+                console.log("validate true");
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                return false;
+            }
+        };
+
+        self.close = function() {
+            popupWindow.close();
+        }
+    };
+
+
+    $(document).ready(function() {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+
+        };
+        var fbaPickListEditModel = new FBAPickListEditModel(model, settings);
+
+        ko.applyBindings(fbaPickListEditModel, document.getElementById('edit-container'));
+    });
+</script>
+
+
+<div id="edit-container" class="inventory-popup">
+    @Html.ValidationSummary(true)
+
+    <input type="hidden" name="Id" data-bind="value: id" />
+    <input type="hidden" name="Shipmenttype" data-bind="value: shipmenttype" />
+
+    <div class="k-edit-form-container grid-small"
+         style="width: 100%; margin-bottom: 15px; height: 535px; font-size: 13px">
+        <div>
+            <div class="k-widget k-grid k-secondary grid-small"
+                 style="overflow-y: scroll; height: 500px">
+
+                <table style="width: 100%">
+                    <colgroup>
+                        <col style="width: 180px" />
+                        <col style="width: 90px" />
+                        <col style="width: 200px" />
+                        <col style="width: 80px" />
+                        <col style="width: auto" />
+                    </colgroup>
+                    <thead class="k-grid-header">
+                        <tr>
+                            <th class="k-header">Style</th>
+                            <th class="k-header">Size</th>
+                            <th class="k-header">Listing</th>
+                            <th class="k-header">Units</th>
+                            <th class="k-header"></th>
+                        </tr>
+                    </thead>
+                    <tbody data-bind="foreach: entries">
+                        <tr class="k-master-row" data-bind="css: { 'k-alt': $index() % 2 == 1 }">
+                            <td>
+                                <input type="hidden" data-bind="value: Id, attr: { name: 'Entries[' + $index() + '].Id' } "/>
+
+                                <input type="text"
+                                       style="width: 180px"
+                                       data-bind="kendoAutoComplete: {
+                                                   value: styleString,
+                                                   data: {},
+                                                   minLenght: 3,
+                                                    highlightFirst: true,
+                                                   dataSource: $root.styleIdSource },
+                                                    valueUpdate: 'afterkeydown',
+                                                    event: {  },
+                                                attr: { name: 'Entries[' + $index() + '].StyleString' }"
+                                       class="k-textbox"/>
+                            </td>
+                            <td>
+                                <input id="StyleItemId"
+                                       name="StyleItemId"
+                                       style="width: 100px"
+                                       data-bind="kendoDropDownList: {data: sizeList, value: styleItemId, dataTextField: 'Text', dataValueField: 'Value' },
+                                        attr: { name: 'Entries[' + $index() + '].StyleItemId' }" />
+                            </td>
+                            <td>
+                                <input id="ListingId"
+                                       name="ListingId"
+                                       style="width: 230px"
+                                       data-bind="kendoDropDownList: {data: listingList, value: listingId, dataTextField: 'Text', dataValueField: 'Value' },
+                                        attr: { name: 'Entries[' + $index() + '].ListingId' }"/>
+                                <div class="red" data-bind="text: listingErrorMessage"></div>
+                            </td>
+                            <td>
+                                <input style='width: 80px' class="k-textbox" data-bind="value: quantity, attr: { name: 'Entries[' + $index() + '].Quantity' }" />
+                            </td>
+                            <td>
+                                <a href="#" data-bind='click: $parent.removeEntry'><span class="k-icon k-delete"></span></a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="padding: 5px">
+                <button type="button" style="width: 80px; font-size: 13px" class="k-button" data-bind='click: addEntry'>
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="k-edit-buttons k-state-default popup-button-panel" style="position: static">
+        <table style="margin-left: auto">
+            <tr>
+                <td>
+                    <button tabindex="-1"
+                            data-bind="click: onSave, enable: canSubmit, css: {'k-state-disabled': !canSubmit() }"
+                            class="k-button k-button-icontext k-grid-update">
+                        <span class="k-icon k-update"></span> Save
+                    </button>
+                </td>
+                <td style="padding-left: 4px">
+                    <button class="k-button k-button-icontext k-grid-cancel"
+                            type="reset"
+                            id="cancel"
+                            onclick="popupWindow.close()">
+                        <span class="k-icon k-cancel"></span> Cancel
+                    </button>
+                    <button type="submit"
+                            id="submit"
+                            style="display: none">
+                        Save
+                    </button>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>

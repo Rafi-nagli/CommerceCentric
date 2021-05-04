@@ -1,0 +1,1267 @@
+﻿@using Amazon.Core.Models
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Products.ItemEditViewModel
+@{
+    Layout = null;
+}
+
+<script>
+    var SOURCE_TYPES = {
+        fromStyle: "1",
+        fromUSParent: "2",
+        custom: "3",
+    }
+
+    var ItemModel = function(model, settings) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+
+        self.market = ko.observable(model.Market);
+        self.marketplaceId = ko.observable(model.MarketplaceId);
+
+        self.isLoading = ko.observable(false);
+        self.hasData = ko.observable(false);
+        self.messages = ko.observableArray([]);
+        self.clearMessages = function() {
+            self.messages([]);
+        }
+        self.addInfo = function(msg) {
+            self.messages({
+                Message: msg,
+            });
+        };
+        self.addError = function(msg) {
+            self.messages({
+                Message: msg,
+                IsError: true
+            });
+        };
+        self.addSuccess = function(msg) {
+            self.messages({
+                Message: msg,
+                IsSuccess: true
+            });
+        };
+
+        console.log("marketplaceId=");
+        console.log(model.MarketplaceId);
+
+        self.market = ko.observable(model.Market);
+        self.marketplaceId = ko.observable(model.MarketplaceId || "");
+
+        self.isAmazonMarket = ko.computed(function () {
+            return self.market() == self.settings.markets.amazon
+                || self.market() == self.settings.markets.amazonEU;
+        });
+        self.isWalmartMarket = ko.computed(function () {
+            return self.market() == self.settings.markets.walmart;
+        });
+
+        self.sourceType = ko.observable(SOURCE_TYPES.custom);
+        console.log("sourceType=" + self.sourceType());
+
+        self.id = ko.observable(null);
+        self.isNew = ko.computed(function () {
+            return self.id() == null || self.id() == 0;
+        });
+
+        self.asin = ko.observable('')
+            .extend({
+                required: {
+                    onlyIf: function () {
+                        return !self.isAmazonMarket();
+                    },
+                    message: "*"
+                },
+                pattern: {
+                    message: "allow only: A-Z,0-9,-",
+                    params: '^([A-Z0-9-_]*)$',
+                    onlyIf: function () {
+                        return !self.isAmazonMarket();
+                    },
+                }
+            });
+        self.canEditASIN = ko.computed(function () {
+            return !self.isAmazonMarket();
+        });
+
+        self.name = ko.observable('')
+            .extend({
+                required: {
+                    message: "*"
+                },
+                //maxLength: { params: 90, message: "Maximum 90 characters" }
+            });
+        self.brand = ko.observable('');
+        self.image = ko.observable('');
+        self.isAutoParentDesc = ko.observable(false);
+
+        self.sku = ko.observable('')
+            .extend({
+                required: {
+                    onlyIf: function () {
+                        return self.isNew() && self.isAmazonMarket();
+                    },
+                    message: "*"
+                },
+                pattern: {
+                    message: "allow only: A-Z,0-9,-,_",
+                    params: '^([A-Z0-9-_]*)$',
+                    onlyIf: function () {
+                        return self.isNew() && self.isAmazonMarket();
+                    },
+                }
+            });
+        self.description = ko.observable('');
+        self.bulletPoint1 = ko.observable('');
+        self.bulletPoint2 = ko.observable('');
+        self.bulletPoint3 = ko.observable('');
+        self.bulletPoint4 = ko.observable('');
+        self.bulletPoint5 = ko.observable('');
+        self.forceEnableColorVariations = ko.observable(false);
+
+        self.newComment = ko.observable('');
+        self.onHold = ko.observable(false);
+        self.lockMarketUpdate = ko.observable(false);
+
+        self.searchStyleId = ko.observable("");
+        self.searchParentASIN = ko.observable("");
+
+        self.publishedStatusList = ko.observable(settings.publishedStatusList);
+
+        self.categoryList = ko.observable([]);
+        self.defaultIndex = ko.observable("0");
+        self.variationList = ko.observableArray([]);
+
+        self.styleList = ko.computed(function () {
+            var styleStrings = $.map(self.variationList(), function (el) {
+                return el.styleString();
+            });
+            return Array.from(new Set(styleStrings))
+        });
+
+        self.getActiveVariationList = function() {
+            return $.grep(self.variationList(), function(n) {
+                return n.isSelected();
+            });
+        };
+
+        self.styleIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetStyleIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if(action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+
+        self.getFromStyleString = function() {
+            self.clearMessages();
+            self.isLoading(true);
+            $.ajax({
+                url: '@Url.Action("GetModelFromStyle", "ItemEdit")',
+                data: {
+                    styleString: self.searchStyleId(),
+                    market: self.market(),
+                    marketplaceId: self.marketplaceId()
+                },
+                cache: false,
+                success: function(result) {
+                    self.isLoading(false);
+                    if (result.IsSuccess) {
+                        self.processModel(result.Data);
+                    } else {
+                        self.clearModel();
+                    }
+
+                    self.messages(result.Messages);
+                }
+            });
+        };
+
+
+        self.asinErrorMessage = ko.observable('');
+
+        self.getFromASIN = function() {
+            console.log("asin=" + self.searchParentASIN());
+            self.clearMessages();
+            self.isLoading(true);
+            $.ajax({
+                url: '@Url.Action("GetModelFromParentASIN", "ItemEdit")',
+                data: { asin: self.searchParentASIN() },
+                cache: false,
+                success: function(result) {
+                    self.isLoading(false);
+                    if (result.IsSuccess) {
+                        self.processModel(result.Data);
+                    } else {
+                        self.clearModel();
+                    }
+
+                    self.messages(result.Messages);
+                }
+            });
+        }
+
+        self.clearModel = function() {
+            self.id(null);
+            self.asin(null);
+            self.sku(null);
+            self.name('');
+            self.brand(null);
+            self.description('');
+            self.bulletPoint1(null);
+            self.bulletPoint2(null);
+            self.bulletPoint3(null);
+            self.bulletPoint4(null);
+            self.bulletPoint5(null);
+            self.image(null);
+            self.forceEnableColorVariations(false);
+            self.onHold(false);
+            self.lockMarketUpdate(false);
+            self.isAutoParentDesc(true);
+
+            self.variationList([]);
+        }
+
+        self.updateDescription = function () {
+            if (self.isAutoParentDesc()) {
+                var selected = self.variationList().firstOrDefault(function (n) { return n.isDefault() == true; });
+                var selectedStyleString = selected != null ? selected.styleString() : null;
+                console.log("SelectedStyleString: " + selectedStyleString);
+                if (!dataUtils.isNullOrEmpty(selectedStyleString))
+                    self.loadDesc(selectedStyleString);
+            }
+        }
+
+        self.loadDesc = function (styleString) {
+            console.log('loadDesc, styleId=' + styleString);
+            $.ajax({
+                url: self.settings.urls.getStyleDesc,
+                data: {
+                    styleString: styleString
+                },
+                success: function (result) {
+                    console.log('init success');
+                    if (result.IsSuccess) {
+                        var data = result.Data;
+                        self.description(data.Description || '');
+                        self.bulletPoint1(data.BulletPoint1);
+                        self.bulletPoint2(data.BulletPoint2);
+                        self.bulletPoint3(data.BulletPoint3);
+                        self.bulletPoint4(data.BulletPoint4);
+                        self.bulletPoint5(data.BulletPoint5);
+                    }
+                }
+            });
+        }
+
+        self.isAutoParentDesc.subscribe(function () {
+            self.updateDescription();
+        });
+
+        self.prepareVariation = function(entry, index) {
+            //entry.name = ko.computed(function() {
+            //    var name = entry.StyleSize;
+            //    if (dataUtils.isEmpty(entry.StyleColor))
+            //        name += " / " + tmpl.f(entry.StyleColor, '-');
+            //    return name;
+            //});
+
+            console.log("entry.PublishedStatus=" + entry.PublishedStatus);
+            console.log(entry.IsSelected);
+
+            entry.arrayIndex = index;
+            entry.isDefault = ko.computed(function () {
+                return entry.arrayIndex == self.defaultIndex();
+            });
+            entry.isDefault.subscribe(function () {
+                self.updateDescription();
+            });
+
+            entry.isSelected = ko.observable(entry.IsSelected);
+
+            entry.canEditSKU = ko.observable(!entry.IsExistOnAmazon
+                || self.settings.isAdmin
+            );
+
+            entry.canEditStatus = ko.observable(self.settings.isAdmin);
+
+            entry.sku = ko.observable(entry.SKU);
+
+            entry.color = ko.observable(entry.Color);
+            entry.price = ko.observable(entry.Price).extend(ko.validation.patterns.requredPossitivePrice("*"));;
+            entry.isPrime = ko.observable(entry.IsPrime);
+
+            entry.isPrime.subscribe(function () {
+                if (self.isWalmartMarket()) {
+                    if (entry.isPrime()) {
+                        entry.price(dataUtils.roundToTwoPrecision(entry.price() + 5));
+                    } else {
+                        entry.price(dataUtils.roundToTwoPrecision(entry.price() - 5));
+                    }
+                }
+            })
+
+            entry.autoGeneratedBarcode = ko.observable(entry.AutoGeneratedBarcode ? "1" : "0");
+            entry.canEditBarcode = ko.computed(function () {
+                return (entry.canEditSKU() || self.settings.isRegularAdmin);
+            });
+
+            entry.enableBarcodeInput = ko.computed(function () {
+                return entry.autoGeneratedBarcode() == "0";
+            });
+
+            entry.barcode = ko.observable().extend({
+                required: {
+                    message: '*',
+                    onlyIf: function () {                        
+                        return !entry.autoGeneratedBarcode();
+                    }
+                },
+            });
+
+            entry.barcodeErrorMessage = ko.observable('');
+            entry.barcode.subscribe(function() {
+                entry.barcodeErrorMessage("");
+                $.ajax({
+                    url: '@Url.Action("GetAmazonBarcodeStatus", "AmazonBarcode")',
+                    data: { barcode: entry.barcode() },
+                    cache: false,
+                    success: function (result) {
+                        if (result.IsSuccess) {
+                            entry.isBarcodeOnAmazon(result.Data);
+                        }
+                        else {
+                            entry.isBarcodeOnAmazon(null);
+                        }
+                    }
+                })
+            });
+            entry.barcode(entry.Barcode);
+
+            entry.isBarcodeOnAmazon = ko.observable(null);
+            entry.amazonBarcodeUrl = ko.computed(function () {
+                return "https://www.amazon.com/s?field-keywords=" + entry.barcode();
+            });
+
+            entry.barcodeBorderCss = ko.computed(function () {
+                if (entry.isBarcodeOnAmazon() == true) {
+                    return "border: 2px solid #99cc99; background: #99cc99";
+                }
+                if (entry.isBarcodeOnAmazon() == false) {
+                    return "border: 2px solid #cc9999; background: #cc9999";
+                }
+                return "";
+            })
+
+            entry.overridePublishedStatus = ko.observable(entry.PublishedStatus);
+            //entry.overridePublishedStatus.subscribe(function () {
+            //    entry.updateEnableStatus();
+            //});
+
+            entry.isEnable = ko.computed(function () {
+                var isEnable = entry.isSelected() &&
+                    (entry.overridePublishedStatus() != self.settings.publishedStatuses.hasUnpublishRequest
+                        && entry.overridePublishedStatus() != self.settings.publishedStatuses.unpublished);
+                return isEnable;
+            });
+
+            //entry.updateEnableStatus = function () {
+            //    var isEnable = entry.isSelected() &&
+            //        (entry.overridePublishedStatus() != self.settings.publishedStatuses.hasUnpublishRequest
+            //            && entry.overridePublishedStatus() != self.settings.publishedStatuses.unpublished);
+
+            //    var tr = $("tr[row-id=" + entry.arrayIndex + "]");
+            //    helper.ui.disableRow(tr, !isEnable, null);
+            //}
+
+            entry.size = ko.observable(entry.Size);
+
+            entry.styleErrorMessage = ko.observable('');
+            entry.styleString = ko.observable();
+            entry.styleStringLoading = ko.observable(false);
+            entry.styleString.subscribe(function() {
+                entry.styleErrorMessage('');
+                entry.styleStringLoading(true);
+                $.ajax({
+                    url: '@Url.Action("GetStyleSizes", "AutoComplete")',
+                    data: { styleString: entry.styleString(), onlyWithQty: false },
+                    cache: false,
+                    success: function(data) {
+                        entry.styleStringLoading(false);
+                        if (data.Data != null && data.Data.length > 0) {
+                            entry.sizeList(data.Data);
+                            if (entry.styleItemId() == null)
+                                entry.styleItemId(data.Data[0].Value);
+
+                            //Set size name
+                            var sizeInfo = entry.sizeList().firstOrDefault(function(s) {
+                                return s.Value == entry.styleItemId();
+                            });
+                            if (sizeInfo != null)
+                                entry.styleSize(sizeInfo.Text);
+                        } else {
+                            entry.styleErrorMessage('StyleString is not found');
+                            entry.sizeList([]);
+                        }
+                    }
+                });
+            });
+
+            entry.sizeList = ko.observable([]);
+
+            entry.styleSize = ko.observable("");
+            entry.styleItemId = ko.observable(entry.StyleItemId);
+            entry.styleItemId.subscribe(function() {
+                var sizeInfo = entry.sizeList().firstOrDefault(function(s) {
+                     return s.Value == entry.styleItemId();
+                });
+                if (sizeInfo != null) {
+                    console.log("sizeInfo");
+                    console.log(sizeInfo);
+                    var hasConverableSize = $.grep(self.variationList(), function(n) {
+                        if (sizeUtils.isConvertableSize(n.styleSize()))
+                            return true;
+                        return false;
+                    }).length > 0;
+                    console.log("hasConverableSize: " + hasConverableSize);
+                    if (dataUtils.isEmpty(entry.Id)) {
+                        console.log("update sku");
+                        entry.sku(entry.styleString() + "-" + (hasConverableSize ? sizeUtils.convertSizeForSKU(sizeInfo.Text) : sizeInfo.Text));
+                        entry.size(sizeInfo.Text);
+                    }
+                    entry.styleSize(sizeInfo.Text);
+                } else {
+                    console.log("empty size info");
+                }
+            });
+
+            entry.styleString(entry.StyleString);
+
+            entry.markAsDeleted = function (item, e) {
+                if (confirm('Are you sure you want to delete this SKU?')) {
+                    if (entry.IsExistOnAmazon == true) {
+                        entry.overridePublishedStatus(self.settings.publishedStatuses.hasUnpublishRequest);
+                    }
+                    else
+                    {
+                        entry.isSelected(false);
+                    }
+                }
+            };
+
+            entry.getBarcodeFromStyleSize = function() {
+                $.ajax({
+                    url: '@Url.Action("GetUnusedBarcodeForStyleItem", "ItemEdit")',
+                    data: {
+                        styleItemId: entry.styleItemId(),
+                        market: self.market(),
+                        marketplaceId: self.marketplaceId(),
+                    },
+                    cache: false,
+                    success: function(result) {
+                        if (result.IsSuccess && !dataUtils.isEmpty(result.Data)) {
+                            entry.barcode(result.Data);
+                        } else {
+                            entry.barcodeErrorMessage('hasn\'t unused barcode');
+                        }
+                    }
+                });
+            }
+        }
+
+        self.processModel = function(data) {
+            self.hasData(!dataUtils.isEmpty(data.ASIN) || data.Id > 0);
+
+            self.id(data.Id);
+            self.name(data.Name || "");
+            self.brand(data.Brand);
+
+            self.description(data.Description || '');
+            self.bulletPoint1(data.BulletPoint1);
+            self.bulletPoint2(data.BulletPoint2);
+            self.bulletPoint3(data.BulletPoint3);
+            self.bulletPoint4(data.BulletPoint4);
+            self.bulletPoint5(data.BulletPoint5);
+            self.image(data.Image);
+            self.asin(data.ASIN);
+            self.sku(data.SKU);
+            self.forceEnableColorVariations(data.ForceEnableColorVariations);
+            self.onHold(data.OnHold);
+            self.lockMarketUpdate(data.LockMarketUpdate);
+            
+            data.VariationList.forEach(function (entry, index) {
+                if (entry.IsDefault) {
+                    console.log("defaultIndex: " + index);
+                    self.defaultIndex(index.toString());
+                }
+            });
+
+            data.VariationList.forEach(function(entry, index) {
+                self.prepareVariation(entry, index);
+            });
+
+            self.variationList(data.VariationList);
+            self.categoryList(data.CategoryIdList);
+
+            self.isAutoParentDesc(data.IsAutoParentDesc);
+            if (!self.isAutoParentDesc()
+                && dataUtils.isNullOrEmpty(data.Description))
+                self.isAutoParentDesc(true);
+        }
+
+        self.addVariation = function(data) {
+            var newVariation = {
+                Id: null,
+                ListingEntityId: null,
+                StyleString: null,
+                StyleId: null,
+                StyleItemId: null,
+                RealQuantity: 0,
+                IsSelected: true,// ko.observable(true),
+                Size: null,
+                Color: null,
+                Price: 0,
+                IsPrime: false,
+                SKU: "",
+                Barcode: "",
+                AutoGeneratedBarcode: false,
+                IsDefault: false,
+                PublishedStatus: 0,
+                IsExistOnAmazon: false
+            }
+            self.prepareVariation(newVariation, self.variationList.length);
+            self.variationList.push(newVariation);
+        }
+
+        self.editStyleDescPopupModel = null;
+        self.editStyleDesc = function (m, e) {
+            console.log("editStyleDesc: " + m);
+
+            if (self.editStyleDescPopupModel == null)
+                self.editStyleDescPopupModel = new EditStyleDescPopupModel(self.model, self.settings);
+
+            self.editStyleDescPopupModel.show(m);
+        };
+
+        self.addStyleVariationModel = null;
+        self.addStyleVariations = function(data, e) {
+            console.log("onAddStyleVariations");
+
+            if (self.addStyleVariationModel == null)
+                self.addStyleVariationModel = new AddStyleVariationsPopupModel(self.model, self.settings);
+
+            var data = {
+                existSizes: $.map(self.variationList(), function (n) { return {
+                    ItemSize: n.size(),
+                    StyleSize: n.styleSize()
+                }})
+            }
+
+            self.addStyleVariationModel
+                .open(data)
+                .then(function(result) {
+                    console.log('add style variation, exist=' + self.variationList().length);
+
+                    self.cleanupVariations();
+
+                    for (var i = 0; i < result.Variations.length; i++) {
+                        self.prepareVariation(result.Variations[i], self.variationList.length);
+                        self.variationList.push(result.Variations[i]);
+                    }
+
+                    if (dataUtils.isEmpty(self.name())) {
+                        self.name(result.Name);
+                    }
+
+                    if (dataUtils.isEmpty(self.asin())) {
+                        self.asin(result.StyleString);
+                    }
+            });
+        }
+
+        self.cleanupVariations = function() {
+            var index = 0;
+            while (index < self.variationList().length) {
+                console.log(self.variationList()[index].styleString());
+                if (dataUtils.isEmpty(self.variationList()[index].styleString())) {
+                    console.log('remove, index=' + index);
+                    self.variationList.splice(index, 1);
+                }
+                else {
+                    index++;
+                }
+            }
+        }
+
+        self.getModel = function() {
+            return {
+                Market: self.market(),
+                MarketplaceId: self.marketplaceId(),
+                Brand: self.brand(),
+                VariationList: $.map(self.getActiveVariationList(), function (n) {
+                    console.log(n.isDefault() + ": " + n.arrayIndex + ": " + self.defaultIndex());
+
+                    return {
+                        StyleItemId: n.styleItemId(),
+                        Size: n.size(),
+                        StyleSize: n.styleSize(),
+                        IsDefault: n.isDefault(),
+                        AutoGeneratedBarcode: n.autoGeneratedBarcode() == "1",
+                    }
+                })
+            };
+        }
+
+        self.addMissingSizes = function(data, e) {
+            console.log("addMissingSizes");
+
+            var dataModel = {
+                existSizes: $.map(self.getActiveVariationList(), function(n) {
+                    return {
+                        StyleItemId: n.styleItemId(),
+                        ItemSize: n.size(),
+                        StyleSize: n.styleSize()
+                    }
+                }),
+                Market: self.market(),
+                MarketplaceId: self.marketplaceId(),
+            };
+
+            $.ajax({
+                url: '@Url.Action("GetMissingSizes", "ItemEdit")',
+                cache: false,
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                type: 'POST',
+                data: JSON.stringify(dataModel),
+                success: function(result) {
+                    console.log("addMissingSizes.success");
+                    if (result.IsSuccess) {
+                        var items = result.Data;
+                        for (var i = 0; i < items.length; i++) {
+                            var firstExistStyleSize = self.getActiveVariationList().firstOrDefault(function(n) { return n.StyleString == items[i].StyleString; });
+                            if (firstExistStyleSize != null) { //Copy color, price
+                                items[i].Color = firstExistStyleSize.color();
+                                items[i].Price = firstExistStyleSize.price();
+                            }
+                            self.prepareVariation(items[i], self.variationList.length);
+                            self.variationList.push(items[i]);
+                        }
+                    }
+                }
+            });
+        }
+
+        self.sourceType.subscribe(function() {
+
+        });
+
+        self.asin.subscribe(function() {
+            //$.each(self.variationList(), function(i, n) {
+            //    if (dataUtils.isEmpty(n.Id))
+            //        n.styleItemId.valueHasMutated();
+            //});
+        });
+
+        self.isLoaded = ko.computed(function() {
+            return self.hasData()
+                || self.sourceType() == SOURCE_TYPES.custom;
+        });
+
+        self.isNew = ko.computed(function() {
+            return dataUtils.isEmpty(self.id()) || self.id() == 0;
+        });
+
+        self.validationAsync = function() {
+            var model = self.getModel();
+            var url = '@Url.Action("Validate", "ItemEdit")';
+            return validationUtils.callAsyncValidation(url, model);
+        };
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function() {
+            return self.errors().length === 0;
+        });
+
+        self.onSubmit = function(data, e) { // function(data, e) {
+            var sender = $(e.target);
+
+            //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+            //http://jsfiddle.net/KHFn8/3238/
+            if (self.isValid()) { //validator.validate() &&
+                console.log("sync validate true");
+
+                helper.ui.showLoading(sender);
+                self.validationAsync().done(function() {
+                    console.log("async validation true");
+                    helper.ui.hideLoading(sender);
+                    $('#submit').click();
+                }).fail(function() {
+                    helper.ui.hideLoading(sender);
+                });
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                e.preventDefault();
+                return false;
+            }
+        };
+
+        self.canSubmit = ko.computed(function() {
+            var loadingInProgressList = $.grep(self.variationList(), function(n) {
+                return n.styleStringLoading();
+            });
+
+            return loadingInProgressList.length == 0;
+        });
+
+
+        //INIT
+        if (self.model != null) {
+            self.processModel(self.model);
+        }
+
+        if (self.variationList().length == 0
+            && self.sourceType() == SOURCE_TYPES.custom) {
+            self.addVariation();
+        }
+    };
+
+    $(document).ready(function () {
+        $('.panel-collapse').on('show.bs.collapse', function () {
+            $(this).siblings('.panel-heading').addClass('active');
+        });
+
+        $('.panel-collapse').on('hide.bs.collapse', function () {
+            $(this).siblings('.panel-heading').removeClass('active');
+        });
+
+        console.log("onready");
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+            markets: {
+                amazon: '@((int) MarketType.Amazon)',
+                amazonEU: '@((int) MarketType.AmazonEU)',
+                amazonAU: '@((int) MarketType.AmazonAU)',
+                eBay: '@((int) MarketType.eBay)',
+                magento: '@((int) MarketType.Magento)',
+                walmart: '@((int) MarketType.Walmart)',
+                walmartCA: '@((int) MarketType.WalmartCA)',
+                jet: '@((int) MarketType.Jet)',
+                shopify: '@((int) MarketType.Shopify)'
+            },
+            publishedStatusList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.PublishedStatusList)),
+
+            publishedStatuses: {
+                none: @((int)PublishedStatuses.None),
+                new: @((int)PublishedStatuses.New),
+                hasChanges: @((int)PublishedStatuses.HasChanges),
+                hasUnpublishRequest: @((int)PublishedStatuses.HasUnpublishRequest),
+            },
+            urls: {
+                createStyleVariations: '@Url.Action("CreateStyleVariations", "ItemEdit")',
+                updateStyleDesc: '@Url.Action("UpdateStyleDesc", "ItemEdit")',
+                getStyleDesc: '@Url.Action("GetStyleDesc", "ItemEdit")',
+            },
+            isAdmin: @(AccessManager.CanEditSystemInfo() ? 1 : 0),
+            isRegularAdmin: @(AccessManager.IsAdmin ? 1 : 0),
+        };
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        var itemModel = new ItemModel(model, settings);
+        ko.applyBindings(itemModel, document.getElementById('edit-item-container'));
+    });
+</script>
+
+<style>
+    .am-row-disabled {
+        background-color: lightgray;
+        opacity: .7;
+        color: #999;
+    }
+</style>
+
+@Html.Partial("_AddStyleVariationsPopupInfo")
+@Html.Partial("_EditStyleDescPopupInfo")
+
+<div id="edit-item-container">
+    <div id="edit-container" class="inventory-popup am-item-popup">
+        <div class="k-edit-form-container" style="padding: 10px;">
+
+            <input type="hidden" name="Market" data-bind="value: market" />
+            <input type="hidden" name="MarketplaceId" data-bind="value: marketplaceId" />
+            <input type="hidden" name="Id" data-bind="value: id" />
+
+            <div class="panel panel-default" data-bind="visible: isNew">
+                <div class="panel-heading">Sources</div>
+                <div class="panel-body">
+                    <table style="width: 700px">
+                        <colgroup>
+                            <col style="width: 250px" />
+                            <col style="width: 250px" />
+                            <col style="width: 150px" />
+                        </colgroup>
+                        <tr>
+                            <td style="vertical-align: top">
+                                <div><input type="radio" value="1" data-bind="checked: sourceType" /> Based on style:</div>
+                                <div data-bind="visible: sourceType() == 1">
+                                    <input style='width: 180px' class="k-textbox" data-bind="kendoAutoComplete: {
+                                           value: searchStyleId,
+                                           data: {},
+                                           minLenght: 3,
+                                           dataSource: styleIdSource }" />
+                                    <a class="k-button" href="javascript: ;" data-bind="click: getFromStyleString">
+                                        <span class='glyphicon glyphicon-search am-icon'></span>
+                                    </a>
+                                </div>
+                            </td>
+                            <td style="vertical-align: top">
+                                <div><input type="radio" value="2" data-bind="checked: sourceType" /> Based on US Parent ASIN:</div>
+                                <div data-bind="visible: sourceType() == 2">
+                                    <input type="text"
+                                           class="k-textbox"
+                                           data-bind="value: searchParentASIN" />
+                                    <a class="k-button" href="javascript: ;" data-bind="click: getFromASIN">
+                                        <span class='glyphicon glyphicon-search am-icon'></span>
+                                    </a>
+                                </div>
+                            </td>
+                            <td style="vertical-align: top">
+                                <div><input type="radio" value="3" data-bind="checked: sourceType" /> Custom</div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div>
+                        <div data-bind="foreach: messages"
+                             style="padding-bottom: 10px">
+                            <div data-bind="if: IsError" class="error"><span data-bind="text: Message"></span></div>
+                            <div data-bind="if: IsSuccess" class="error"><span data-bind="text: Message"></span></div>
+                        </div>
+                    </div>
+
+                    <div data-bind="visible: isLoading"
+                         style="text-align: center; padding: 20px; padding-left: 40px">
+                        Loading...
+                    </div>
+
+                    <div data-bind="visible: !isLoaded()" style="padding: 50px 0px 50px 0px; text-align: center">
+                        Please set Style or Parent ASIN
+                    </div>
+                </div>
+            </div>
+
+            <div data-bind="visible: isLoaded">
+                <div class="panel panel-default">
+                    <div class="panel-heading">General</div>
+                    <div class="panel-body">
+
+                        <div class="editor-label">
+                            <span data-bind="visible: isAmazonMarket()">Parent ASIN</span>
+                            <span data-bind="visible: !isAmazonMarket()">Parent SKU <span class="red">*</span></span>
+                        </div>
+                        <div class="editor-field">
+                            <input type="hidden" name="ASIN" data-bind="value: asin" />
+                            <input type="text"
+                                    class="k-textbox"
+                                    tabindex="1"
+                                    autofocus="autofocus"
+                                    style="width: 200px"
+                                    data-bind="value: asin, enable: canEditASIN" />
+                        </div>
+
+                        <div data-bind="visible: isAmazonMarket()">
+                            <div class="editor-label">
+                                <span>Parent SKU <span data-bind="visible: isNew()" class="red">*</span></span>
+                            </div>
+                            <div class="editor-field">
+                                <input type="text"
+                                       class="k-textbox"
+                                       tabindex="1"
+                                       autofocus="autofocus"
+                                       name="SKU"
+                                       style="width: 200px"
+                                       data-bind="value: sku" />
+                            </div>
+                        </div>
+
+                        <div class="editor-label">Listing Title <span class="red">*</span></div>
+                        <div class="editor-field">
+                            <textarea rows="2"
+                                      class="k-textbox"
+                                      style="width: 400px"
+                                      tabindex="3"
+                                      name="Name"
+                                      data-bind="value: name, valueUpdate:'afterkeydown'"></textarea>
+                            <div class="note">symbols: <span data-bind="text: name().length"></span></div>
+                        </div>
+
+                        <div class="editor-label">On Hold</div>
+                        <div class="editor-field">
+                            <input type="checkbox"
+                                   name="OnHold"
+                                   tabindex="5"
+                                   data-bind="checked: onHold" />
+                        </div>
+                        @*<div class="editor-label">Lock Market Update</div>
+        <div class="editor-field">
+            <input type="checkbox"
+                   name="LockMarketUpdate"
+                   tabindex="5"
+                   data-bind="checked: lockMarketUpdate" />
+        </div>*@
+                    </div>
+                </div>
+
+
+                <div class="panel panel-default">
+                    <div class="panel-heading active" role="tab" id="headingOne">
+                        <a role="button" style="font-size: 14px; text-decoration: underline" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                            Parent Details
+                        </a>
+                        <span class="pull-right clickable">
+                            <a style="color: #333"
+                               href="javascript:;">
+                                <i class="glyphicon glyphicon-chevron-down" css="glyphicon-chevron-up"></i>
+                            </a>
+                        </span>
+                    </div>
+                    <div id="collapseOne" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
+                        <div class="panel-body">
+                            <div class="editor-label">Brand</div>
+                            <div class="editor-field">
+                                <input type="text"
+                                       class="k-textbox"
+                                       style="width: 200px"
+                                       tabindex="10"
+                                       name="Brand"
+                                       data-bind="value: brand" />
+                            </div>
+                            <div class="editor-label">Image</div>
+                            <div class="editor-field">
+                                <input type="text"
+                                       class="k-textbox"
+                                       style="width: 400px"
+                                       tabindex="15"
+                                       name="Image"
+                                       data-bind="value: image" />
+                            </div>
+
+                            <div class="editor-label">Force enable color variations</div>
+                            <div class="editor-field">
+                                <input type="checkbox"
+                                       tabindex="20"
+                                       name="ForceEnableColorVariations"
+                                       data-bind="checked: forceEnableColorVariations" />
+                            </div>
+
+                            <div class="editor-label">Auto description:</div>
+                            <div class="editor-field">
+                                <input type="checkbox"
+                                       tabindex="25"
+                                       name="IsAutoParentDesc"
+                                       data-bind="checked: isAutoParentDesc" />
+                            </div>
+                            <div class="editor-label">Description:</div>
+                            <div class="editor-field">
+                                <input type="hidden" name="Description" data-bind="value: description, valueUpdate:'afterkeydown'" />
+                                <textarea class="k-textbox"
+                                          rows="5"
+                                          tabindex="30"
+                                          style="width: 260px"
+                                          data-bind="value: description, enable: !isAutoParentDesc()"></textarea>
+                                <div class="note">symbols: <span data-bind="text: description().length"></span></div>
+                            </div>
+                            <div class="editor-label">Bullet Point 1:</div>
+                            <div class="editor-field">
+                                <input type="hidden" name="BulletPoint1" data-bind="value: bulletPoint1" />
+                                <textarea class="k-textbox"
+                                          rows="2"
+                                          tabindex="35"
+                                          style="width: 260px"
+                                          data-bind="value: bulletPoint1, enable: !isAutoParentDesc()" />
+                            </div>
+                            <div class="editor-label">Bullet Point 2:</div>
+                            <div class="editor-field">
+                                <input type="hidden" name="BulletPoint2" data-bind="value: bulletPoint2" />
+                                <textarea class="k-textbox"
+                                          rows="2"
+                                          tabindex="40"
+                                          style="width: 260px"
+                                          data-bind="value: bulletPoint2, enable: !isAutoParentDesc()" />
+                            </div>
+                            <div class="editor-label">Bullet Point 3:</div>
+                            <div class="editor-field">
+                                <input type="hidden" name="BulletPoint3" data-bind="value: bulletPoint3" />
+                                <textarea class="k-textbox"
+                                          rows="2"
+                                          tabindex="45"
+                                          style="width: 260px"
+                                          data-bind="value: bulletPoint3, enable: !isAutoParentDesc()" />
+                            </div>
+                            <div class="editor-label">Bullet Point 4:</div>
+                            <div class="editor-field">
+                                <input type="hidden" name="BulletPoint4" data-bind="value: bulletPoint4" />
+                                <textarea class="k-textbox"
+                                          rows="2"
+                                          tabindex="50"
+                                          style="width: 260px"
+                                          data-bind="value: bulletPoint4, enable: !isAutoParentDesc()" />
+                            </div>
+                            <div class="editor-label">Bullet Point 5:</div>
+                            <div class="editor-field">
+                                <input type="hidden" name="BulletPoint5" data-bind="value: bulletPoint5" />
+                                <textarea class="k-textbox"
+                                          rows="2"
+                                          tabindex="55"
+                                          style="width: 260px"
+                                          data-bind="value: bulletPoint5, enable: !isAutoParentDesc()" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="panel panel-default">
+                    <div class="panel-heading">Comments</div>
+                    <div class="panel-body">
+                        <div class="editor-label">New Comment</div>
+                        <div class="editor-field">
+                            <textarea rows="2"
+                                      class="k-textbox"
+                                      style="width: 200px"
+                                      tabindex="100"
+                                      name="NewComment"
+                                      data-bind="value: newComment"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        Styles
+                        <a href="javascript:;"
+                           data-bind="click: addStyleVariations"
+                           tabindex="110"
+                           class="k-button">
+                            <span class="k-icon k-add"></span>Add Style
+                        </a>
+                    </div>
+                    <div class="panel-body">
+                        <div data-bind="foreach: styleList" style="padding-left: 5px">
+                            <span data-bind="text: $data"></span>
+                            <a class='k-button' style='margin-right: 20px' data-bind="click: $parent.editStyleDesc"><span class='glyphicon glyphicon-pencil am-icon'></span></a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        Variations
+
+                        <a href="javascript:;"
+                           data-bind="click: addVariation"
+                           tabindex="120"
+                           class="k-button">
+                            <span class="k-icon k-add"></span>Add
+                        </a>
+
+                        <a href="javascript:;"
+                           data-bind="click: addMissingSizes"
+                           tabindex="130"
+                           class="k-button">
+                            <span class="k-icon k-add"></span>Add Missing Sizes
+                        </a>
+                    </div>
+                    <div class="panel-body">
+                        <table style="width: 955px" class="variation-list">
+                            <colgroup>
+                                <col style="width: 20px" />
+                                <col style="width: 140px" />
+                                <col style="width: 50px" />
+                                <col style="width: 115px" />
+                                <col style="width: 85px" />
+                                <col style="width: 85px" />
+                                <col style="width: 150px" />
+                                <col style="width: 210px" />
+                                <col />
+                            </colgroup>
+                            <tr>
+                                <td></td>
+                                <td>Style Id</td>
+                                <td>Style Item</td>
+                                <td>Custom Size</td>
+                                <td>Custom Color</td>
+                                <td>Price, $</td>
+                                <td>SKU</td>
+                                <td>Barcode</td>
+                                <td>Default</td>
+                            </tr>
+
+                            <tbody data-bind="foreach: variationList">
+                                <tr data-bind="attr: { 'row-id' : arrayIndex }, css: { 'am-row-disabled': !isEnable() }">
+                                    <td>
+                                        <input type="hidden" data-bind="value: Id, attr: { name: 'VariationList[' + $index() + '].Id' }" />
+                                        <input type="hidden" data-bind="value: ListingEntityId, attr: { name: 'VariationList[' + $index() + '].ListingEntityId' }" />
+
+                                        <input type="hidden" data-bind="value: RealQuantity, attr: { name: 'VariationList[' + $index() + '].RealQuantity' }" />
+                                        <input type="hidden" data-bind="value: isSelected, attr: { name: 'VariationList[' + $index() + '].IsSelected' }" />
+                                        <input type="hidden" data-bind="value: isPrime, attr: { name: 'VariationList[' + $index() + '].IsPrime' }" />
+
+                                        <button class="k-button" data-bind="click: markAsDeleted, attr: { tabindex: $index() + 200 }, disabled: !isEnable()"><span class='glyphicon glyphicon-remove'></span></button>
+                                        @*<input type="checkbox" data-bind="checked: isSelected, enable: canEditSKU, attr: { tabindex: $index() + 200 }" />*@
+                                    </td>
+                                    <td>
+                                        <input style='width: 140px' class="k-textbox" data-bind="kendoAutoComplete: {
+                                           value: styleString,
+                                           data: {},
+                                           minLenght: 3,
+                                           dataSource: $root.styleIdSource }, attr: { name: 'VariationList[' + $index() + '].StyleString', tabindex: $index() + 1000 }" />
+                                        <div data-bind="text: styleErrorMessage" class="red"></div>
+                                    </td>
+                                    <td>
+                                        <input type="hidden" data-bind="value: styleSize, attr: { name: 'VariationList[' + $index() + '].StyleSize' }" />
+                                        <input style="width: 80px"
+                                               data-bind="attr: { name: 'VariationList[' + $index() + '].StyleItemId', tabindex: $index() + 2000, }, kendoDropDownList: {
+                                               data: sizeList,
+                                               value: styleItemId,
+                                               dataTextField: 'Text',
+                                               dataValueField: 'Value' }" />
+                                    </td>
+                                    <td>
+                                        <input type="text"
+                                               style='width: 110px'
+                                               class="k-textbox"
+                                               data-bind="value: size, attr: { name: 'VariationList[' + $index() + '].Size', tabindex: $index() + 3000 }" />
+                                    </td>
+                                    <td>
+                                        <input type="text"
+                                               style='width: 80px'
+                                               class="k-textbox"
+                                               data-bind="value: color, attr: { name: 'VariationList[' + $index() + '].Color', tabindex: $index() + 4000 }" />
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <input type="text"
+                                                   style='width: 80px'
+                                                   class="k-textbox"
+                                                   data-bind="value: price, attr: { name: 'VariationList[' + $index() + '].Price', tabindex: $index() + 5000 }" />
+                                        </div>
+                                        <div data-bind="visible: $root.isWalmartMarket">
+                                            <input type="checkbox" data-bind="checked: isPrime, attr: { tabindex: $index() + 5001 }" /> Free 2nd day
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <input type="hidden" data-bind="value: sku, attr: { name: 'VariationList[' + $index() + '].SKU' }" />
+                                        <input type="text"
+                                               style='width: 155px'
+                                               class="k-textbox"
+                                               data-bind="value: sku, enable: canEditSKU, attr: { tabindex: $index() + 6000 }" />
+                                        <div data-bind="visible: canEditStatus">
+                                            <input type="hidden" data-bind="value: PublishedStatus, attr: { name: 'VariationList[' + $index() + '].PublishedStatus' }" />
+                                            <input data-bind="attr: { name: 'VariationList[' + $index() + '].OverridePublishedStatus' }, kendoDropDownList: {data: $parent.publishedStatusList, value: overridePublishedStatus, dataTextField: 'Text', dataValueField: 'Value' }" />
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <input type="hidden" data-bind="value: barcode, attr: { name: 'VariationList[' + $index() + '].Barcode' }" />
+                                        <div>
+                                            <span data-bind="visible: canEditBarcode">
+                                                <input type="radio" value="1" data-bind='checked: autoGeneratedBarcode, attr: { name: "VariationList[" + $index() + "].AutoGeneratedBarcodeInt", tabindex: $index() * 3 + 2 + 7000 }' /> PA UPC
+                                                &nbsp;
+                                            </span>
+                                            <input type="radio" value="0" style="margin-left: 3px" data-bind='visible: canEditBarcode, checked: autoGeneratedBarcode, attr: { name: "VariationList[" + $index() + "].AutoGeneratedBarcodeInt", tabindex: $index() * 3 + 7000 }' />
+                                            <input type="text"
+                                                   style='width: 105px'
+                                                   class="k-textbox"
+                                                   data-bind="value: barcode, enable: canEditBarcode() && enableBarcodeInput(), attr: { tabindex: $index() * 3 + 1 + 7000 }" />
+                                            <a data-bind="attr: { 'href' : amazonBarcodeUrl, 'style' : barcodeBorderCss }" target="_blank"><img src="~/Images/amazon-icon.png" width="16px" /></a>
+                                        </div>
+                                        <div style="text-align: right; margin-right: 3px" data-bind="visible: canEditBarcode"><a href="javascipt:;" tabindex="-1" data-bind="click: getBarcodeFromStyleSize">load from style</a></div>
+                                        <div style="text-align: right">
+                                            <span class="red" data-bind="text: barcodeErrorMessage"></span>
+                                        </div>
+
+                                    </td>
+                                    <td>
+                                        <input type="hidden" data-bind="value: isDefault, attr: { name: 'VariationList[' + $index() + '].IsDefault' }" />
+                                        <input type="radio"
+                                               data-bind="checked: $parent.defaultIndex, attr: { value: $index(), tabindex: $index() + 8000 }" />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        @Html.ValidationSummary(false)
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="k-edit-buttons k-state-default popup-button-panel" style="position: static">
+        <table style="width: 100%">
+            <tr>
+                <td>
+                    <table style="margin-left: auto">
+                        <tr>
+                            <td>
+                                <button tabindex="100000"
+                                        type="button"
+                                        id="preSubmit"
+                                        data-bind="click: onSubmit, enable: canSubmit, css: {'k-state-disabled': !canSubmit() }"
+                                        class="k-button k-button-icontext k-grid-update">
+                                    <span class="k-icon k-update"></span>Save
+                                </button>
+
+                                <button type="submit"
+                                        id="submit"
+                                        style="display: none">
+                                    Save
+                                </button>
+                            </td>
+                            <td style="padding-left: 4px">
+                                <button class="k-button k-button-icontext k-grid-cancel"
+                                        type="reset"
+                                        id="cancel"
+                                        tabindex="100001"
+                                        onclick="popupWindow.close()">
+                                    <span class="k-icon k-cancel"></span>Cancel
+                                </button>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>

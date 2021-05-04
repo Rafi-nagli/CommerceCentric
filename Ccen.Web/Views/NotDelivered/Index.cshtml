@@ -1,0 +1,383 @@
+﻿@using Amazon.Core.Models
+@using Amazon.Web.Models.SearchFilters
+@using Amazon.Web.ViewModels
+@using Kendo.Mvc.UI
+
+@model NotDeliveredFilterViewModel
+
+@{
+    ViewBag.Title = "Not Delivered Orders";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/feedback.ico" />
+}
+
+<script type="text/javascript">
+
+    var NotDeliveredModel = function(model, settings) {
+        var self = this;
+        ko.BaseViewModel.call(self);
+
+        self.settings = settings;
+        self.model = model;
+
+        //Search
+        self.buyerName = ko.observable('');
+        self.orderNumber = ko.observable('');
+        
+        self.minDate = new Date(2000, 1, 1);
+        self.maxDate = new Date();
+        self.maxDate.setHours(23);
+        self.maxDate.setMinutes(59);
+
+        self.dateFrom = ko.observable('');
+        self.dateTo = ko.observable('');
+
+        self.status = ko.observable('');
+        self.statusList = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(NotDeliveredFilterViewModel.StatusList));
+
+
+        //Grid
+        self.gridId = settings.gridId;
+        self.gridNode = $("#" + self.gridId);
+        self.grid = self.gridNode.data("kendoGrid");
+
+        self.checkAll = function(data, e) {
+            var checked = $(e.target).is(":checked");
+            $("#" + self.gridId + " tbody input:checkbox").prop("checked", checked);
+            return true;
+        };
+
+        self.setDismiss = function(sender, id) {
+            sender = $(sender);
+            helper.ui.showLoading(sender);
+            var rowData = self.grid.dataSource.get(id);
+
+            $.ajax({
+                url: '@Url.Action("SetDismiss", "NotDelivered")',
+                cache: false,
+                data: {
+                    shippingId: rowData.ShippingInfoId,
+                    shippingType: rowData.ShippingInfoType,
+                },
+                success: function() {
+                    helper.ui.hideLoading(sender);
+                    rowData.set("IsDismiss", true);
+                }
+            });
+        };
+
+        self.setSubmitClaim = function(sender, id) {
+            sender = $(sender);
+            helper.ui.showLoading(sender);
+            var rowData = self.grid.dataSource.get(id);
+
+            $.ajax({
+                url: '@Url.Action("SetSubmitClaim", "NotDelivered")',
+                data: {
+                    shippingId: rowData.ShippingInfoId,
+                    shippingType: rowData.ShippingInfoType,
+                },
+                cache: false,
+                success: function() {
+                    helper.ui.hideLoading(sender);
+                    rowData.set("IsSubmittedClaim", true);
+                }
+            });
+        };
+
+        self.setHighlight = function(sender, id) {
+            sender = $(sender);
+            helper.ui.showLoading(sender);
+            var rowData = self.grid.dataSource.get(id);
+
+            $.ajax({
+                url: '@Url.Action("SetHighlight", "NotDelivered")',
+                data: {
+                    shippingId: rowData.ShippingInfoId,
+                    shippingType: rowData.ShippingInfoType,
+                    isHighlight: !rowData.IsHighlight
+                },
+                cache: false,
+                success: function(result) {
+                    helper.ui.hideLoading(sender);
+                    rowData.set("IsHighlight", !rowData.IsHighlight);
+                }
+            });
+        };
+        
+        self.dataBound = function() {
+            console.log("dataBound, page=" + self.grid.dataSource.page());
+
+            var data = self.grid.dataSource.data();
+            var view = self.grid.dataSource.view();
+
+            $.each(view, function(i, row) {
+                var rowNode = $('tr[data-uid="' + row.uid + '"]');
+                console.log(row);
+                helper.ui.highlightRow(rowNode, row.IsHighlight);
+            });
+        };
+
+        self.addTopPager = function(e) {
+            var grid = self.grid;
+            var wrapper = $('<div class="k-pager-wrap k-grid-pager pagerTop"/>').insertBefore(grid.element.children("table"));
+            grid.pagerTop = new kendo.ui.Pager(wrapper, $.extend({}, grid.options.pageable, { dataSource: grid.dataSource }));
+            grid.element.height("").find(".pagerTop").css("border-width", "0 0 1px 0");
+        };
+        
+
+        //Search
+        
+        self.search = function (isSearch) {
+            var params = self.getGridParams();
+            
+            self.resetRowNumber(0);
+
+            if (self.grid.dataSource.page() != 1) {
+                self.grid.dataSource.page(1); //May call read
+            }
+            self.grid.dataSource.read(params);
+        };
+
+        self.searchByKeyCmd = function (data, event) {
+            if (event.keyCode == 13)
+                self.search(true);
+            return true;
+        };
+
+        self.getGridParams = function () {
+            console.log("getGridParams");
+
+            var status = self.status();
+            var from = kendo.toString(self.dateFrom(), 'MM/dd/yyyy');
+            var to = kendo.toString(self.dateTo(), 'MM/dd/yyyy');
+            var orderNumber = self.orderNumber();
+            var buyerName = self.buyerName();
+
+            var params = {
+                status: status,
+                dateFrom: from,
+                dateTo: to,
+                buyerName: buyerName,
+                orderNumber: orderNumber
+            };
+            console.log(params);
+            return params;
+        };
+        
+        self.clear = function () {
+            self.status(self.model.Status);
+            self.dateFrom('');
+            self.dateTo('');
+            self.buyerName('');
+            self.orderNumber('');
+        };
+
+        self.clearAndSearch = function () {
+            self.clear();
+            self.search(false);
+        };
+
+        self.searchByButton = function () {
+            self.search(true);
+        };
+        
+        self.addTopPager();
+        self.grid.bind("dataBound", self.dataBound);
+
+        self.clear();
+        self.search(false);
+    };
+   
+</script>
+
+<div id="page-content">
+
+    <ol class="breadcrumb">
+        <li><a href="#">Tracking</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <div class="messages-block">
+                <div><span id="infoMessage" class="text-info"></span></div>
+                <div><span id="errorMessage" class="label label-danger"></span></div>
+                <div><span id="successMessage" class="label label-success"></span></div>
+            </div>
+
+            <table>
+                <colgroup>
+                    <col style="width: 100px"/>
+                    <col style="width: 210px"/>
+                    <col style="width: 100px"/>
+                    <col style="width: 450px"/>
+                </colgroup>
+                <tr>
+                    <th class="right-block">Order Date: </th>
+                    <td>
+                        <table>
+                            <tr>
+                                <th>From</th>
+                                <td>
+                                    <input data-bind="kendoDatePicker: { value: dateFrom, format: 'MM/dd/yyyy', min: minDate, max: maxDate }"/>
+                                </td>
+                                <th>To</th>
+                                <td>
+                                    <input data-bind="kendoDatePicker: { value: dateTo, format: 'MM/dd/yyyy', min: minDate, max: maxDate }"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            <table>
+                <colgroup>
+                    <col style="width: 100px"/>
+                    <col style="width: 210px"/>
+                    <col style="width: 100px"/>
+                    <col style="width: 210px"/>
+                    <col style="width: 100px"/>
+                    <col style="width: 210px"/>
+                </colgroup>
+                <tr>
+                    <th class="right-block">Filter: </th>
+                    <td>
+                        <input style="width: 180px" data-bind="kendoDropDownList: { data: statusList, value: status, dataTextField: 'Text', dataValueField: 'Value' }"/>
+                    </td>
+                    <th>Buyer Name:</th>
+                    <td>
+                        <input type="text" data-bind="value: buyerName, valueUpdate: 'afterkeydown', event: { keypress: searchByKeyCmd }" class="k-textbox"/>
+                    </td>
+                    <th class="right-block">Order #:</th>
+                    <td>
+                        <input type="text" data-bind="value: orderNumber, valueUpdate: 'afterkeydown', event: { keypress: searchByKeyCmd }" class="k-textbox"/>
+                    </td>
+
+                </tr>
+            </table>
+            <button class="k-button"
+                    style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                    data-bind="click: searchByButton">
+                <span class='glyphicon glyphicon-search am-icon'></span>Search
+            </button>
+            <button class="k-button"
+                    style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                    data-bind="click: clearAndSearch">
+                <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+            </button>
+        </div>
+    </div>
+
+    <div class="grid-small">
+        @(Html.Kendo().Grid<NotDeliveredOrderViewModel>()
+          .Name("grid")
+          .Columns(columns =>
+          {
+              columns.Bound(c => c.TrackingNumber)
+                  .ClientTemplate("<div><a class='order-num' target='_blank' href='#=TrackingUrl#'>#=TrackingNumber#</a></div>")
+                  .Width(180);
+              columns.Bound(c => c.OrderDate)
+                  .Format("{0:ddd, MM.dd.yyyy}")
+                  .Width(125);
+              columns.Bound(c => c.BuyerName)
+                  .Title("Buyer name")
+                  .ClientTemplate("<div>#=BuyerName #</div>");
+              columns.Bound(c => c.OrderNumber)
+                  .Width(180)
+                  .ClientTemplate("<div><a class='order-num' target='_blank' href='#=SellerOrderUrl#'>#=OrderNumber#</a></div>");
+              columns.Bound(c => c.ShippingDate)
+                  //.Format("{0:ddd, MM.dd.yyyy}")
+                  .ClientTemplate("<div>#= tmpl.f(ShippingDate, 'ddd, MM.dd.yyyy')#</div>"
+                                  + "<div>#=FormattedShippingService# #if(IsInternational){# <span class='gray'>(International)</span> #} else {# <span class='gray'>(Domestic)</span> #}#")
+                  .Title("Shipped")
+                  .Width(180);
+              columns.Bound(c => c.PackageDeliveryDate)
+                  .Format("{0:ddd, MM.dd.yyyy}")
+                  .ClientTemplate("#=tmpl.isNullFormat(PackageDeliveryDate, 'ddd, MM.dd.yyyy HH:mm', '-')#"
+                  + "<div class='gray remark'>#=tmpl.isNull(TrackingStateEvent, '-')#</div>")
+                  .Title("Tracking status")
+                  .Width(200);
+              columns.Bound(c => c.Timezone)
+                  .Width(80);
+              columns.Bound(c => c.OrderNumber)
+                  .ClientTemplate("#= tmpl.t('status-column-template', data)#")
+                  .Title("Status")
+                  .Width(120);
+              columns.Bound(o => o.OrderNumber)
+                  .ClientTemplate("#= tmpl.t('actions-column-template', data)#")
+                  .Title("")
+                  .Width(160);
+          })
+          .Pageable(conf => conf.Enabled(true).Refresh(true))
+          .AutoBind(false)
+          .DataSource(dataSource => dataSource
+              .Ajax()
+              .Model(conf => conf.Id(m => m.Id))
+              .Sort(conf => conf.Add(o => o.OrderDate).Descending())
+              .PageSize(100)
+              .Read(read => read.Action("GetAll", "NotDelivered").Data("GetGridParams")))
+        )
+    </div>
+
+</div>
+
+
+<script type="text/kendo-tmpl" id="actions-column-template">
+    #if (IsDismiss == 0) {#
+    <a class='k-button k-button-icontext' style="margin-top: 2px; width: 100px" onclick="notDeliveredVm.setDismiss(this, '#=Id#')">Dismiss</a>
+    #}#
+    #if (IsSubmittedClaim == 0) {#
+        <a class='k-button k-button-icontext' style="margin-top: 2px; width: 100px" onclick="notDeliveredVm.setSubmitClaim(this, '#=Id#')">Submit Claim</a>
+    #}#
+
+    <div>
+        <a class='k-button k-button-icontext' style='margin-top: 4px; width: 80px' onclick="notDeliveredVm.setHighlight(this, '#=Id#')">
+            #if (IsHighlight) {#
+                UnSelect    
+            #} else {#
+                Select
+            #}#
+        </a>
+    </div>
+
+</script>
+
+
+<script type="text/kendo-tmpl" id="status-column-template">
+    #if (IsDismiss == 1) {#
+        <div>-Dismissed</div>
+    #}#
+    #if (IsSubmittedClaim == 1) {#
+        <div>-Submitted Claim</div>
+    #}#    
+</script>
+
+<script>
+    var notDeliveredVm = null;
+
+    $(document).ready(function () {
+        console.log("begin ready");
+
+        var settings = {
+            gridId: 'grid'
+        };
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        notDeliveredVm = new NotDeliveredModel(model, settings);
+        ko.applyBindings(notDeliveredVm, document.getElementById("page-content"));
+    });
+
+
+    function GetGridParams() {
+        console.log("GetGridParams");
+        if (notDeliveredVm != null)
+            return notDeliveredVm.getGridParams();
+        return {};
+    }
+</script>

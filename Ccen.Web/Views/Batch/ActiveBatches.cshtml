@@ -1,0 +1,110 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Core.Models.Settings
+@using Amazon.Core.Models.Stamps
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels
+@using Kendo.Mvc.UI
+@{
+    ViewBag.Title = "Batch Orders";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@model  BatchCollection
+
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/orders.ico" />
+}
+
+<style>
+    #batches .k-content {
+        /*display: inline-block;*/
+        padding: 0.3em 0.3em 0;
+        margin: 0px;
+        /*width: 100%;*/
+        height: 100%;
+        border-left: none;
+        border-right: none;
+    }
+
+    .glyphicon-duplicate:before {
+      content: "\e224";
+    }
+</style>
+
+<script src="~/Scripts/knockout-kendo.min.js" type="text/javascript"></script>
+<script type="text/javascript">
+    var batchList = [];
+
+
+</script>
+
+<style>
+    .k-widget .warning-tab .k-link { color: red }
+
+    .no-active-batches {
+        font-size: 16px;
+        padding: 50px 20px 20px 0px;
+        color: black;
+        width: 100%;
+        text-align: center;
+    }
+</style>
+
+<div id="batches">
+    
+    @if (Model.Batches.Any())
+    {
+        @(Html.Kendo().TabStrip()
+              .Name("tabstrip")
+              .Events(e => e.Select("onSelectTab"))
+              .Items(tabstrip =>
+              {
+                  for (int i = 0; i < Model.Batches.Count; i++)
+                  {
+                      var batch = Model.Batches[i];
+                      batch.Number = i;
+                      var batchId = batch.Id;
+                      tabstrip.Add().Text(batch.Name)
+
+                          .HtmlAttributes(new {@class = batch.UnshippedWarning ? "warning-tab" : "", @title = "ID: " + batch.Id + ", order: " + batch.OrdersCount })
+                          .Selected(batch.Selected)
+                          .Content(@<text>
+                                        <div class="batchContent">                                    
+                                            @(Html.Partial("_Batch", batch)) 
+                                        </div>
+                                        @if (batch.Selected)
+                                        {
+                                            <script type="text/javascript">
+                                                $(document).ready(function() {
+                                                    batch@(batch.Id).load();
+                                                });
+                                            </script>
+                                        }
+                                    </text>);
+                  }
+              }))
+    }
+    else
+    {
+        <div class="no-active-batches">No active batches</div>
+    }
+</div>
+
+<script type="text/javascript">
+    function onSelectTab(e) {
+        //var currentIndex = this.currentItem().index();
+        console.log(e);
+        var newIndex = $(e.item).index(); //.text()
+        console.log(newIndex);
+        
+        var selectedItems = $.grep(batchList, function(item) {
+            return item.batchNumber == newIndex;
+        });
+        console.log("count: " + selectedItems.length);
+        $.each(selectedItems, function(i, item) {
+            item.load();
+        });
+    }
+</script>
+      

@@ -1,0 +1,344 @@
+﻿@using Amazon.Common.Helpers
+@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.Models
+@model Amazon.Web.ViewModels.OrderReports.ShipmentReportSearchFilterViewModel
+@{
+    ViewBag.Title = "Shipments Report";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/inventory.ico" />
+}
+
+<script>
+    var ShipmentReportViewModel = function (model, settings) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+
+        self.items = ko.observableArray([]);
+        self.rowTotal = ko.computed(function () {
+            return self.items().length;
+        });
+
+        self.minDate = new Date(2000, 1, 1);
+        self.maxDate = new Date();
+        self.defaultFromDate = new Date();
+        self.defaultFromDate.setDate(self.defaultFromDate.getDate() - 7);
+
+        //Search begin
+        self.searchFilters = {
+            orderString: ko.observable(null),
+            fromDate: ko.observable(self.defaultFromDate),
+            toDate: ko.observable(null),
+        };
+
+        self.searchByKeyCmd = function (data, event) {
+            console.log('searchByKeyCmd');
+            if (event.keyCode == 13)
+                self.search(true);
+            return true;
+        };
+
+        self.getSearchParams = function () {
+            var toDate = self.searchFilters.toDate();
+            if (toDate != null) {
+                toDate.setHours(23);
+                toDate.setMinutes(59);
+            }
+
+            return {
+                orderString: self.searchFilters.orderString(),
+                fromDate: self.searchFilters.fromDate(),
+                toDate: toDate,
+            };
+        }
+
+
+        self.exportToExcelUrl = ko.computed(function () {
+            var baseUrl = self.settings.urls.exportToExcel;
+            var parts = [];
+
+            var searchParams = self.getSearchParams();
+
+            if (!dataUtils.isNullOrEmpty(searchParams.orderString))
+                parts.push("orderString=" + searchParams.orderString);
+            if (searchParams.fromDate != null)
+                parts.push("fromDate=" + searchParams.fromDate);
+            if (searchParams.toDate != null)
+                parts.push("toDate=" + searchParams.toDate);
+
+            if (parts.length > 0)
+                baseUrl += "?" + parts.join("&");
+            return baseUrl;
+        });
+
+
+        self.orderIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: self.settings.urls.getOrderIdList,
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if (action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.searchInProgress = ko.observable(false);
+        self.search = function () {
+            self.searchInProgress(true);
+
+            self.grid.read({ Page: 1 }).done(function () {
+                self.searchInProgress(false);
+            });
+        };
+
+        self.clear = function () {
+            self.searchFilters.orderString(null);
+            self.searchFilters.fromDate(self.defaultFromDate);
+            self.searchFilters.toDate(null);
+
+            self.search();
+        };
+
+        self.getItemsAsync = function (params) {
+            var defer = $.Deferred();
+
+            var searchParams = self.getSearchParams();
+            var exParams = $.extend(params, searchParams);
+
+            $.ajax({
+                cache: false,
+                data: exParams,
+                url: self.settings.urls.getOrders,
+                success: function (result) {
+                    for (var i = 0; i < result.Items.length; i++) {
+                        var item = result.Items[i];
+                        self.prepareRow(item);
+                    }
+
+                    console.log("receiveDate=" + result.GenerateDate);
+                    console.log("totalCount=" + result.TotalCount);
+                    //self.itemsReceiveDate(result.GenerateDate);
+
+                    console.log("getAllAsync end: " + result.Items.length);
+                    defer.resolve(result);
+                }
+            });
+            return defer;
+        };
+
+        self.prepareRow = function (rowData) {
+        };
+
+        self.grid = new FastGridViewModel({
+            gridId: 'OrderListGrid',
+            rowTemplate: 'order-report-row-template',
+            getItemsAsync: self.getItemsAsync,
+            filterCallback: self.filterCallback,
+            isLocalMode: false,
+            itemsPerPage: 50,
+            sortField: 'ShippingDate',
+            sortMode: 'desc',
+            fields: [
+                { name: "ShippingDate", type: 'date'},
+                { name: "OrderId", type: 'string' },
+                //{ name: "LocationIndex", type: 'int' }
+            ],
+        });
+
+        self.getGridColumns = function () {
+            var columns = [
+                { title: "#", width: "25px" },
+                { title: "Shipping Date", width: "150px", field: "ShippingDate", sortable: true },
+                { title: "Order Id", width: "auto" },
+                { title: "Market", width: "120px" },
+                { title: "Ordered qty", width: "70px" },
+                { title: "Shipping cost", width: "100px" },
+            ];
+            if (self.settings.isFulfilment) {
+                columns.push({ title: "Shipping cost (w/o upcharge)", width: "150px" });
+            }
+
+            return columns;
+        }
+
+        self.fastGridSettings = {
+            gridId: self.grid.gridId,
+            hierarchy: { enable: false },
+            sort: { field: self.grid.sortField, mode: self.grid.sortMode },
+            columns: self.getGridColumns(),
+            loadingStatus: self.grid.loadingStatus,
+            itemCount: self.grid.itemCount,
+        };
+
+        self.grid.read();
+    };
+
+</script>
+
+<div id="page-content" class="order-page">
+    <div id="windowContainer"></div>
+
+    <div id="MessagePopupWindow0" style="display: none;"></div>
+    <div id="MessagePopupWindow1" style="display: none;"></div>
+
+    <ol class="breadcrumb">
+        <li><a href="#">Shipments Report</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <div class="messages-block">
+                <div><span id="infoMessage" class="text-info"></span></div>
+                <div><span id="errorMessage" class="label label-danger"></span></div>
+                <div><span id="successMessage" class="label label-success"></span></div>
+            </div>
+
+            <table style="width: 100%">
+                <colgroup>
+                    <col style="width: 120px" />
+                    <col style="width: 220px" />
+                    <col style="width: 100px" />
+                    <col style="width: 200px" />
+                    <col style="width: 100px" />
+                    <col style="width: 200px" />
+                    <col style="width: auto" />
+                </colgroup>
+                <tr>
+                    <th>Order Id:</th>
+                    <td style="padding-right: 20px; vertical-align: top">
+                        <input type="text"
+                               style="width: 180px"
+                               data-bind="kendoAutoComplete: {
+                                            value: searchFilters.orderString,
+                                            data: {},
+                                            highlightFirst: true,
+                                            minLenght: 3,
+                                            dataSource: orderIdSource },
+                                        valueUpdate: 'afterkeydown',
+                                        event: { keypress: searchByKeyCmd }"
+                               class="k-textbox" />
+                    </td>
+                    <th class="right-content">Shipping Date: </th>
+                    <td>
+                        <table>
+                            <tr>
+                                <th>From</th>
+                                <td>
+                                    <input data-bind="kendoDatePicker: { value: searchFilters.fromDate, format: 'MM/dd/yyyy', min: minDate, max: maxDate }" />
+                                </td>
+                                <th>To</th>
+                                <td>
+                                    <input data-bind="kendoDatePicker: { value: searchFilters.toDate, format: 'MM/dd/yyyy', min: minDate, max: maxDate }" />
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="text-align: left; padding-top: 5px">
+                        <button class="k-button"
+                                style="width: 110px; margin: 0px 0px 0px 0px; padding: 3px 20px 3px 20px"
+                                data-bind="click: search, disable: searchInProgress, css: { 'k-state-disabled': searchInProgress }">
+                            <span class='glyphicon glyphicon-search am-icon'></span>Search
+                        </button>
+                        <button class="k-button"
+                                style="width: 100px; margin: 0px 0px 0px 10px; padding: 3px 20px 3px 20px"
+                                data-bind="click: clear">
+                            <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+                        </button>
+                        <div>
+                            <div data-bind="visible: searchInProgress">searching...</div>
+                        </div>
+                    </td>
+                    <td colspan="2" style="text-align: right; padding-top: 5px">
+                        <a data-bind="attr: { href: exportToExcelUrl }" target="_blank" class="k-button" style="margin-left: 20px; padding-right: 10px"><img src="/Images/excel.png" width="20" style="margin-left: 5px; margin-right: 5px" />Export...</a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="grid-small">
+        <div data-bind='component: {
+        name: "grid-pager",
+        params: { itemCount: grid.itemCount, pageIndex: grid.pageIndex, itemsPerPage: grid.itemsPerPage, refreshCallback: grid.reload }
+        }'></div>
+
+        <div data-bind='component: {
+         name: "fast-grid",
+         params: fastGridSettings }'></div>
+
+        <div data-bind='component: {
+        name: "grid-pager",
+        params: { itemCount: grid.itemCount, pageIndex: grid.pageIndex, itemsPerPage: grid.itemsPerPage, refreshCallback: grid.reload }
+        }'></div>
+    </div>
+</div>
+
+
+
+@Html.Partial(MVC.Shared.Views._TemplatesOrder)
+
+@Html.Partial("_TemplateGridPager")
+@Html.Partial("_TemplateFastGrid")
+
+<script type="text/kendo-tmpl" id="order-report-row-template">
+    <tr class="k-master-row #=data._isAlt ? 'k-alt': ''#" row-uid="#=data.Id#">
+        <td>#=data._pageIndex#</td>
+
+        <td>#= tmpl.f(data.ShippingDate, '@(DateHelper.DateTimeFormat)')#</td>
+        <td><a href='#= data.OrderUrl #' target="_blank">#= tmpl.isNull(data.FormattedOrderId, '-')#</a></td>
+        <td>#= data.MarketName #</td>
+
+        <td>#= tmpl.isNull(data.TotalOrderedQty, '-')#</td>
+        <td>#= tmpl.isNullFormat(data.TotalUpchargedShippingCost, '$0.00', '-')#</td>
+        @if (AccessManager.IsFulfilment)
+        {
+            <td>#= tmpl.isNullFormat(data.TotalShippingCost, '$0.00', '-')#</td>
+        }
+    </tr>
+</script>
+
+
+<script type="text/javascript">
+        var orderReportVm = null;
+
+        $(document).ready(function() {
+
+            var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+            var settings = {
+                urls: {
+                    getOrders: '@Url.Action("GetAll", "ShipmentReport")',
+                    getOrderIdList: '@Url.Action("GetOrderIdList", "AutoComplete")',
+                    exportToExcel: '@Url.Action("ExportToExcel", "ShipmentReport")',
+                },
+                marketList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.MarketList)),
+                dropShipperList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.DropShipperList)),
+
+                isFulfilment: @(AccessManager.IsFulfilment ? 1 : 0),
+            };
+
+            orderReportVm = new ShipmentReportViewModel(model, settings);
+
+            ko.applyBindings(orderReportVm, document.getElementById('page-content'));
+        });
+</script>

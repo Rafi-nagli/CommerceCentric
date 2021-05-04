@@ -1,0 +1,253 @@
+﻿<Notification>
+<NotificationMetaData>
+	<NotificationType>AnyOfferChanged</NotificationType>
+	<PayloadVersion>1.0</PayloadVersion>
+	<UniqueId>4f13b0c7-648c-48ac-bff1-6852cb06e8ce</UniqueId>
+	<PublishTime>2016-09-07T22:19:02.671Z</PublishTime>
+	<SellerId>A3TZ6XI34C2FZ0</SellerId>
+	<MarketplaceId>ATVPDKIKX0DER</MarketplaceId>
+</NotificationMetaData>
+<NotificationPayload>
+	<AnyOfferChangedNotification>
+		<OfferChangeTrigger>
+			<MarketplaceId>ATVPDKIKX0DER</MarketplaceId>
+			<ASIN>B014GN7T7S</ASIN>
+			<ItemCondition>new</ItemCondition>
+			<TimeOfOfferChange>2016-09-07T22:18:42.247Z</TimeOfOfferChange>
+		</OfferChangeTrigger>
+		<Summary>
+			<NumberOfOffers>
+				<OfferCount condition="new" fulfillmentChannel="Merchant">5</OfferCount>
+				<OfferCount condition="new" fulfillmentChannel="Amazon">2</OfferCount>
+			</NumberOfOffers>
+			<LowestPrices>
+				<LowestPrice condition="new" fulfillmentChannel="Merchant">
+					<LandedPrice>
+						<Amount>13.18</Amount>
+						<CurrencyCode>USD</CurrencyCode>
+					</LandedPrice>
+					<ListingPrice>
+						<Amount>13.18</Amount>
+						<CurrencyCode>USD</CurrencyCode>
+					</ListingPrice>
+					<Shipping>
+						<Amount>0.00</Amount>
+						<CurrencyCode>USD</CurrencyCode>
+					</Shipping>
+				</LowestPrice>
+				<LowestPrice condition="new" fulfillmentChannel="Amazon">
+					<LandedPrice>
+						<Amount>13.99</Amount>
+						<CurrencyCode>USD</CurrencyCode>
+					</LandedPrice>
+					<ListingPrice>
+						<Amount>13.99</Amount>
+						<CurrencyCode>USD</CurrencyCode>
+					</ListingPrice>
+					<Shipping>
+						<Amount>0.00</Amount>
+						<CurrencyCode>USD</CurrencyCode>
+					</Shipping>
+				</LowestPrice>
+			</LowestPrices>
+			<BuyBoxPrices>
+				<BuyBoxPrice condition="new">
+					<LandedPrice>
+						<Amount>13.99</Amount>
+						<CurrencyCode>USD</CurrencyCode>
+					</LandedPrice>
+					<ListingPrice>
+						<Amount>13.99</Amount>
+						<CurrencyCode>USD</CurrencyCode>
+					</ListingPrice>
+					<Shipping>
+						<Amount>0.00</Amount>
+						<CurrencyCode>USD</CurrencyCode>
+					</Shipping>
+				</BuyBoxPrice>
+			</BuyBoxPrices>
+			<ListPrice>
+				<Amount>14.99</Amount>
+				<CurrencyCode>USD</CurrencyCode>
+			</ListPrice>
+			
+			
+			
+			<BuyBoxEligibleOffers>
+				<OfferCount condition="new" fulfillmentChannel="Merchant">5</OfferCount>
+				<OfferCount condition="new" fulfillmentChannel="Amazon">2</OfferCount>
+			</BuyBoxEligibleOffers>
+		</Summary>
+		<Offers>
+			<Offer>
+				<SellerId>A653RF85QVOSP</SellerId>
+				<SubCondition>new</SubCondition>
+				<SellerFeedbackRating>
+					<SellerPositiveFeedbackRating>96</SellerPositiveFeedbackRating>
+					<FeedbackCount>3814</FeedbackCount>
+				</SellerFeedbackRating>
+				<ShippingTime minimumHours="72" maximumHours="96" availabilityType="NOW"/>
+				<ListingPrice>
+					<Amount>13.18</Amount>
+					<CurrencyCode>USD</CurrencyCode>
+				</ListingPrice>
+				<Shipping>
+					<Amount>0.00</Amount>
+					<CurrencyCode>USD</CurrencyCode>
+				</Shipping>
+				<ShipsFrom>
+					<Country>US</Country>
+					<State>NY</State>
+				</ShipsFrom>
+				<IsFulfilledByAmazon>false</IsFulfilledByAmazon>
+				<IsBuyBoxWinner>false</IsBuyBoxWinner>
+				<IsFeaturedMerchant>true</IsFeaturedMerchant>
+				<ShipsDomestically>true</ShipsDomestically>
+			</Offer>
+			<Offer>
+				<SellerId>A28Z4FDJQZWA6J</SellerId>
+				<SubCondition>new</SubCondition>
+				<SellerFeedbackRating>
+					<SellerPositiveFeedbackRating>99</SellerPositiveFeedbackRating>
+					<FeedbackCount>14387</FeedbackCount>
+				</SellerFeedbackRating>
+				<ShippingTime minimumHours="24" maximumHours="48" availabilityType="NOW"/>
+				<ListingPrice>
+					<Amount>8.27</Amount>
+					<CurrencyCode>USD</CurrencyCode>
+				</ListingPrice>
+				<Shipping>
+					<Amount>5.61</Amount>
+					<CurrencyCode>USD</CurrencyCode>
+				</Shipping>
+				<ShipsFrom>
+					<Country>US</Country>
+					<State>VA</State>
+				</ShipsFrom>
+				<IsFulfilledByAmazon>false</IsFulfilledByAmazon>
+				<IsBuyBoxWinner>false</IsBuyBoxWinner>
+				<IsFeaturedMerchant>true</IsFeaturedMerchant>
+				<ShipsDomestically>true</ShipsDomestically>
+			</Offer>
+			<Offer>
+				<SellerId>ATVPDKIKX0DER</SellerId>
+				<SubCondition>new</SubCondition>
+				<SellerFeedbackRating>
+					<SellerPositiveFeedbackRating>91</SellerPositiveFeedbackRating>
+					<FeedbackCount>387</FeedbackCount>
+				</SellerFeedbackRating>
+				<ShippingTime minimumHours="0" maximumHours="0" availabilityType="NOW"/>
+				<ListingPrice>
+					<Amount>13.99</Amount>
+					<CurrencyCode>USD</CurrencyCode>
+				</ListingPrice>
+				<Shipping>
+					<Amount>0.00</Amount>
+					<CurrencyCode>USD</CurrencyCode>
+				</Shipping>
+				<IsFulfilledByAmazon>true</IsFulfilledByAmazon>
+				<IsBuyBoxWinner>true</IsBuyBoxWinner>
+				<IsFeaturedMerchant>true</IsFeaturedMerchant>
+				<ShipsDomestically>true</ShipsDomestically>
+			</Offer>
+			<Offer>
+				<SellerId>A2VOT9ZKL2Y52L</SellerId>
+				<SubCondition>new</SubCondition>
+				<SellerFeedbackRating>
+					<SellerPositiveFeedbackRating>96</SellerPositiveFeedbackRating>
+					<FeedbackCount>388</FeedbackCount>
+				</SellerFeedbackRating>
+				<ShippingTime minimumHours="0" maximumHours="0" availabilityType="NOW"/>
+				<ListingPrice>
+					<Amount>19.99</Amount>
+					<CurrencyCode>USD</CurrencyCode>
+				</ListingPrice>
+				<Shipping>
+					<Amount>0.00</Amount>
+					<CurrencyCode>USD</CurrencyCode>
+				</Shipping>
+				<IsFulfilledByAmazon>true</IsFulfilledByAmazon>
+				<IsBuyBoxWinner>false</IsBuyBoxWinner>
+				<IsFeaturedMerchant>true</IsFeaturedMerchant>
+				<ShipsDomestically>true</ShipsDomestically>
+			</Offer>
+			<Offer>
+				<SellerId>A3TZ6XI34C2FZ0</SellerId>
+				<SubCondition>new</SubCondition>
+				<SellerFeedbackRating>
+					<SellerPositiveFeedbackRating>99</SellerPositiveFeedbackRating>
+					<FeedbackCount>4111</FeedbackCount>
+				</SellerFeedbackRating>
+				<ShippingTime minimumHours="24" maximumHours="24" availabilityType="NOW"/>
+				<ListingPrice>
+					<Amount>17.99</Amount>
+					<CurrencyCode>USD</CurrencyCode>
+				</ListingPrice>
+				<Shipping>
+					<Amount>4.49</Amount>
+					<CurrencyCode>USD</CurrencyCode>
+				</Shipping>
+				<ShipsFrom>
+					<Country>US</Country>
+					<State>FL</State>
+				</ShipsFrom>
+				<IsFulfilledByAmazon>false</IsFulfilledByAmazon>
+				<IsBuyBoxWinner>false</IsBuyBoxWinner>
+				<IsFeaturedMerchant>true</IsFeaturedMerchant>
+				<ShipsDomestically>true</ShipsDomestically>
+			</Offer>
+			<Offer>
+				<SellerId>A3LCXYNB5239OI</SellerId>
+				<SubCondition>new</SubCondition>
+				<SellerFeedbackRating>
+					<SellerPositiveFeedbackRating>92</SellerPositiveFeedbackRating>
+					<FeedbackCount>231</FeedbackCount>
+				</SellerFeedbackRating>
+				<ShippingTime minimumHours="24" maximumHours="48" availabilityType="NOW"/>
+				<ListingPrice>
+					<Amount>19.56</Amount>
+					<CurrencyCode>USD</CurrencyCode>
+				</ListingPrice>
+				<Shipping>
+					<Amount>6.89</Amount>
+					<CurrencyCode>USD</CurrencyCode>
+				</Shipping>
+				<ShipsFrom>
+					<Country>US</Country>
+					<State>GA</State>
+				</ShipsFrom>
+				<IsFulfilledByAmazon>false</IsFulfilledByAmazon>
+				<IsBuyBoxWinner>false</IsBuyBoxWinner>
+				<IsFeaturedMerchant>true</IsFeaturedMerchant>
+				<ShipsDomestically>true</ShipsDomestically>
+			</Offer>
+			<Offer>
+				<SellerId>A3LCXYNB5239OI</SellerId>
+				<SubCondition>new</SubCondition>
+				<SellerFeedbackRating>
+					<SellerPositiveFeedbackRating>92</SellerPositiveFeedbackRating>
+					<FeedbackCount>231</FeedbackCount>
+				</SellerFeedbackRating>
+				<ShippingTime minimumHours="24" maximumHours="48" availabilityType="NOW"/>
+				<ListingPrice>
+					<Amount>23.45</Amount>
+					<CurrencyCode>USD</CurrencyCode>
+				</ListingPrice>
+				<Shipping>
+					<Amount>6.89</Amount>
+					<CurrencyCode>USD</CurrencyCode>
+				</Shipping>
+				<ShipsFrom>
+					<Country>US</Country>
+					<State>GA</State>
+				</ShipsFrom>
+				<IsFulfilledByAmazon>false</IsFulfilledByAmazon>
+				<IsBuyBoxWinner>false</IsBuyBoxWinner>
+				<IsFeaturedMerchant>true</IsFeaturedMerchant>
+				<ShipsDomestically>true</ShipsDomestically>
+			</Offer>
+		</Offers>
+	</AnyOfferChangedNotification>
+</NotificationPayload>
+</Notification>
+

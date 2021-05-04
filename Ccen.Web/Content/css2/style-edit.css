@@ -1,0 +1,218 @@
+﻿
+.inventory-popup table {
+    border: none;
+    padding: 0px;
+    margin: 0px;
+    margin-bottom: 15px;
+    margin-left: 0px;
+}
+
+.inventory-popup table input[type='text'] {
+    width: 160px;
+}
+
+.inventory-popup td, .inventory-popup th {
+    border: none;
+    padding: 2px;
+    margin: 0px;
+}
+
+.inventory-popup table .editor-label {
+    font-weight: normal;
+}
+
+.inventory-popup .editor-label {
+    padding: 0px;
+    margin: 0px;
+    font-weight: bold;
+}
+
+.inventory-popup .right {
+    float: right;
+}
+
+.inventory-popup .style-features-panel .editor-label {
+    width: 40%;
+    padding-right: 10px;
+}
+
+.inventory-popup .style-features-panel .editor-field {
+    width: 50%;
+    padding-bottom: 0.3em;
+}
+
+.inventory-popup .edit-descriptions .editor-label {
+    width: 25%;
+}
+
+.inventory-popup .edit-descriptions .editor-field {
+    width: 65%;
+}
+
+.style-panel {
+    padding-bottom: 12px;
+}
+
+.style-panel .title {
+    padding: .4em 0 1em;
+    margin-left: 2%;
+    text-align: left;
+    padding-top: 2px;
+    padding-bottom: 7px;
+    font-weight: bold;
+}
+
+.inventory-popup .style-main-info .editor-field {
+    width: 66%;
+}
+
+.inventory-popup .style-main-info .editor-label {
+    width: 24%;
+}
+
+.inventory-popup .style-main-info input[type='text'] {
+     width: 235px;
+     margin: 2px 0px;
+     line-height: 20px;
+ }
+
+.inventory-popup .style-location-block {
+    padding-left: 20px;
+}
+
+.inventory-popup .style-location-block table {
+    margin-bottom: 5px;
+}
+
+.inventory-popup .style-location-block td,
+.inventory-popup .style-location-block th {
+    vertical-align: top;
+}
+
+.inventory-popup .use-qty-cell {
+    background: #bAdD82;
+    border-bottom: 1px solid black;
+}
+
+.inventory-popup .onhold-row {
+    background: lightgray;
+}
+
+
+
+.am-style-popup .k-edit-form-container {
+    width: auto;
+    font-size: 13px !important;
+}
+
+.am-style-popup .panel-body {
+    padding: 5px 3px;
+}
+
+.am-style-popup .panel-heading {
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+.am-style-popup .am-left {
+    width: 370px;
+    vertical-align: top;
+}
+
+.am-style-popup .am-right {
+    width: 380px;
+    vertical-align: top;
+}
+
+.am-style-popup .display-field,
+.am-style-popup .editor-field,
+.am-style-popup .editor-label {
+    margin-top: 0px;
+    vertical-align: middle;
+}
+
+.inventory-popup .display-field,
+.inventory-popup .editor-field,
+.inventory-popup .editor-label {
+    margin-top: 0px;
+    vertical-align: middle;
+}
+
+.inventory-popup input[type='text'],
+.inventory-popup input[type='number'] {
+    /*width: auto;*/
+    line-height: 18px;
+}
+
+.inventory-popup .k-edit-form-container .editor-as-text {
+    padding: .4em 0em;
+}
+
+
+.size-table th {
+    padding-bottom: 6px;
+}
+
+.size-table td {
+    vertical-align: top;
+    padding-top: 2px;
+}
+
+.size-table td table {
+    padding: 0px;
+    margin: 0px;
+}
+
+.size-table td table td {
+    padding: 0 0 5px 0;
+    margin: 0px;
+}
+
+
+
+.size-table .barcode-list tr:last-child {
+    display: none;
+}
+
+.size-table .barcode-button {
+    color: white;
+    text-align: right;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.size-name {
+    font-size: 10px;
+}
+
+.size-remain {
+    font-weight: bold;
+}
+
+.qty-panel .k-grid td {
+    line-height: 1.4em;
+}
+
+.qty-panel .validationMessage {
+    font-size: 85%;
+}
+
+.popup-button-panel .flag-icon {
+    display: block;
+    float: right;
+}
+
+.popup-button-panel .flag-caption {
+    display: block;
+    float: left;
+    padding-top: 3px;
+    padding-left: 4px;
+}
+
+.price-listing table {
+    border: 1px solid #666;
+}
+
+.price-listings th{
+    font-weight: normal;
+}

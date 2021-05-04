@@ -1,0 +1,85 @@
+﻿@using Amazon.Web.HtmlExtend
+@using Kendo.Mvc.UI
+@using Ccen.Web.ViewModels.Reports
+@using Amazon.Common.Helpers
+@{
+    ViewBag.Title = "Refunded orders";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<script type="text/javascript">
+    var returnedOrdersStyleId = 0;
+    var ReturnOrdersModel = function (model) {
+        var self = this;
+        self.styleId = model.StyleId;
+        self.close = function() {
+            popupWindow.close();
+        }
+    };
+
+    var GetGridParams = function () {
+        return { styleId: returnedOrdersStyleId };
+    }
+
+    self.onDataBound = function (e) {
+        console.log("dataBound");
+    }
+
+    $(document).ready(function() {
+        model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        console.log(model);
+        returnedOrdersStyleId = model.StyleId;
+        var returnOrdersModel = new ReturnOrdersModel(model);
+        //ko.applyBindings(returnOrdersModel, document.getElementById('grid-container'));
+    });
+
+
+
+
+</script>
+
+
+<div id="'grid-container" class="inventory-popup">
+    @(Html.Kendo().Grid<ReturnedOrderViewModel>()
+          .Name("ReturnOrdersList")
+          .Editable(e => e.Mode(GridEditMode.PopUp))
+          .Columns(columns =>
+          {
+              columns.Bound(c => c.Id)
+                  .Sortable(false).Visible(false);
+              columns.Bound(c => c.CustomerOrderId).Width(150)
+                  .Title("Order Id")
+                  .ClientTemplate("#= tmpl.t('orderid-column-template', data)#");
+              columns.Bound(c => c.Size).Width(120)
+                 .Title("Size");
+              columns.Bound(c => c.Color).Width(150)
+                 .Title("Color");
+              columns.Bound(c => c.OrderDate)
+                  .Format("{0:" + DateHelper.DateTimeFormat + "}").Width(150)
+                  .Title("Order Date");
+              columns.Bound(c => c.Reason)
+                  .Title("Reason");
+          })
+          .Sortable(conf => conf.Enabled(true).SortMode(GridSortMode.SingleColumn))
+          .Pageable(conf => conf.Enabled(true).Refresh(true))
+          .Filterable(conf => conf.Enabled(true))
+          .AutoBind(true)
+          .Events(e =>
+          {
+              e.DataBound("onDataBound");
+          })
+          .DataSource(dataSource => dataSource
+              .Ajax()
+              .ServerOperation(false)
+              .PageSize(50)
+              .Model(conf => conf.Id(m => m.Id))
+              .Sort(conf => {
+                  conf.Add(n => n.OrderDate).Descending();
+              })
+              .Read(read => read.Action(MVC.SalesReturnReport.ActionNames.GetAllOrders, MVC.SalesReturnReport.Name)
+                  .Data("GetGridParams"))))
+</div>
+
+<script type="text/kendo-tmpl" id="orderid-column-template">
+    <div>#if (CustomerOrderId != null) {# <a target='_blank' href='#=OrderUrl#'>#=CustomerOrderId#</a> #} else {# [no order] #}#</div>    
+</script>

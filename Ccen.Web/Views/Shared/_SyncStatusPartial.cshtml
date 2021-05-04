@@ -1,0 +1,117 @@
+﻿@using System.Web.Razor.Parser.SyntaxTree
+@using Amazon.DAL
+@using Amazon.Web
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels
+@{
+    Layout = null;
+    var model = new SyncStatusViewModel(new SettingsService(new DbFactory()), new DbFactory());
+}
+
+<script>
+    var HeaderStatusViewModel = function(model, settings) {
+        var self = this;
+        self.isDemo = settings.isDemo;
+
+        //self.listingQtyAlerts = model.Marketplaces.reduce(function(prevVal, v) {
+        //    return prevVal + v.ListingQtyAlert;
+        //}, 0);
+        //self.listingQtyAlertStatus = ko.computed(function() {
+        //    if (!self.isDemo) {
+        //        if (self.listingQtyAlerts > 0)
+        //            return "<span class='label label-danger'>" + self.listingQtyAlerts + "</span>";
+        //    }
+        //    return "<span class='label label-default'>no</span>";
+        //});
+
+        //self.listingPriceAlerts = model.Marketplaces.reduce(function(prevVal, v) {
+        //    return prevVal + v.ListingPriceAlert;
+        //}, 0);
+        //self.listingPriceAlertStatus = ko.computed(function() {
+        //    if (!self.isDemo) {
+        //        if (self.listingPriceAlerts > 0)
+        //            return "<span class='label label-danger'>" + self.listingPriceAlerts + "</span>";
+        //    }
+        //    return "<span class='label label-default'>no</span>";
+        //});
+
+        $.each(model.ListingErrors, function (i, entry) {
+            entry.flagCss = "flag-" + entry.ShortName;
+            entry.listingPageUrl = '@Url.Action("Products", "Item")' + "?market=" + entry.Market + "&marketplaceId=" + entry.MarketplaceId + "&showIssues=true";
+        });
+        self.listingErrors = ko.observable(model.ListingErrors);
+
+        self.orderSyncIsOvertimeList = $.grep(model.Marketplaces, function(n) {
+            return n.OrdersSyncAfterIsOvertime;
+        });
+        self.orderSyncOvertimeStatus = ko.computed(function() {
+            if (!self.isDemo) {
+                if (self.orderSyncIsOvertimeList.length > 0) {
+                    return "<span class='label label-danger'>" + self.orderSyncIsOvertimeList[0].OrdersSyncAgoDateFormatted + " ago " 
+                        + " (" + self.orderSyncIsOvertimeList[0].MarketShortName + ")</span>";
+                }
+            }
+            return "<span class='label label-success'>success</span>";
+        });
+
+        self.itemSyncIsOvertimeList = $.grep(model.Marketplaces, function(n) {
+            return n.ListingsSyncAfterIsOvertime;
+        });
+        self.itemSyncOvertimeStatus = ko.computed(function() {
+            if (!self.isDemo) {
+                if (self.itemSyncIsOvertimeList.length > 0) {
+                    return "<span class='label label-danger'>" + self.itemSyncIsOvertimeList[0].ListingsSyncAgoDateFormatted + " ago "
+                        + " (" + self.itemSyncIsOvertimeList[0].MarketShortName + ")</span>";
+                }
+            }
+            return "<span class='label label-success'>success</span>";
+        });
+
+        self.orderSyncMissed = model.Marketplaces.reduce(function(prevVal, val) {
+            return prevVal + val.OrderCountOnMarket - val.OrderCountInDb;
+        }, 0);
+        self.orderSyncMissedStatus = ko.computed(function() {
+            if (!self.isDemo) {
+                if (self.orderSyncMissed > 0) {
+                    return "<span class='label label-danger'>missed " + self.orderSyncMissed + " orders</span>";
+                }
+            }
+            return "";
+        });
+    }
+
+    $(document).ready(function() {
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(model));
+        var settings = {
+            isDemo: @(Ccen.Web.AppSettings.IsDemo ? 1 : 0),
+        };
+        var headerStatusModel = new HeaderStatusViewModel(model, settings);
+
+        ko.applyBindings(headerStatusModel, document.getElementById('header-status-info'));
+    });
+</script>
+
+<div id="header-status-info" class="amz-status-info">
+    <div class="status-line">Orders sync:
+        <span data-bind="html: orderSyncOvertimeStatus"></span>
+        &nbsp;
+        <span data-bind="html: orderSyncMissedStatus"></span>
+    </div>
+    <div class="status-line">Items sync:
+        <span data-bind="html: itemSyncOvertimeStatus"></span>    
+    </div>
+    <div class="status-line">
+        <div style="float:left">Listing Errors:</div>
+        <div data-bind="foreach: listingErrors">
+            <div style="float:left">
+                <a data-bind="attr: { 'href': listingPageUrl }" target="_blank">
+                    <span class="flag-link" data-bind="css: flagCss"
+                          style="display: inline-block; width: 20px; height: 18px; vertical-align: top"></span>
+                    <span data-bind="text: Count" class="label label-danger" style="vertical-align: middle">
+                    </span>
+                </a>
+            </div>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>

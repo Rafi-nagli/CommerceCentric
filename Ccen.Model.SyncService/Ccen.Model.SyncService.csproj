@@ -1,0 +1,266 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{9301D880-C846-4E1D-9061-B5CD8E483F14}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ccen.Model.SyncService</RootNamespace>
+    <AssemblyName>Ccen.Model.SyncService</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Amazon.Api, Version=2016.5.1553.17, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Amazon.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="DropShipper.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\DropShipper.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="eBay.Api, Version=2016.5.1553.17, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\eBay.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="Groupon.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Groupon.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="Jet.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Jet.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="Magento.Api">
+      <HintPath>..\Api\Dlls\Magento.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="Magento.Api.Wrapper, Version=2016.5.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Magento.Api.Wrapper.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Shopify.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Shopify.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="Supplieroasis.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Supplieroasis.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="Walmart.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Api\Dlls\Walmart.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="WooCommerce.Api">
+      <HintPath>..\Api\Dlls\WooCommerce.Api.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AppSettings.cs">
+      <DependentUpon>AppSettings.tt</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <Compile Include="Models\AmazonReports\AmazonReportSettingsFactory.cs" />
+    <Compile Include="Models\AmazonReports\IAmazonReportSettings.cs" />
+    <Compile Include="Models\AmazonReports\ReportRequestMode.cs" />
+    <Compile Include="Models\AmazonReports\Settings\BaseAmazonReportSettings.cs" />
+    <Compile Include="Models\AmazonReports\Settings\UpdateCategoryListingsReportSettings.cs" />
+    <Compile Include="Models\AmazonReports\Settings\UpdateFBAListingsFeeReportSettings.cs" />
+    <Compile Include="Models\AmazonReports\Settings\UpdateListingsReportCombineModeSettings.cs" />
+    <Compile Include="Models\AmazonReports\Settings\UpdateReturnsDataReportSettings.cs" />
+    <Compile Include="Models\AmazonReports\Settings\UpdateListingsReportUpdateModeSettings.cs" />
+    <Compile Include="Models\AmazonReports\Settings\UpdateSetlementReportSettings.cs" />
+    <Compile Include="Models\AmazonReports\Settings\UpdateFBAListingsReportSettings.cs" />
+    <Compile Include="Models\AmazonReports\Settings\UpdateListingsDefectReportSettings.cs" />
+    <Compile Include="Models\AmazonReports\Settings\UpdateListingsLiteReportSettings.cs" />
+    <Compile Include="Models\AmazonReports\Settings\UpdateListingsOpenReportSettings.cs" />
+    <Compile Include="Models\AmazonReports\Settings\UpdateListingsReportSettings.cs" />
+    <Compile Include="Models\AmazonReports\UpdateAmazonRequestedReportThread.cs" />
+    <Compile Include="Models\AmazonReports\UpdateAmazonSheduledReportThread.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Threads\Simple\AutoCreateListingsThread.cs" />
+    <Compile Include="Threads\Simple\BatchArchiveThread.cs" />
+    <Compile Include="Threads\Simple\Demo\UpdateDemoTimeStampsThread.cs" />
+    <Compile Include="Threads\Simple\DhlECommerceSwitchThread.cs" />
+    <Compile Include="Threads\Simple\Notifications\CheckDhlInvoiceThread.cs" />
+    <Compile Include="Threads\Simple\Notifications\CheckEmailStatusThread.cs" />
+    <Compile Include="Threads\Simple\Notifications\CheckKioskBarcodeThread.cs" />
+    <Compile Include="Threads\Simple\Notifications\CheckOverdueStatusThread.cs" />
+    <Compile Include="Threads\Simple\Notifications\CheckSameDayThread.cs" />
+    <Compile Include="Threads\Simple\Notifications\CheckSizeMappingThread.cs" />
+    <Compile Include="Threads\Simple\Notifications\SupportNotificationsThread.cs" />
+    <Compile Include="Threads\Simple\OrderFixupThread.cs" />
+    <Compile Include="Threads\Simple\PrintLabelsThread.cs" />
+    <Compile Include="Threads\Simple\PurchaseLabels\PurchaseLabelsForAmazonNextDayThread.cs" />
+    <Compile Include="Threads\Simple\PurchaseLabels\PurchaseLabelsForOverdueThread.cs" />
+    <Compile Include="Threads\Simple\PurchaseLabels\PurchaseLabelsForPrimeThread.cs" />
+    <Compile Include="Threads\Simple\PurchaseLabels\PurchaseLabelsForSameDayThread.cs" />
+    <Compile Include="Threads\Simple\ReValidateAddressThread.cs" />
+    <Compile Include="Threads\Simple\UpdateAmazonInfo\UpdateListingsUnpublishOnAmazonThread.cs" />
+    <Compile Include="Threads\Simple\RestartServiceThread.cs" />
+    <Compile Include="Threads\Simple\UpdateChartInfoThread.cs" />
+    <Compile Include="Threads\Simple\RefreshRateThread.cs" />
+    <Compile Include="Threads\Simple\SendEmailsThread.cs" />
+    <Compile Include="Threads\Simple\SystemActionsThread.cs" />
+    <Compile Include="Threads\Simple\UpdateAmazonInfo\AmazonReadPriceThread.cs" />
+    <Compile Include="Threads\Simple\UpdateAmazonInfo\UpdateAdjustmentDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateAmazonInfo\UpdateAmazonBuyBoxStatusThread.cs" />
+    <Compile Include="Threads\Simple\UpdateAmazonInfo\UpdateCancellationDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateAmazonInfo\UpdateFulfillmentDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateAmazonInfo\UpdateListingsDataOnAmazonThread.cs" />
+    <Compile Include="Threads\Simple\UpdateAmazonInfo\UpdateListingsImageOnAmazonThread.cs" />
+    <Compile Include="Threads\Simple\UpdateAmazonInfo\UpdateListingsPriceOnAmazonThread.cs" />
+    <Compile Include="Threads\Simple\UpdateAmazonInfo\UpdateListingsRelationshipOnAmazonThread.cs" />
+    <Compile Include="Threads\Simple\UpdateAmazonInfo\UpdateListingsPriceRuleOnAmazonThread.cs" />
+    <Compile Include="Threads\Simple\UpdateAmazonInfo\UpdateListingsQtyOnAmazonThread.cs" />
+    <Compile Include="Threads\Simple\UpdateDSInfo\UpdateDSListingQtyThread.cs" />
+    <Compile Include="Threads\Simple\UpdateDSInfo\UpdateDSOrderDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateEBayInfo\EBayRepublishThread.cs" />
+    <Compile Include="Threads\Simple\UpdateGrouponInfo\UpdateGrouponCancellationDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateGrouponInfo\UpdateGrouponAcknowledgementDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateGrouponInfo\UpdateGrouponOrderDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateOverstock\ReadListingOverstockInfoFromMarketThread.cs" />
+    <Compile Include="Threads\Simple\UpdateOverstock\UpdateOverstockListingQtyThread.cs" />
+    <Compile Include="Threads\Simple\UpdateOverstock\UpdateOverstockOrderDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateItemsFixupThread.cs" />
+    <Compile Include="Threads\Simple\UpdateRecountingThread.cs" />
+    <Compile Include="Threads\Simple\UpdateCachesThread.cs" />
+    <Compile Include="Threads\Simple\UpdateEBayInfo\ReadListingEBayInfoFromMarketThread.cs" />
+    <Compile Include="Threads\Simple\UpdateEBayInfo\UpdateEBayListingDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateEBayInfo\UpdateEBayListingPriceThread.cs" />
+    <Compile Include="Threads\Simple\UpdateEBayInfo\UpdateEBayListingQtyThread.cs" />
+    <Compile Include="Threads\Simple\UpdateEBayInfo\UpdateEBayOrderDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateEmailsThread.cs" />
+    <Compile Include="Threads\Simple\UpdateImageThread.cs" />
+    <Compile Include="Threads\Simple\UpdateJetInfo\UpdateJetListingDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateJetInfo\UpdateJetListingPriceThread.cs" />
+    <Compile Include="Threads\Simple\UpdateJetInfo\UpdateJetListingQtyThread.cs" />
+    <Compile Include="Threads\Simple\UpdateJetInfo\UpdateJetOrderAcknowledgmentThread.cs" />
+    <Compile Include="Threads\Simple\UpdateJetInfo\UpdateJetOrderDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateJetInfo\UpdateJetOrderReturnDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateMagentoInfo\UpdateMagentoListingDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateMagentoInfo\UpdateMagentoListingPriceThread.cs" />
+    <Compile Include="Threads\Simple\UpdateMagentoInfo\UpdateMagentoListingQtyThread.cs" />
+    <Compile Include="Threads\Simple\UpdateMagentoInfo\UpdateMagentoOrderDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateOrdersFromOrderApiThread.cs" />
+    <Compile Include="Threads\Simple\UpdateOrderTrackingStatusThread.cs" />
+    <Compile Include="Threads\Simple\UpdateQuantityDistributionThread.cs" />
+    <Compile Include="Threads\Simple\UpdateQuantityPriceFixupThread.cs" />
+    <Compile Include="Threads\Simple\UpdateSalesEndThread.cs" />
+    <Compile Include="Threads\Simple\UpdateWooCommerceInfo\ImportWooCommerceListingDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateWooCommerceInfo\ReadWooCommerceListingInfoThread.cs" />
+    <Compile Include="Threads\Simple\UpdateShopifyInfo\ReadShopifyListingInfoThread.cs" />
+    <Compile Include="Threads\Simple\UpdateShopifyInfo\ImportShopifyListingDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateShopifyInfo\UpdateShopifyCancellationDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateShopifyInfo\UpdateShopifyListingDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateShopifyInfo\UpdateShopifyListingPriceThread.cs" />
+    <Compile Include="Threads\Simple\UpdateShopifyInfo\UpdateShopifyListingQtyThread.cs" />
+    <Compile Include="Threads\Simple\UpdateShopifyInfo\UpdateShopifyOrderDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateShopifyInfo\UpdateShopifyOrderRefundDataThread.cs" />
+    <Compile Include="Threads\Simple\UpdateShopifyInfo\UpdateShopifyPaymentStatusThread.cs" />
+    <Compile Include="Threads\Simple\UpdateStampsBalanceThread.cs" />
+    <Compile Include="Threads\Simple\Walmart\CheckWalmartListingStatusThread.cs" />
+    <Compile Include="Threads\Simple\Walmart\ReadReturnWalmartInfoFromMarketThread.cs" />
+    <Compile Include="Threads\Simple\Walmart\ReadListingWalmartInfoFromMarketThread.cs" />
+    <Compile Include="Threads\Simple\Walmart\UpdateWalmartCancellationDataThread.cs" />
+    <Compile Include="Threads\Simple\Walmart\UpdateWalmartListingDataThread.cs" />
+    <Compile Include="Threads\Simple\Walmart\UpdateWalmartListingPriceThread.cs" />
+    <Compile Include="Threads\Simple\Walmart\UpdateWalmartListingQtyThread.cs" />
+    <Compile Include="Threads\Simple\Walmart\UpdateWalmartOrderAcknowledgmentThread.cs" />
+    <Compile Include="Threads\Simple\Walmart\UpdateWalmartOrderAdjustmentDataThread.cs" />
+    <Compile Include="Threads\Simple\Walmart\UpdateWalmartOrderDataThread.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ccen.Common\Ccen.Common.csproj">
+      <Project>{447F53F9-324D-479E-849A-8AF262EF8537}</Project>
+      <Name>Ccen.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Core\Ccen.Core.csproj">
+      <Project>{B852AB63-645F-4F09-B314-29C3D46BE832}</Project>
+      <Name>Ccen.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.DAL\Ccen.DAL.csproj">
+      <Project>{64BD5177-22DC-43C8-A8E3-DDD30DC49831}</Project>
+      <Name>Ccen.DAL</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.DTO\Ccen.DTO.csproj">
+      <Project>{8342451D-92AB-4B34-80DC-ED20FBBE6A32}</Project>
+      <Name>Ccen.DTO</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.ImageProcessing\Ccen.ImageProcessing.csproj">
+      <Project>{4B3E9DAA-7AD3-44BD-AA34-185B399E5E68}</Project>
+      <Name>Ccen.ImageProcessing</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Model.General\Ccen.Model.General.csproj">
+      <Project>{B51F8C91-9759-499E-9E38-5D3EEDF86265}</Project>
+      <Name>Ccen.Model.General</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Model\Ccen.Model.csproj">
+      <Project>{4851EDE3-4EAE-4C12-B5AC-19E86915AAD2}</Project>
+      <Name>Ccen.Model</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.ReportParser\Ccen.ReportParser.csproj">
+      <Project>{216DB70D-656B-455D-9222-D29DECA1A12E}</Project>
+      <Name>Ccen.ReportParser</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Templates\Ccen.Templates.csproj">
+      <Project>{8DDF37AB-D90D-4DC0-BBDD-CD9A4EEED1F3}</Project>
+      <Name>Ccen.Templates</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="AppSettings.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>AppSettings.cs</LastGenOutput>
+    </None>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

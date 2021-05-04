@@ -1,0 +1,76 @@
+﻿@{
+    Layout = null;
+}
+<script>
+    function onSubmitBegin(e) {
+        console.log(e);
+        $("#formContent").find("#submit").showLoading("processing...");
+        $("#formContent").find("#cancel").kDisable();
+    }
+
+    function onSubmitSuccess(e) {
+        console.log(e);
+        $("#formContent").find("#submit").hideLoading();
+        $("#formContent").find("#cancel").kEnable();
+
+        popupWindow.submit(e);
+    }
+</script>
+
+
+
+@using (Ajax.BeginForm("Submit", null, FormMethod.Post, new AjaxOptions
+{
+    HttpMethod = "POST",
+    InsertionMode = InsertionMode.Replace,
+    UpdateTargetId = "partialViewContainer",
+    OnBegin = "onSubmitBegin",
+    OnSuccess = "onSubmitSuccess",
+
+}, new
+{
+    id = "formContent",
+    enctype = "multipart/form-data",
+    onkeypress = "return event.keyCode != 13;"
+}))
+{
+    <div class="">
+        <div class="k-edit-form-container" style="width: auto; position:static">
+            <div id="partialViewContainer">
+                @Html.Partial(ViewBag.PartialViewName as string)
+            </div>
+
+            <div class="k-edit-buttons k-state-default" style="position: static">
+                <table style="margin-left: auto">
+                    <tr>
+                        <td id="additional-button-panel-holder"></td>
+                        <td>
+                            <table style="margin-left: auto">
+                                <tr>
+                                    <td style="vertical-align: top">
+                                        <button tabindex="-1"
+                                                type="submit"
+                                                id="submit"
+                                                class="k-button k-button-icontext k-grid-update">
+                                            <span class="k-icon k-update"></span>
+                                            @(ViewBag.PartialViewSubmitButtonName ?? "Save")
+                                        </button>
+                                    </td>
+                                    <td style="vertical-align: top">
+                                        <button class="k-button k-button-icontext k-grid-cancel"
+                                                type="reset"
+                                                id="cancel"
+                                                onclick="popupWindow.close()">
+                                            <span class="k-icon k-cancel"></span>
+                                            Cancel
+                                        </button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+}

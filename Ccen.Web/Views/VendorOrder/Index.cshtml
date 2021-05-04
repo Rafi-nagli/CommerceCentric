@@ -1,0 +1,269 @@
+﻿@using Amazon.Common.Helpers
+@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Inventory
+@using Amazon.Web.ViewModels.Vendors
+@using Kendo.Mvc.UI
+@{
+    ViewBag.Title = "Orders to Vendors";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/inventory.ico" />
+}
+
+<script>
+    var VendorOrderModel = function (settings) {
+        var self = this;
+
+        ko.BaseViewModel.call(self);
+
+        self.settings = settings;
+        self.grid = $(settings.gridId).data("kendoGrid");
+
+        self.grid.bind("dataBound", function (e) {
+            self.resetRowNumber();
+            self.rowTotal(self.grid.dataSource.total());
+        });
+
+        self.editAction = function(sender, id) {
+            popupWindow.initAndOpen('@Url.Action(MVC.VendorOrder.Update())' + "?id=" + id,
+                "Edit Vendor Order",
+                450);
+        };
+
+        self.createAction = function (sender) {
+            popupWindow.initAndOpen('@Url.Action(MVC.VendorOrder.Create())',
+                "New Vendor Order",
+                450);
+        };
+
+        self.deleteAction = function (sender, id) {
+            $.ajax({
+                url: '@Url.Action(MVC.VendorOrder.Delete())',
+                data: { id: id },
+                async: false,
+                success: function() {
+                    self.resetRowNumber();
+                    self.grid.dataSource.read();
+                }
+            });
+        };
+
+
+        //Item
+        self.deleteItemAction = function (sender, id, parentId) {
+            $.ajax({
+                url: '@Url.Action(MVC.VendorOrderItem.Delete())',
+                data: { id: id },
+                async: false,
+                success: function () {
+                    //self.resetRowNumber();
+                    $('#VendorOrderItem_' + id).data("kendoGrid").dataSource.read();
+                }
+            });
+        };
+
+        self.createItemAction = function(sender, id) {
+            popupWindow.initAndOpen('@Url.Action(MVC.VendorOrderItem.Create())' + "?parentId=" + id,
+                "New Vendor Order Item",
+                820);
+        };
+
+        self.editItemAction = function(sender, id) {
+            popupWindow.initAndOpen('@Url.Action(MVC.VendorOrderItem.Update())' + "?id=" + id,
+                "Edit Vendor Order Item",
+                820);
+        };
+
+
+        helper.ui.addTopPager(self.grid);
+    };
+</script>
+
+<div id="page-content">
+    <ol class="breadcrumb">
+        <li><a href="#">Emails</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="k-toolbar k-grid-toolbar">
+        <a href="#"
+           class="k-button k-button-icontext k-grid-add"
+           data-bind="click: createAction">
+            <span class="k-icon k-add"></span>
+            Add Vendor Order
+        </a>
+    </div>
+
+    <div>
+        @(Html.Kendo().Grid<VendorOrderViewModel>()
+      .Name("VendorOrders")
+      .Editable(e => e.Mode(GridEditMode.PopUp))
+      .Columns(columns =>
+      {
+          columns.Bound(c => c.Id)
+              .Title("#")
+              .Width(25)
+              .Filterable(false);
+          columns.Bound(c => c.VendorName)
+              .Title("Vendor Name");
+          columns.Bound(c => c.LineTotal)
+              .Title("Line Total")
+              .ClientTemplate("#=tmpl.isNullFormat(LineTotal, '$0.00', '-')#")
+              .Width(100);
+          columns.Bound(c => c.TotalQuantity)
+              .Title("Total Qty")
+              .ClientTemplate("#=tmpl.isNull(TotalQuantity, '-')#")
+              .Width(100);
+          columns.Bound(c => c.StatusString)
+              .Width(105)
+              .Title("Status");
+          columns.Bound(c => c.CreateDate)
+            .Format("{0:" + DateHelper.DateFormat + "}")
+            .Width(70)
+            .Title("Create Date");
+          columns.Bound(c => c.Id)
+              .Width(120)
+              .Title("")
+              .Filterable(false)
+              .Sortable(false)
+              .ClientTemplate("#=tmpl.t('vendororder-buttons-column-template', data)#");
+
+
+          if (AccessManager.CanEditStyle())
+          {
+              columns.Bound(c => c.Id)
+                  .Width(40)
+                  .Title("")
+                  .ClientTemplate("<a href='javascript: void(0)' class='k-button' style='min-width: 25px' onclick='vendorOrderVm.deleteAction(this, \"${Id}\")'><span class='glyphicon glyphicon-remove am-icon'></span></a>")
+                  .Filterable(false)
+                  .Sortable(false);
+          }
+      })
+      .Sortable(conf => conf.Enabled(true).SortMode(GridSortMode.SingleColumn))
+      .Filterable(conf => conf.Enabled(true))
+      .ClientDetailTemplateId("itemsTemplate")
+      .Pageable(conf => conf.Enabled(true).Refresh(true))
+      .DataSource(dataSource => dataSource
+          .Ajax()
+          .ServerOperation(false)
+          .PageSize(50)
+          .Model(conf => conf.Id(m => m.Id))
+          .Sort(conf => conf.Add(m => m.Id).Descending())
+          .Read(read => read.Action(MVC.VendorOrder.ActionNames.GetAll, MVC.VendorOrder.Name))))
+
+    </div>
+</div>
+
+
+<script type="text/x-kendo-template" id="vendororder-buttons-column-template">
+    @if (AccessManager.CanEditVendorOrder())
+    {
+        <span>
+            <a href='javascript: void(0)'
+               class='k-button'
+               style='width:90px'
+               onclick='vendorOrderVm.editAction(this, "#=Id#")'><span class='glyphicon glyphicon-pencil am-icon'></span>Edit</a>
+        </span>
+    }
+
+    @if (AccessManager.CanEditVendorOrder())
+    {
+        <span>
+            <a class='k-button'
+               style='margin-top:4px; width:90px'
+               target="_blank"
+               href='@Url.Action("Export", "VendorOrder")?id=#=Id#'>
+                <span class='glyphicon glyphicon-save-file am-icon'></span>Excel
+            </a>
+        </span>
+    }
+
+</script>
+
+<script id="itemsTemplate" type="text/kendo-tmpl">
+    <div><b>Items:</b></div>
+    <div id="commands" class="k-toolbar k-grid-toolbar k-grid-top">
+        @if (AccessManager.CanEditVendorOrder())
+        {
+            <a href="javascript: vendorOrderVm.createItemAction(this, '#=Id#')" class="k-button k-button-icontext k-grid-add" style="margin-right: 20px">
+                <span class="k-icon k-add"></span> Add Item
+            </a>
+        }
+    </div>
+
+    @(Html.Kendo().Grid<VendorOrderItemViewModel>()
+            .Name("VendorOrderItem_#=Id#")
+            .Editable(e => e.Mode(GridEditMode.PopUp))
+            .Columns(columns =>
+            {
+                columns.Bound(c => c.Id).Width(30);
+                columns.Bound(c => c.Id)
+                    .Width(100)
+                    .Title("Picture")
+                    .ClientTemplate("<img height='75' src='\\#=Thumbnail\\#' style='border:0' />");
+                columns.Bound(c => c.StyleString)
+                    .Title("Style");
+                columns.Bound(c => c.Name)
+                    .Title("Name");
+                columns.Bound(c => c.SizeString)
+                    .Title("Sizes");
+                columns.Bound(c => c.BreakdownString)
+                    .Title("Breakdown");
+                columns.Bound(c => c.Price)
+                    .ClientTemplate("\\#=tmpl.f(Price, '$0.00')\\#")
+                    .Width(80);
+                columns.Bound(c => c.Quantity)
+                    .Width(80)
+                    .Title("Qty");
+                columns.Bound(c => c.LineTotal)
+                    .Width(80)
+                    .ClientTemplate("\\#=tmpl.f(LineTotal, '$0.00')\\#")
+                    .Title("Line Total");
+                columns.Bound(c => c.CreateDate)
+                    .Format("{0:" + DateHelper.DateFormat + "}")
+                    .Width(70)
+                    .Title("Create Date");
+                if (AccessManager.CanEditVendorOrder())
+                {
+                    columns.Bound(c => c.Id)
+                        .Title("")
+                        .Width(75)
+                        .ClientTemplate(
+                            "<a href='javascript: void(0)' class='k-button' onclick='vendorOrderVm.editItemAction(this, \"\\#=Id\\#\")'>Edit</a>" +
+                            "<a href='javascript: void(0)' class='k-button' style='margin-top:4px' onclick='vendorOrderVm.deleteItemAction(this, \"\\#=Id\\#\", #=Id#)'>Delete</a>");
+                }
+
+            })
+            .DataSource(dataSource => dataSource
+                .Ajax()
+                .Model(conf => conf.Id(m => m.Id))
+                .Read(read => read.Action(MVC.VendorOrderItem.ActionNames.GetAll, MVC.VendorOrderItem.Name, new { vendorOrderId = "#=Id#" }))
+            )
+            .ToClientTemplate()
+    )
+</script>
+
+
+
+<script>
+    $(document).ready(function () {
+        var settings = {
+            gridId: "#VendorOrders"
+        };
+
+        vendorOrderVm = new VendorOrderModel(settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+        ko.applyBindings(vendorOrderVm, document.getElementById('page-content'));
+    });
+</script>

@@ -1,0 +1,90 @@
+﻿
+
+
+.amz .header-search .t-textbox > input{
+    height: 28px;
+}
+
+.amz .header-search .k-input {
+    height: 28px;
+}
+
+
+/*.inline-menu {
+    
+}
+
+.inline-menu ul {
+    color: #696969;
+    
+    text-align: left;
+    display: inline;
+    margin: 0;
+    padding: 2px 0px 2px 0px;
+
+    list-style: none;
+}
+
+
+.inline-menu ul li {
+    display: inline-block;
+    margin-right: -4px;
+    position: relative;
+    padding: 3px 7px 3px 10px;
+    background: #dfdfdf;
+    cursor: pointer;
+    -webkit-transition: all 0.2s;
+    -moz-transition: all 0.2s;
+    -ms-transition: all 0.2s;
+    -o-transition: all 0.2s;
+    transition: all 0.2s;
+}
+
+.dark .inline-menu ul li {
+    background-color: #888;
+    color: #ccc;
+}
+
+.inline-menu ul li:hover {
+    background: #ccc;
+    color: #696969;
+}
+
+.inline-menu ul li ul {
+    padding: 0;
+    position: absolute;
+    top: 25px;
+    left: 0;
+    min-width: 200px;
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+    box-shadow: none;
+    display: none;
+    opacity: 0;
+    visibility: hidden;
+    -webkit-transiton: opacity 0.2s;
+    -moz-transition: opacity 0.2s;
+    -ms-transition: opacity 0.2s;
+    -o-transition: opacity 0.2s;
+    -transition: opacity 0.2s;
+    z-index: 10000;
+}
+
+.inline-menu ul li ul li,
+.dark .inline-menu ul li ul li  { 
+    padding: 7px 10px;
+    background: #dfdfdf;
+    color: #696969;
+    display: block; 
+    text-shadow: 0 -1px 0 #000;
+}
+
+.inline-menu ul li ul li:hover {
+     background: #ccc;
+}
+
+.inline-menu ul li:hover ul {
+    display: block;
+    opacity: 1;
+    visibility: visible;
+}*/

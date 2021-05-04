@@ -1,0 +1,750 @@
+﻿@using Amazon.Common.Helpers
+@using Amazon.Core.Models
+@using Amazon.Web.HtmlExtend
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Inventory
+@using Kendo.Mvc.UI
+@model StyleViewModel
+@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var GenerateStyleModel = function(model, settings) {
+        var self = this;
+        self.settings = settings;
+
+        self.GenerateForMarket = ko.observable();
+
+        self.MSRP = ko.observable(model.MSRP);
+        self.Price = ko.observable(model.Price);
+        self.Name = ko.observable(model.Name);
+        self.Thumbnail = ko.observable(model.Thumbnail);
+
+        self.searchTermsMaxLength = 249;
+        self.SearchTerms = ko.observable(model.SearchTerms).extend({
+            maxLength: { params: self.searchTermsMaxLength, message: "Maximum 249 characters" }
+        });
+        self.searchTermsLength = ko.computed(function () {
+            return self.SearchTerms() != null ? self.SearchTerms().length : 0;
+        });
+
+        self.WMKeywordsMaxLength = 249;
+        self.WMKeywords  = ko.observable(model.WMKeywords).extend({
+            maxLength: { params: self.WMKeywordsMaxLength, message: "Maximum 249 characters" }
+        });
+        self.WMKeywordsLength = ko.computed(function () {
+            return self.WMKeywords() != null ? self.WMKeywords().length : 0;
+        });
+
+        self.BulletPoint1 = ko.observable(model.BulletPoint1).extend({
+            maxLength: { params: 500, message: "Maximum 500 characters" }
+        });
+        self.BulletPoint2 = ko.observable(model.BulletPoint2).extend({
+            maxLength: { params: 500, message: "Maximum 500 characters" }
+        });
+        self.BulletPoint3 = ko.observable(model.BulletPoint3).extend({
+            maxLength: { params: 500, message: "Maximum 500 characters" }
+        });
+        self.BulletPoint4 = ko.observable(model.BulletPoint4).extend({
+            maxLength: { params: 500, message: "Maximum 500 characters" }
+        });
+        self.BulletPoint5 = ko.observable(model.BulletPoint5).extend({
+            maxLength: { params: 500, message: "Maximum 500 characters" }
+        });
+
+        self.init = function (model, featureListVm) {
+            self.GenerateForMarket("");
+
+            self.MSRP(model.MSRP());
+            self.Price(model.Price());
+
+            self.SearchTerms(model.SearchTerms());
+            self.WMKeywords(model.WMKeywords());
+
+            self.BulletPoint1(model.BulletPoint1());
+            self.BulletPoint2(model.BulletPoint2());
+            self.BulletPoint3(model.BulletPoint3());
+            self.BulletPoint4(model.BulletPoint4());
+            self.BulletPoint5(model.BulletPoint5());
+
+            if (dataUtils.isEmpty(self.SearchTerms())
+                && dataUtils.isEmpty(self.WMKeywords()))
+                self.buildSearchTerms(featureListVm);
+
+            if (dataUtils.isEmpty(self.BulletPoint1()))
+                self.buildBulletPoints(featureListVm);
+        }
+
+        self.buildSearchTerms = function(featureList) {
+            var sleeve = featureList.getValueByFeatureId(@((int) StyleFeatureHelper.SLEEVE));
+            var itemStyle = featureList.getValueByFeatureId(@((int) StyleFeatureHelper.ITEMSTYLE));
+            var material = featureList.getValueByFeatureId(@((int) StyleFeatureHelper.MATERIAL));
+
+            var searchTerms = "";
+            if ((itemStyle || "").toLowerCase().indexOf("pajama") >= 0)
+                searchTerms = "sleepwear, pj, jummie, new, " + (sleeve || "").toLowerCase();
+            if ((itemStyle || "").toLowerCase().indexOf("nightgown") >= 0)
+                searchTerms = "night, gown, night-gown, sleepwear, pj, jummie, new, " + (sleeve || "").toLowerCase() + ", dress up";
+
+            searchTerms = dataUtils.combineString(searchTerms, "Gift, present, 2018, 2019, cozy", ", ");
+            if ((material || "").toLowerCase().indexOf("fleece") >= 0)
+                searchTerms += ", fleece, microfleece, warm, winter spring";
+
+            self.SearchTerms(searchTerms);
+            self.WMKeywords(searchTerms);
+        }
+
+        self.buildBulletPoints = function(featureList) {
+            var mainLicense = featureList.getValueByFeatureId(@((int) StyleFeatureHelper.MAIN_LICENSE));
+            var subLicense = featureList.getValueByFeatureId(@((int) StyleFeatureHelper.SUB_LICENSE1));
+            var material = featureList.getValueByFeatureId(@((int) StyleFeatureHelper.MATERIAL));
+            var gender = featureList.getValueByFeatureId(@((int) StyleFeatureHelper.GENDER));
+            var isKids = gender == 'Boys' && gender != 'Girls';
+
+            if (mainLicense == "DC Comics/Marvel")
+            {
+                if (subLicense == "Spiderman")
+                    mainLicense = "Marvel";
+                else
+                    mainLicense = "DC Comics";
+            }
+
+            self.BulletPoint1("Authentic " + (mainLicense || "") + " product with reliable quality and durability");
+            self.BulletPoint2("Featuring " + (subLicense || ""));
+            self.BulletPoint3((material || "").toLowerCase().indexOf("cotton") >= 0 ? "100% Cotton" : (isKids ? "Flame resistant" : ""));
+            self.BulletPoint4("Machine Wash, Easy Care");
+            self.BulletPoint5(((material || "").toLowerCase().indexOf("cotton") >= 0 && isKids) ? "Made of 100% cotton so please plan for a snug fit. If you prefer a looser fit, kindly choose one size up." : "");
+        }
+
+
+        self.isNoExcelMode = ko.computed(function() {
+            return self.GenerateForMarket() == "" || self.GenerateForMarket() == null;
+        });
+    }
+
+
+    var StyleModel = function(model, settings) {
+        var self = this;
+        self.isLoaded = ko.observable(false);
+        self.settings = settings;
+
+        self.id = model.Id;
+
+        self.isNew = ko.observable(model.Id == 0);
+
+        self.wizardStep = ko.observable(0);
+        self.setStep = function (step) {
+            console.log(step);
+            self.wizardStep(step);
+        }
+        self.getStep = function () {
+            return self.wizardStep();
+        }
+
+        self.generateStyle = new GenerateStyleModel(model, settings);
+        self.GenerateForMarket = ko.observable("");
+
+        self.MSRP = ko.observable(model.MSRP)
+            .extend(ko.validation.patterns.number("please use only digits and ,."));
+        self.Price = ko.observable(model.Price);
+        self.SearchTerms = ko.observable(model.SearchTerms);
+        self.WMKeywords = ko.observable(model.WMKeywords);
+        self.BulletPoint1 = ko.observable(model.BulletPoint1);
+        self.BulletPoint2 = ko.observable(model.BulletPoint2);
+        self.BulletPoint3 = ko.observable(model.BulletPoint3);
+        self.BulletPoint4 = ko.observable(model.BulletPoint4);
+        self.BulletPoint5 = ko.observable(model.BulletPoint5);
+
+        self.canEditStyle = ko.observable(self.settings.isAdmin || self.isNew());
+        self.StyleId = ko.observable(model.StyleId)
+            .extend({
+                required: {
+                    message: "*",
+                    onlyIf: function() {
+                        return self.canEditStyle();
+                    }
+                },
+                pattern: {
+                    message: "Only the following special characters are allowed: -_.",
+                    params: '^([-_.0-9a-zA-Z]*)$'
+                }
+            });
+        self.Name = ko.observable(model.Name);
+        self.nameLength = ko.computed(function() {
+            return (self.Name() || "").length;
+        });
+
+        self.description = ko.observable(model.Description || "");
+
+        self.dropShipperId = ko.observable(model.DropShipperId);
+        self.dropShipperList = ko.observable(settings.dropShipperList);
+
+        self.canEditDS = ko.computed(function () {
+            return true;
+        });
+
+        self.itemTypeId = ko.observable(model.ItemTypeId);
+        self.itemTypeId.subscribe(function() {
+            helper.ui.showLoading($("#info"), "refreshing...");
+            self.reload();
+        });
+        self.ItemTypeList = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.ItemTypes));
+
+        self.fillingStatus = ko.observable(model.FillingStatus);
+        self.fillingStatusList = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.FillingStatuses));
+
+        self.pictureStatus = ko.observable(model.PictureStatus);
+        self.pictureStatusUpdateDate = ko.observable(model.PictureStatusUpdateDate != null ? new Date(model.PictureStatusUpdateDate) : null);
+        self.pictureStatusList = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.PictureStatuses));
+
+        self.styleItemsList = ko.observable({ styleItems: [] });
+
+        self.commentUpdateDate = ko.observable(model.CommentUpdateDate != null ? new Date(model.CommentUpdateDate) : null);
+
+        self.reload = function() {
+            console.log("reload: id=" + model.Id + ", type=" + self.itemTypeId());
+            $("#popup").data("kendoWindow").refresh({
+                url: '@Url.Action("UpdateStyle", "Inventory")' + "?id=" + model.Id + "&itemType=" + self.itemTypeId()
+            });
+        };
+
+        self.switchToQty = function() {
+            console.log("switchToQty, id=" + self.id);
+
+            popupWindow.customAction("openStyleQuantity", {
+                id: self.id,
+                type: self.Type,
+            });
+        };
+
+        self.canSwitchToQty = ko.computed(function() {
+            return self.isLoaded() && !self.isNew();
+        });
+
+        self.switchToPrice = function() {
+            console.log("switchToPrice, id=" + self.id);
+
+            popupWindow.customAction("openStylePrice", {
+                id: self.id,
+                type: self.Type,
+            });
+        };
+
+        self.canSwitchToPrice = ko.computed(function() {
+            return self.isLoaded() && !self.isNew();
+        });
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function() {
+            return self.errors().length === 0;
+        });
+        self.onSubmit = function (data, e) { // function(data, e) {
+            self.saveBulletPoints();
+            //console.log(data);
+            console.log(e);
+            console.log("save click");
+            //var validator = $("#form").kendoValidator().data('kendoValidator');
+
+            //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+            //http://jsfiddle.net/KHFn8/3238/
+            if (self.isValid() && locationVm.isValid()) { //validator.validate() &&
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                locationVm.errors.showAllMessages();
+                e.preventDefault();
+                return false;
+            }
+        };
+
+
+        self.generateContentPopup = null;
+        self.onOpenGenerate = function(date, e) {
+            console.log("onGenerate"); //windowContainer2
+
+            self.generateStyle.init(this);
+
+            if (self.generateContentPopup == null) { //Create new when first open for style
+                console.log($(".generateContent").length);
+                $(".generateContent").each(function(i) {
+                    var popup = $(this).data("kendoWindow");
+                    if (popup != null) {
+                        console.log("close previous generate popup");
+
+                        popup.close();
+                        popup.destroy();
+                    }
+                });
+
+                var popupModel = new GeneratePopupModel();
+                popupModel.init(self);
+
+                console.log("create new generate popup");
+                $("#generateContent").kendoWindow({
+                    modal: true,
+                    width: "800px",
+                    title: "Generate Excel",
+                    visible: false,
+                    actions: [
+                        "Close"
+                    ],
+                });
+
+            }
+            var popup = $("#generateContent").data("kendoWindow");
+            popup.center().open();
+
+            self.generateContentPopup = popup;
+        }
+
+        self.onCloseGenerate = function(data, e) {
+            console.log('onCloseGenerate');
+            $("#generateContent").data("kendoWindow").close();
+        }
+
+        self.onGenerateValidation = function (data, e) {
+            var defer = $.Deferred();
+            console.log("onGenerateValidation");
+            var noBarcodes = $.grep(self.styleItemsList().styleItems(), function (m) {
+                return $.grep(m.barcodes(), function (b) {
+                    return !dataUtils.isNullOrEmpty(b.Barcode);
+                }).length == 0 && m.AutoGeneratedBarcode() == false;
+            });
+
+            console.log("noBarcodes: " + noBarcodes.length);
+            console.log(self.styleItemsList().styleItems());
+            if (noBarcodes.length > 0) {
+                Message.popupAsync({
+                    title: 'Confirm',
+                    message: 'Set "auto-generate barcode" for all sizes w/o barcodes?',
+                    type: Message.YES_NO
+                }).done(function () {
+                    console.log("setting auto-generate for all");
+                    for (var i = 0; i < self.styleItemsList().styleItems().length; i++) {
+                        if ($.grep(self.styleItemsList().styleItems()[i].barcodes(), function (b) {
+                            return !dataUtils.isNullOrEmpty(b.Barcode);
+                        })) {
+                            console.log("set AutoGeneratedBarcode=true, size=" + self.styleItemsList().styleItems()[i].Size);
+                            self.styleItemsList().styleItems()[i].AutoGeneratedBarcode(true);
+                        }
+                    }
+                    defer.resolve();
+                }).fail(function () {
+                    console.log("skip setting auto-generate");
+                    defer.resolve();
+                });
+            }
+            else
+            {
+                defer.resolve(false);
+            }
+            return defer;
+        }
+
+        self.saveBulletPoints = function () {
+            self.Price(self.generateStyle.Price());
+            self.MSRP(self.generateStyle.MSRP());
+
+            self.WMKeywords(self.generateStyle.WMKeywords());
+            self.SearchTerms(self.generateStyle.SearchTerms());
+            self.BulletPoint1(self.generateStyle.BulletPoint1());
+            self.BulletPoint2(self.generateStyle.BulletPoint2());
+            self.BulletPoint3(self.generateStyle.BulletPoint3());
+            self.BulletPoint4(self.generateStyle.BulletPoint4());
+            self.BulletPoint5(self.generateStyle.BulletPoint5());
+        }
+
+        self.onGenerate = function(date, e) {
+            console.log('onGenerate, market=' + self.GenerateForMarket());
+
+            var task = self.onGenerateValidation();
+            task.done(function () {
+                self.saveBulletPoints();
+
+                self.GenerateForMarket(self.generateStyle.GenerateForMarket());
+
+                $("#generateContent").data("kendoWindow").close();
+                $('#submit').click();
+            });
+        }
+
+        self.isLoaded(true);
+    };
+
+
+
+    function resetTabindexes(table, index) {
+        var tabindex = index;
+        var f = index + 1;
+
+        $(table + ">tbody>tr").each(function () {
+
+            var $tr = $(this);
+            var isChecked = $tr.find("input:checkbox").is(":checked");
+            if (isChecked) {
+                $tr.find(".barcode").each(function () {
+
+                    var tb = $(this);
+                    if (tb.parent().parent().is(':visible'))
+                    {
+                        tabindex++;
+                        tb.attr("tabindex", tabindex);
+                    }
+                });
+            } else {
+                $tr.find("input:text").removeAttr("tabindex");
+            }
+        });
+        $(table + ">tbody>tr").each(function () {
+            var $tr = $(this);
+
+            var isChecked = $tr.find("input:checkbox").is(":checked");
+            if (isChecked) {
+                $tr.find(".barcode").each(function() {
+                    var tb = $(this);
+                    var ind = $(tb).attr('tabindex');
+                    tb.on('keydown', function(e) {
+                        if (e.keyCode === 13) {
+                            ind++;
+                            var next = $('[tabindex=' + ind + ']');
+                            next.focus();
+                        }
+                    });
+                });
+            }
+        });
+
+        $('[tabindex=' + f + ']').focus();
+    }    
+</script>
+
+<style>
+    .am-style-popup .k-dropdown {
+        width: 13.4em;
+    }
+</style>
+
+<div id="edit-style-container">
+    <div class="inventory-popup am-style-popup">
+        <div class="k-edit-form-container">
+            @Html.HiddenFor(m => m.Id)
+            @Html.ValidationSummary(false)
+
+            <input type="hidden" name="GenerateForMarket" data-bind="value: GenerateForMarket" />
+            <input type="hidden" name="ItemTypeId" data-bind="value: itemTypeId" />
+            <input type="hidden" name="Price" data-bind="value: Price" />
+            <input type="hidden" name="SearchTerms" data-bind="value: SearchTerms" />
+            <input type="hidden" name="WMKeywords" data-bind="value: WMKeywords" />
+            <input type="hidden" name="BulletPoint1" data-bind="value: BulletPoint1" />
+            <input type="hidden" name="BulletPoint2" data-bind="value: BulletPoint2" />
+            <input type="hidden" name="BulletPoint3" data-bind="value: BulletPoint3" />
+            <input type="hidden" name="BulletPoint4" data-bind="value: BulletPoint4" />
+            <input type="hidden" name="BulletPoint5" data-bind="value: BulletPoint5" />
+
+            <div style="padding-top: 10px">
+                <ul class="nav nav-tabs" style="padding-top: 10px;">
+                    <li role="presentation" data-bind="css: { 'active': wizardStep() == 0 }"><a href="javascript:;" data-bind="click: function() { setStep(0); }">General</a></li>
+                    <li role="presentation" data-bind="css: { 'active': wizardStep() == 1 }"><a href="javascript:;" data-bind="click: function() { setStep(1); }">Images</a></li>
+                    <li role="presentation" data-bind="css: { 'active': wizardStep() == 2 }"><a href="javascript:;" data-bind="click: function() { setStep(2); }">Weights</a></li>
+                    <li role="presentation" data-bind="css: { 'active': wizardStep() == 3 }"><a href="javascript:;" data-bind="click: function() { setStep(3); }">Features</a></li>
+                    <li role="presentation" data-bind="css: { 'active': wizardStep() == 4 }"><a href="javascript:;" data-bind="click: function() { setStep(4); }">Bullet Boints</a></li>
+                    <li role="presentation" data-bind="css: { 'active': wizardStep() == 5 }"><a href="javascript:;" data-bind="click: function() { setStep(5); }">Marketplaces</a></li>
+                </ul>
+            </div>
+
+            <div class="style-main-info" style="background-color: #e5e5e5; margin-bottom: 10px; display: none">
+                <div style="padding: 10px 0 0px 0; width: 350px;">
+                    <div class="editor-label">Type</div>
+                    <div class="editor-field">
+                        <input name="ItemTypeId" data-bind="kendoDropDownList: {data: ItemTypeList, value: itemTypeId, dataTextField: 'Text', dataValueField: 'Value' }" />
+                        <div id="info"></div>
+                    </div>
+                    <div style='clear: both'></div>
+                </div>
+            </div>
+
+
+            <div class="style-panel" data-bind="visible: getStep() == 0">
+                <div class="panel panel-default">
+                    <div class="panel-heading">General</div>
+                    <div class="panel-body">
+                        <div class="editor-label">Style ID</div>
+                        <div class="editor-field">
+                            <div style="display: none">
+                                <input type="hidden" name="StyleId" data-bind="value: StyleId" />
+                            </div>
+                            <input type="text" data-bind="value: StyleId, enable: canEditStyle" tabindex="1" class="k-textbox" />
+                        </div>
+                        <div style="color: red; margin-left: 35px" id="StyleMsg"></div>
+
+                        <div class="editor-label">Original<br />Style ID <span class="red" data-bind="visible: isNew">*</span></div>
+                        <div class="editor-field">@Html.TextBoxFor(m => m.OriginalStyleId, new { tabindex = 2, @class = "k-textbox" })</div>
+
+                        <div class="editor-label">On Hold</div>
+                        <div class="editor-field" style="margin-top: 2px">
+                            <input type="checkbox"
+                                   @(Model.OnHold ? "checked='checked'" : "")
+                                   id="OnHold"
+                                   name="OnHold"
+                                   class="cmn-toggle cmn-toggle-round"
+                                   tabindex="3" />
+                            <label for="OnHold"></label>
+                        </div>
+
+                        <div class="editor-label">Name</div>
+                        <div class="editor-field">
+                            <textarea name="Name"
+                                      data-bind="value: Name, valueUpdate:'afterkeydown'"
+                                      tabindex="4"
+                                      rows="3"
+                                      style="width: 230px"
+                                      class="k-textbox"></textarea>
+                            <div class="note">symbols: <span data-bind="text: nameLength"></span></div>
+                        </div>
+                        @*<div class="editor-label">Display Name</div>
+                    <div class="editor-field">@Html.TextAreaFor(m => m.DisplayName, new {tabindex = 5, style = "width: 230px", rows = 3, @class = "k-textbox"})</div>*@
+
+                        <div class="editor-label">Manufacturer</div>
+                        <div class="editor-field">@Html.TextBoxFor(m => m.Manufacturer, new { tabindex = 6, @class = "k-textbox" })</div>
+
+                        <div class="editor-label">MSRP</div>
+                        <div class="editor-field">
+                            <input name="MSRP"
+                                   data-bind="value: MSRP"
+                                   tabindex="7"
+                                   class="k-textbox" />
+                        </div>
+
+                        <div class="editor-label">Dropshipper:</div>
+                        <div class="editor-field" style="margin-top: 3px">
+                            <input type="hidden" name="DropShipperId" data-bind="value: dropShipperId" />
+                            <input data-bind="kendoDropDownList: {data: dropShipperList, value: dropShipperId, dataTextField: 'Text', dataValueField: 'Value', enabled: canEditDS }" />
+                        </div>
+
+                        <div class="editor-label">Description</div>
+                        <div class="editor-field">
+                            <textarea name="Description"
+                                      data-bind="value: description, valueUpdate:'afterkeydown'"
+                                      tabindex="8"
+                                      rows="4"
+                                      style="width: 230px"
+                                      class="k-textbox"></textarea>
+                            <div class="note">symbols: <span data-bind="text: description().length"></span></div>
+                        </div>
+
+                        <div class="editor-label">For kiosks</div>
+                        <div class="editor-field" style="margin-top: 3px">
+                            <input type="checkbox"
+                                   @(Model.IsHidden ? "checked='checked'" : "")
+                                   id="IsHidden"
+                                   name="IsHidden"
+                                   class="cmn-toggle cmn-toggle-round"
+                                   tabindex="8" />
+                        </div>
+                        <div class="editor-label">Rem. price tag</div>
+                        <div class="editor-field" style="margin-top: 3px">
+                            <input type="checkbox"
+                                   @(Model.RemovePriceTag ? "checked='checked'" : "")
+                                   id="RemovePriceTag"
+                                   name="RemovePriceTag"
+                                   class="cmn-toggle cmn-toggle-round"
+                                   tabindex="9" />
+                        </div>
+                        <div class="editor-label">Status:</div>
+                        <div class="editor-field" style="margin-top: 3px">
+                            <input name="FillingStatus" data-bind="kendoDropDownList: {data: fillingStatusList, value: fillingStatus, dataTextField: 'Text', dataValueField: 'Value' }" />
+                        </div>
+                        <div class="editor-label">Picture status:</div>
+                        <div class="editor-field" style="margin-top: 3px">
+                            <input name="PictureStatus" data-bind="kendoDropDownList: {data: pictureStatusList, value: pictureStatus, dataTextField: 'Text', dataValueField: 'Value' }" />
+                            <div><span class="remark">updated at <span data-bind="textFormatted: pictureStatusUpdateDate, pattern: 'MM.dd.yyyy', ifEmpty: '-'"></span></span></div>
+                        </div>
+
+                        <div class="editor-label">Comment</div>
+                        <div class="editor-field">
+                            @Html.TextAreaFor(m => m.Comment, new { tabindex = 8, rows = 2, style = "width: 230px", @class = "k-textbox" })
+                            <div><span class="remark">updated at <span data-bind="textFormatted: commentUpdateDate, pattern: 'MM.dd.yyyy', ifEmpty: '-'"></span></span></div>
+                        </div>
+
+                        <div class="clear"></div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="style-panel" data-bind="visible: getStep() == 1">
+                @Html.Partial("_ItemImages", Model)
+            </div>
+
+            <div data-bind="visible: getStep() == 2">
+                <div class="style-panel">
+                    @Html.Partial("_ItemStyleItems", Model.StyleItems)
+                </div>
+
+                <div class="style-panel">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">Locations</div>
+                        <div class="panel-body">
+                            @Html.Partial("_ItemLocations", Model.Locations)
+                            <div class="clear"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="style-panel style-features-panel" data-bind="visible: getStep() == 3">
+                <div class="panel panel-default">
+                    <div class="panel-heading">Features</div>
+                    <div class="panel-body">
+                        @Html.Partial("_ItemFeatures", Model.Features)
+                        <div class="clear"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="style-panel style-features-panel"
+                 data-bind="visible: getStep() == 4">
+                <div class="panel panel-default">
+                    <div class="panel-heading">Bullet Points</div>
+                    <div class="panel-body">
+                        @Html.Partial("_ItemBulletPoints")
+                        
+                        <div class="clear"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="style-panel style-features-panel"
+                 data-bind="visible: getStep() == 5">
+                <div class="panel panel-default">
+                    <div class="panel-heading">Marketplaces</div>
+                    <div class="panel-body">
+                        @Html.Partial("_ItemPublishes", Model.Publishes)
+                        <div class="clear"></div>
+                    </div>
+                </div>
+            </div>
+
+
+
+            @Html.Partial("_GeneratePopupInfo")
+
+            <div>
+                @Html.ValidationSummary(false)
+            </div>
+        </div>
+        </div>
+
+    <div class="k-edit-buttons k-state-default popup-button-panel" style="position: static">
+        <table style="width: 100%">
+            <tr>
+                <td style="text-align: left">
+                    <button tabindex="-1"
+                            type="button"
+                            data-bind="click: onOpenGenerate"
+                            class="k-button k-button-icontext k-grid-update">
+                        <span class="glyphicon glyphicon-save-file am-icon"></span>Save & Generate...
+                    </button>
+                </td>
+                <td>
+                    <table style="margin-left: auto">
+                        <tr>
+                            <td style="display: none; padding-right: 15px;"
+                                data-bind="visible: canSwitchToPrice">
+                                <button class="k-button"
+                                        data-bind="click: switchToPrice">
+                                    <span class="glyphicon glyphicon-usd am-icon"></span>Switch to Price
+                                </button>
+                            </td>
+
+                            <td style="display: none; padding-right: 25px;"
+                                data-bind="visible: canSwitchToQty">
+                                <button class="k-button"
+                                        data-bind="click: switchToQty">
+                                    <span class="glyphicon glyphicon-list am-icon"></span>Switch to Quantity
+                                </button>
+                            </td>
+
+                            <td>
+                                <button tabindex="-1"
+                                        type="submit"
+                                        id="submit"
+                                        data-bind="click: onSubmit"
+                                        class="k-button k-button-icontext k-grid-update">
+                                    <span class="k-icon k-update"></span>Save
+                                </button>
+                            </td>
+                            <td style="padding-left: 4px">
+                                <button class="k-button k-button-icontext k-grid-cancel"
+                                        type="reset"
+                                        id="cancel"
+                                        onclick="popupWindow.close()">
+                                    <span class="k-icon k-cancel"></span>Cancel
+                                </button>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<script type="text/javascript">
+    $('#StyleId').on('blur', function () {
+        var styleId = $('#StyleId').val();
+        var id = $('#Id').val();
+        $.ajax({
+            url: '@Url.Action("CheckStyleId", "Inventory")',
+            data: {
+                id: id,
+                styleId: styleId
+            },
+            async: false,
+            success: function (data) {
+                if (!data) {
+                    $('#StyleMsg').text("Style with this Style Id already exists");
+                } else {
+                    $('#StyleMsg').text("");
+                }
+            }
+        });
+    });
+
+
+    var styleModel = null;
+    $(document).ready(function() {
+        $('[tabindex=' + 1 + ']').focus();
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+            markets: {
+                amazon: @((int)MarketType.Amazon),
+                amazonEU: @((int)MarketType.AmazonEU),
+                amazonAU: @((int)MarketType.AmazonAU),
+                walmart: @((int)MarketType.Walmart),
+                walmartCA: @((int)MarketType.WalmartCA),
+                jet: @((int)MarketType.Jet),
+            },
+            isAdmin: @(AccessManager.IsAdmin ? 1 : 0),
+            dropShipperList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.DropShipperList))
+        }
+
+        styleModel = new StyleModel(model, settings);
+        styleModel.generateStyle.init(styleModel, featureListVm);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(styleModel, $('#edit-style-container')[0]);
+    });
+</script>

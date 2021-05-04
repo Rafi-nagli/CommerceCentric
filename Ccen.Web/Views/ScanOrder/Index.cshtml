@@ -1,0 +1,188 @@
+﻿@using Amazon.Common.Helpers
+@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Inventory
+@using Amazon.Web.ViewModels.ScanOrders
+@using Amazon.Web.ViewModels.Vendors
+@using Kendo.Mvc.UI
+@{
+    ViewBag.Title = "Scan Inventory";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/inventory.ico" />
+}
+
+<script>
+    var ScanOrderModel = function (settings) {
+        var self = this;
+
+        ko.BaseViewModel.call(self);
+
+        self.settings = settings;
+        self.grid = $(settings.gridId).data("kendoGrid");
+
+        self.grid.bind("dataBound", function (e) {
+            self.resetRowNumber();
+            self.rowTotal(self.grid.dataSource.total());
+        });
+
+        self.editItemAction = function(sender, id, orderId) {
+            popupWindow.initAndOpenWithSettings({
+                title: "Edit Scan Item",
+                content: '@Url.Action(MVC.ScanOrderItem.Update())' + "?scanItemId=" + id + "&scanOrderId=" + orderId,
+                width: 420,
+                submitSuccess: self.onSubmitSuccess
+            });
+        };
+
+        self.onSubmitSuccess = function(e) {
+            var grid = $("#" + e.GridName);
+            if (grid != null && grid.length > 0)
+                grid.refreshRow(e.Row, e.UpdateFields, e.ForseGridRefresh, 0);
+        };
+
+        self.addStyle = function () {
+            popupWindow.initAndOpenWithSettings({
+                content: '@Url.Action(MVC.Inventory.CreateStyle(ItemType.Pajama))',
+                title: "Add Style",
+                width: 1170,
+                customAction: self.onPopupCustomAction,
+                submitSuccess: function (result) {
+                    
+                }
+            });
+        };
+
+        helper.ui.addTopPager(self.grid);
+    };
+</script>
+
+<div id="page-content">
+
+
+    <ol class="breadcrumb">
+        <li><a href="#">Inventory</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+    
+    @if (AccessManager.CanEditStyle())
+    {
+        <div class="k-toolbar k-grid-toolbar">
+            <a href="#"
+                class="k-button k-button-icontext k-grid-add"
+                style="margin-right: 20px"
+                data-bind="click: addStyle">
+                <span class="k-icon k-add"></span>
+                Add new style
+            </a>
+        </div>
+    }
+
+    <div class="grid-small">
+        @(Html.Kendo().Grid<ScanOrderViewModel>()
+          .Name("ScanOrders")
+          .Editable(e => e.Mode(GridEditMode.PopUp))
+          .Columns(columns =>
+          {
+              columns.Bound(c => c.Id)
+                  .Title("Scan Id")
+                  .Width(70)
+                  .Filterable(false);
+              columns.Bound(c => c.Name)
+                  .Title("Scan Batch Name");
+              columns.Bound(c => c.TotalQuantity)
+                  .Title("Scanned");
+              columns.Bound(c => c.TotalCost)
+                  .Title("Total Cost");
+              columns.Bound(c => c.OrderDate)
+                  .Format("{0:" + DateHelper.DateFormat + "}")
+                  .Width(150)
+                  .Title("Scan Date");
+          })
+          .Sortable(conf => conf.Enabled(true).SortMode(GridSortMode.SingleColumn))
+          .Pageable(conf => conf.Enabled(true).Refresh(true))
+          .Filterable(conf => conf.Enabled(true))
+          .ClientDetailTemplateId("itemsTemplate")
+          .DataSource(dataSource => dataSource
+              .Ajax()
+              .ServerOperation(false)
+              .PageSize(50)
+              .Model(conf => conf.Id(m => m.Id))
+              .Sort(conf => conf.Add(m => m.OrderDate).Descending())
+              .Read(read => read.Action(MVC.ScanOrder.ActionNames.GetAll, MVC.ScanOrder.Name))))
+    </div>
+</div>
+
+
+<script id="itemsTemplate" type="text/kendo-tmpl">
+    <div><b>Barcodes:</b></div>
+
+    @(Html.Kendo().Grid<ScanOrderItemViewModel>()
+            .Name("ScanOrderItem_#=Id#")
+            .Editable(e => e.Mode(GridEditMode.PopUp))
+            .Columns(columns =>
+            {
+                columns.Bound(c => c.Id).Title("Item Id").Width(60);
+                columns.Bound(c => c.Barcode)
+                    .Width(150)
+                    .Title("Barcode");
+                columns.Bound(c => c.Quantity)
+                    .Width(100)
+                    .Title("Quantity");
+                columns.Bound(c => c.StyleString)
+                    .Title("Style")
+                    .ClientTemplate("\\#if (StyleString != null) {\\# <a target='_blank' href='\\#=StyleUrl\\#'>\\#=StyleString\\#</a> \\#} else {\\# <span>-</span> \\#}\\#");
+                columns.Bound(c => c.Size)
+                    .Title("Size");
+                columns.Bound(c => c.StyleName)
+                    .Title("Style Name");
+                columns.Bound(c => c.SubLicense)
+                    .Title("Sub License");
+                if (AccessManager.CanEditScanOrder())
+                {
+                    columns.Bound(c => c.Id)
+                        .Title("")
+                        .Width(95)
+                        .ClientTemplate("\\#=tmpl.t('scanorderitem-buttons-column-template', data)\\#");
+                }
+            })
+            .DataSource(dataSource => dataSource
+                .Ajax()
+                .Model(conf => conf.Id(m => m.Id))
+                .Sort(conf => conf.Add(m => m.Id).Descending())
+                .Read(read => read.Action(MVC.ScanOrderItem.ActionNames.GetAll, MVC.ScanOrderItem.Name, new { scanOrderId = "#=Id#" }))
+            )
+            .ToClientTemplate()
+    )
+</script>
+
+<script type="text/x-kendo-template" id="scanorderitem-buttons-column-template">
+    #if (StyleString == null) {#
+    <a href='javascript: void(0)' class='k-button' onclick='scanOrderVm.editItemAction(this, "#=Id#", "#=ScanOrderId#")'>Set Style</a>
+    #} else {#
+    <span>-</span>
+    #}#
+</script>
+
+    <script>
+        $(document).ready(function () {
+            var settings = {
+                gridId: "#ScanOrders"
+            };
+
+            scanOrderVm = new ScanOrderModel(settings);
+
+            ko.validation.init({
+                errorElementClass: "input-validation-error",
+                errorMessageClass: "field-validation-error",
+                decorateElement: true,
+                decorateInputElement: true,
+                decorateElementOnModified: true
+            });
+            ko.applyBindings(scanOrderVm, document.getElementById('page-content'));
+        });
+    
+</script>

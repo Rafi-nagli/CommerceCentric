@@ -1,0 +1,320 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Model.Implementation.Markets
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+
+@if (AccessManager.IsAuthenticated)
+{
+    if (AccessManager.Company.ShortName == PortalEnum.PA.ToString()
+        || AccessManager.Company.ShortName == PortalEnum.MBG.ToString())
+    {
+        @(Html.Kendo().Menu().SecurityTrimming(false)
+                .Name("menu")
+                .Items(menu =>
+                {
+                    if (AccessManager.IsRestricted)
+                    {
+                        menu.Add().Text("Dashboard").Action("Index", "Dashboard");
+                        //menu.Add().Text("Inventory").Action("Styles", "Inventory");
+                    }
+                    else
+                    {
+                        menu.Add().Text("Dashboard").Action("Index", "Dashboard");
+                        menu.Add().Text("Orders").Action("Orders", "Order").Items(item =>
+                        {
+                            item.Add().Text("Orders").Action("Orders", "Order");
+                            item.Add().Text("Pending Orders").Action("PendingOrders", "Order");
+                            item.Add().Text("FBA Orders").Action("FBAOrders", "Order");
+                            item.Add().Text("WFS Orders").Action("FBAOrders", "Order", new { market = "Walmart" });
+                            //item.Add().Text("eBay Orders").Action("EBayOrders", "Order");
+                            //item.Add().Text("Magento Orders").Action("MagentoOrders", "Order");
+                            //item.Add().Text("Walmart Orders").Action("WalmartOrders", "Order");
+                            if (AccessManager.CanPrintLabel())
+                            {
+                                item.Add().Text("<div class='k-separator'></div>").Encoded(false).Enabled(false);
+                                item.Add().Text("Return/Exchange").Action("Index", "ReturnOrder");
+                            }
+                        });
+
+                        menu.Add().Text("Listings").Action("Products", "Item", new { market = MarketType.Amazon, marketplaceId = MarketplaceKeeper.AmazonComMarketplaceId })
+                            .Items(item =>
+                            {
+                                foreach (var market in MarketHelper.GetOrderPageMarketplaces())
+                                {
+                                    item.Add().Text("Listings " + market.DotName).Action("Products", "Item", new { market = market.Market, marketplaceId = market.MarketplaceId });
+                                }
+                                item.Add().Text("<div class='k-separator'></div>").Encoded(false).Enabled(false);
+                                item.Add().Text("Check Rank").Action("CheckRank", "Item");
+                                item.Add().Text("Check Barcode").Action("CheckBarcode", "Item");
+                            });
+
+                        if (MobileHelper.IsMobileDeviceCustom())
+                        {
+                            menu.Add().Text("Inventory").Items(pItem =>
+                            {
+                                pItem.Add().Text("Inventory").Action("Styles", "Inventory");
+                                pItem.Add().Text("Inventory Group").Action("Index", "InventoryGroup");
+                                if (!AccessManager.IsReadonly)
+                                {
+                                    pItem.Add().Text("<div class='k-separator'></div>").Encoded(false).Enabled(false);
+                                    pItem.Add().Text("Inventory Special Cases").Action("Index", "QuantityOperation");
+                                    pItem.Add().Text("Scan Inventory").Action("Index", "ScanOrder");
+                                }
+                                pItem.Add().Text("<div class='k-separator'></div>").Encoded(false).Enabled(false);
+                                pItem.Add().Text("Inventory Counting").Action("Styles", "InventoryCounting");
+                                pItem.Add().Text("Inventory 2017").Action("Styles", "InventoryLiteCounting");
+                                pItem.Add().Text("Inventory Approve").Action("Approve", "InventoryLiteCounting");
+                                pItem.Add().Text("Inventory Descriptions").Action("Styles", "InventoryDescription");
+                                pItem.Add().Text("<div class='k-separator'></div>").Encoded(false).Enabled(false);
+                                pItem.Add().Text("FBA Shipments").Action("Index", "Shipment", new { shipmenttype = "FBA" });
+                                pItem.Add().Text("WFS Shipments").Action("Index", "Shipment", new { shipmenttype = "WFS" });
+                                pItem.Add().Text("<div class='k-separator'></div>").Encoded(false).Enabled(false);
+                                pItem.Add().Text("Barcode-SKU List").Action("Index", "CustomBarcode");
+                                pItem.Add().Text("Photoshoots").Action("Index", "Photoshoot");
+                            });
+                        }
+                        else
+                        {
+                            menu.Add().Text("Inventory").Action("Styles", "Inventory").Items(pItem =>
+                            {
+                                pItem.Add().Text("Inventory").Action("Styles", "Inventory");
+                                pItem.Add().Text("Inventory Group").Action("Index", "InventoryGroup");
+                                if (!AccessManager.IsReadonly)
+                                {
+                                    pItem.Add().Text("<div class='k-separator'></div>").Encoded(false).Enabled(false);
+                                    pItem.Add().Text("Inventory Special Cases").Action("Index", "QuantityOperation");
+                                    pItem.Add().Text("Scan Inventory").Action("Index", "ScanOrder");
+                                }
+                                pItem.Add().Text("<div class='k-separator'></div>").Encoded(false).Enabled(false);
+                                pItem.Add().Text("Inventory Counting").Action("Styles", "InventoryCounting");
+                                pItem.Add().Text("Inventory 2019").Action("Styles", "InventoryLiteCounting");
+                                pItem.Add().Text("Inventory: Approve Counting").Action("Approve", "InventoryLiteCounting");
+                                pItem.Add().Text("Inventory Descriptions").Action("Styles", "InventoryDescription");
+                                pItem.Add().Text("<div class='k-separator'></div>").Encoded(false).Enabled(false);
+                                pItem.Add().Text("FBA Shipments").Action("Index", "Shipment", new { shipmenttype = "FBA" });
+                                pItem.Add().Text("WFS Shipments").Action("Index", "Shipment", new { shipmenttype = "WFS" });
+                                pItem.Add().Text("<div class='k-separator'></div>").Encoded(false).Enabled(false);
+                                pItem.Add().Text("Barcode-SKU List").Action("Index", "CustomBarcode");
+                                pItem.Add().Text("Photoshoots").Action("Index", "Photoshoot");
+                            });
+                        }
+
+                        menu.Add().Text("Batches").Action("ActiveBatches", "Batch").Items(lItem =>
+                        {
+                            lItem.Add().Text("Active Batches").Action("ActiveBatches", "Batch");
+                            if (!AccessManager.IsReadonly)
+                            {
+                                lItem.Add().Text("Batches").Action("Batches", "Batch");
+                            }
+                        });
+
+                        menu.Add().Text("Labels").Action("Index", "Mailing").Items(lItem =>
+                        {
+                            if (AccessManager.CanPrintLabel())
+                            {
+                                lItem.Add().Text("Mailing label").Action("Index", "Mailing");
+                                lItem.Add().Text("<div class='k-separator'></div>").Encoded(false).Enabled(false);
+                            }
+                            lItem.Add().Text("Print Files").Action("PrintFiles", "Print");
+                        });
+
+                        if (!AccessManager.IsReadonly)
+                            menu.Add().Text("Vendors").Items(vItem =>
+                            {
+                                vItem.Add().Text("Orders to Vendors").Action("Index", "VendorOrder");
+                            });
+
+                        if (!AccessManager.IsReadonly)
+                        {
+                            menu.Add().Text("Tracking").Items(item =>
+                            {
+                                item.Add().Text("Track Orders").Action("Index", "OrderToTrack");
+                                item.Add().Text("Not Delivered").Action("Index", "NotDelivered");
+                            });
+                        }
+
+
+                        menu.Add().Text("Emails").Action("Index", "Email").Items(eItem =>
+                        {
+                            eItem.Add().Text("Emails").Action("Index", "Email");
+                            if (!AccessManager.IsReadonly)
+                            {
+                                eItem.Add().Text("Request Feedback").Action("Index", "Feedback");
+                            }
+                        });
+
+
+                        if (!AccessManager.IsReadonly)
+                            menu.Add().Text("Reports").Items(item =>
+                            {
+                                item.Add().Text("Email Statistic Report").Action("Index", "EmailStatisticReport");
+
+                                item.Add().Text("Buy Box Status").Action("Index", "BuyBox");
+                                item.Add().Text("Second Day").Action("SecondDayOrders", "Order");
+                                item.Add().Text("Sync history").Action("SyncHistory", "History");
+                                item.Add().Text("Feed status").Action("Index", "Feed");
+                                item.Add().Text("Sales Reports").Action("SalesByDate", "Report").Items(subItem =>
+                                {
+                                    subItem.Add().Text("Sales Extended").Action("Index", "SalesExtReport");
+                                    subItem.Add().Text("Returns").Action("Index", "SalesReturnReport");
+                                    subItem.Add().Text("<div class='k-separator'></div>").Encoded(false).Enabled(false);
+                                    subItem.Add().Text("Sales By Date").Action("SalesByDate", "Report");
+                                    subItem.Add().Text("Sales By License").Action("SalesByLicense", "Report");
+                                    subItem.Add().Text("Sales By Sleeve").Action("SalesBySleeve", "Report");
+                                    subItem.Add().Text("Sales By Gender").Action("SalesByGender", "Report");
+                                });
+                                item.Add().Text("Buyer Black List").Action("Index", "BuyerBlackList");
+                                item.Add().Text("Feedback Black List").Action("Index", "FeedbackBlackList");
+                                item.Add().Text("Dhl Invoices").Action("Index", "DhlInvoice");
+                                item.Add().Text("Bargains Search").Action("Search", "Bargain");
+                            });
+
+                        if (!AccessManager.IsReadonly)
+                            menu.Add().Text("System").Action("Index", "Notification").Items(item =>
+                            {
+                                item.Add().Text("Notifications").Action("Index", "Notification");
+                                item.Add().Text("Licenses").Action("Index", "License");
+                                item.Add().Text("Sizes").Action("Index", "Size");
+                                item.Add().Text("Size Mappings").Action("Index", "SizeMapping");
+
+                                if (AccessManager.IsAdmin)
+                                {
+                                    item.Add().Text("User Management").Action("Index", "User");
+                                }
+                            });
+                        if (!AccessManager.IsReadonly)
+                            menu.Add().Text("Images").Action("Index", "Image").Items(item =>
+                            {
+                                item.Add().Text("Upload Image").Action("Index", "Image");
+                                item.Add().Text("Market Images").Action("MarketImages", "Image");
+                                item.Add().Text("Style Images").Action("StyleImages", "Image");
+                            });
+                    }
+                }));
+    }
+
+    if (AccessManager.Company.ShortName == PortalEnum.BS.ToString()
+        || AccessManager.Company.ShortName == PortalEnum.HDEA.ToString())
+    {
+        if (AccessManager.RoleName == AccessManager.RoleClient)
+        {
+            @(Html.Kendo().Menu()
+                .Name("menu")
+                .Items(menu =>
+                {
+                    menu.Add().Text("Dashboard").Action("Index", "Dashboard");
+                    menu.Add().Text("Orders").Action("Orders", "Order").Items(item =>
+                    {
+                        item.Add().Text("Orders").Action("Orders", "Order");
+                        item.Add().Text("Pending Orders").Action("PendingOrders", "Order");
+                        item.Add().Text("<div class='k-separator'></div>").Encoded(false).Enabled(false);
+                        item.Add().Text("New Order").Action("Index", "NewOrder");
+                        item.Add().Text("Upload Orders").Action("Index", "UploadOrders");
+
+                        item.Add().Text("<div class='k-separator'></div>").Encoded(false).Enabled(false);
+                        item.Add().Text("Refunds").Action("Index", "ReturnOrder");
+                    });
+
+
+                    menu.Add().Text("Inventory").Action("Styles", "Inventory").Items(pItem =>
+                    {
+                        pItem.Add().Text("Inventory").Action("Styles", "Inventory");
+                        pItem.Add().Text("Inventory Special Cases").Action("Index", "QuantityOperation");
+                    });
+
+
+                    menu.Add().Text("Shipping").Action("Index", "Mailing").Items(lItem =>
+                    {
+                        lItem.Add().Text("Buy Postage").Action("Index", "Mailing");
+                        lItem.Add().Text("<div class='k-separator'></div>").Encoded(false).Enabled(false);
+
+                        lItem.Add().Text("Print Files").Action("PrintFiles", "Print");
+                    });
+
+                    menu.Add().Text("Customers").Action("Index", "Customer");
+
+                    menu.Add().Text("Purchase Orders").Action("Index", "PurchaseOrder");
+
+
+                    menu.Add().Text("Reports").Items(item =>
+                    {
+                        item.Add().Text("Order Report").Action("Index", "OrderReport");
+                        item.Add().Text("Shipment Report").Action("Index", "ShipmentReport");
+                        item.Add().Text("Sales Extended").Action("Index", "SalesExtReport");
+                    });
+
+                    menu.Add().ImageUrl("~/Images/calculator-light.png").ImageHtmlAttributes(new { height = 22, style = "margin-left: 2px" }).Text(" ").Action("Index", "RateCalculator");
+
+                }))
+        }
+        else
+        {
+            @(Html.Kendo().Menu()
+                    .Name("menu")
+                    .Items(menu =>
+                    {
+                        menu.Add().Text("Dashboard").Action("Index", "Dashboard");
+                        menu.Add().Text("Orders").Action("Orders", "Order").Items(item =>
+                        {
+                            item.Add().Text("Orders").Action("Orders", "Order");
+                            item.Add().Text("Pending Orders").Action("PendingOrders", "Order");
+                            item.Add().Text("<div class='k-separator'></div>").Encoded(false).Enabled(false);
+                            item.Add().Text("Return/Exchange").Action("Index", "ReturnOrder");
+                        });
+
+
+                        menu.Add().Text("Inventory").Action("Styles", "Inventory").Items(pItem =>
+                        {
+                            pItem.Add().Text("Inventory").Action("Styles", "Inventory");
+                            pItem.Add().Text("Inventory Special Cases").Action("Index", "QuantityOperation");
+                        });
+
+
+                        menu.Add().Text("Batches").Action("ActiveBatches", "Batch").Items(lItem =>
+                        {
+                            lItem.Add().Text("Active Batches").Action("ActiveBatches", "Batch");
+                            lItem.Add().Text("Batches").Action("Batches", "Batch");
+                        });
+
+
+                        menu.Add().Text("Labels").Action("Index", "Mailing").Items(lItem =>
+                        {
+                            lItem.Add().Text("Buy postage").Action("Index", "Mailing");
+                            lItem.Add().Text("<div class='k-separator'></div>").Encoded(false).Enabled(false);
+
+                            lItem.Add().Text("Print Files").Action("PrintFiles", "Print");
+                        });
+
+
+                        menu.Add().Text("Emails").Action("Index", "Email").Items(eItem =>
+                        {
+                            eItem.Add().Text("Emails").Action("Index", "Email");
+                        });
+
+                        menu.Add().Text("Reports").Items(item =>
+                        {
+                            item.Add().Text("Order Report").Action("Index", "OrderReport");
+                            item.Add().Text("Shipment Report").Action("Index", "ShipmentReport");
+                            item.Add().Text("Sales Extended").Action("Index", "SalesExtReport");
+                        });
+
+                        if (AccessManager.IsAdmin)
+                            menu.Add().Text("System").Items(item =>
+                            {
+                                //item.Add().Text("Notifications").Action("Index", "Notification");
+                                //item.Add().Text("Licenses").Action("Index", "License");
+                                //item.Add().Text("Sizes").Action("Index", "Size");
+                                //item.Add().Text("Size Mappings").Action("Index", "SizeMapping");
+
+
+                                item.Add().Text("User Management").Action("Index", "User");
+                                item.Add().Text("Settings").Items(settingItems =>
+                                {
+                                    settingItems.Add().Text("Shipping Charge").Action("ShippingCharges", "Settings");
+                                });
+                            });
+                    }))
+        }
+    }
+}

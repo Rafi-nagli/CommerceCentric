@@ -1,0 +1,109 @@
+﻿@using Amazon.Web.ViewModels
+@using Amazon.Web.ViewModels.Companies
+@using Kendo.Mvc.UI
+@using Amazon.Web.Models
+@{
+    ViewBag.Title = "Users";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<script>
+    var UserListViewModel = function () {
+        var self = this;
+
+        self.onUserEdit = function (e) {
+            console.log("onUserEdit");
+            
+            console.log(e);
+
+            if (e && e.model.Id != null) {
+                e.container.find("[name='Password']").parent().prev().text("New Password");
+                e.container.find("[name='UserName']").prop('readonly', true);
+            } else {
+                e.container.find("[name='Password']").parent().prev().text("Password");
+                e.container.find("[name='UserName']").prop('readonly', false);
+            }
+
+            e.container.find("[name='Password']").prop("autocomplete", false);
+            e.container.find("[name='Email']").prop("autocomplete", false);
+            /*e.container.find("[name='Password']").prop("autocomplete", "off");
+        e.container.find("[name='UserName']").prop("autocomplete", "off");*/
+            //e.container.find("[name='Email']").removeAttr("readonly");
+            //e.container.find("[name='Password']").removeAttr("readonly");
+
+
+            /*e.container.find("[name='Password']").prop("autocomplete", "off");
+            e.container.find("[name='UserName']").prop("autocomplete", "off");*/
+            //e.container.find("[name='Email']").removeAttr("readonly");
+            //e.container.find("[name='Password']").removeAttr("readonly");
+            
+            //if (e && e.mode == 'edit') {
+            //    e.form.UserName.readOnly = true;
+            //    e.form.UserName.style.color = '#888888';
+
+            //    $(e.form.Password).parent().prev('.editor-label').text("New Password");
+            //    e.form.ConfirmPassword.value = '';
+            //    $(e.form.Password).removeAttr('data-val-required');
+
+            //} else {
+            //$(e.form.OldPassword).parent().css('display', 'none');
+            //$(e.form.OldPassword).parent().prev('.editor-label').css('display', 'none');
+            //}
+        };
+    }
+
+    var userListViewModel = null;
+
+    $(document).ready(function () {
+
+        userListViewModel = new UserListViewModel();
+    });
+
+    function onUserEdit(e) {
+        userListViewModel.onUserEdit(e);
+    }
+</script>
+
+<ol class="breadcrumb">
+    <li><a href="#">System</a></li>
+    <li class="active">@ViewBag.Title</li>
+</ol>
+
+@(Html.Kendo().Grid<UserViewModel>()
+          .Name("Users")
+          .Editable(e => e.Mode(GridEditMode.PopUp).CreateAt(GridInsertRowPosition.Top))
+          .ToolBar(t => t.Create())
+          .Columns(c =>
+          {
+              c.Bound(l => l.Id)
+                  .Title("#")
+                  .Width(25);
+              c.Bound(l => l.UserName);
+              c.Bound(l => l.Email);
+              c.Bound(l => l.RoleName)
+                  .Title("Role");
+              c.Bound(l => l.IsLockedOut)
+                  .Title("Locked Out")
+                  .ClientTemplate("#=(IsLockedOut ? 'Yes' : 'No')#");
+              c.Command(cmd =>
+              {
+                  cmd.Edit();
+                  cmd.Destroy();
+              }).Width(170);
+
+          })
+          .Pageable(conf => conf.Enabled(true).Refresh(true))
+          .Events(e => e.Edit("onUserEdit"))
+          .DataSource(dataSource => dataSource
+              .Ajax()
+              .PageSize(10)
+              .Model(conf =>
+              {
+                  conf.Id(m => m.Id);
+                  conf.Field(m => m.Id).Editable(false);
+                  conf.Field(m => m.RoleId).DefaultValue(AccessManager.RoleUserId);
+              })
+              .Read(read => read.Action("GetAll", "User"))
+                  .Update(update => update.Action("Update", "User").Type(HttpVerbs.Post))
+                      .Create(create => create.Action("Add", "User").Type(HttpVerbs.Post))
+                      .Destroy(delete => delete.Action("Remove", "User").Type(HttpVerbs.Post))))

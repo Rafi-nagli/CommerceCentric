@@ -1,0 +1,238 @@
+﻿@using Amazon.Common.Helpers
+@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.Models
+@{
+    ViewBag.Title = "Inventory Description";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/inventory.ico" />
+}
+
+<style>
+    .infoBar {
+        position: fixed; 
+        z-index: 10000; 
+        top: 0px; 
+        left: 0px;
+        width: 100%;
+    }
+
+    .buffer-bar {
+        /*width: 100%;*/
+        /*height: 80px; */
+        /*background-color: #BB4444;
+        color: #efefef;*/
+        background-color: #428bca;
+        color: #efefef;
+        text-align: center;
+        /*padding: 10px;*/
+        font-size: 16px;
+        font-family: Arial;
+        padding: 10px;
+    }
+</style>
+
+<div id="page-content">
+
+    <div class="infoBar">
+        <div class="buffer-bar" data-bind="visible: !buffer.isEmpty()" style="display: none;">
+            In the buffer: <span data-bind="text: buffer.styleString"></span>
+            <a href='javascript: void(0)'
+               class='btn btn-default'
+               style="margin-left: 10px"
+               data-bind="click: cancelCopyDescription">
+                <span class="glyphicon glyphicon-remove"></span>Cancel
+            </a>
+        </div>
+    </div>
+
+    <ol class="breadcrumb">
+        <li><a href="#">Inventory</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <div class="messages-block">
+                <div><span id="infoMessage" class="text-info"></span></div>
+                <div><span id="errorMessage" class="label label-danger"></span></div>
+                <div><span id="successMessage" class="label label-success"></span></div>
+            </div>
+
+            <table style="width: 100%">
+                <colgroup>
+                    <col style="width: 80px" />
+                    <col style="width: 230px" />
+                    <col style="width: 100px" />
+                    <col style="width: 300px" />
+                    <col style="width: 110px" />
+                    <col style="width: 180px" />
+                    <col style="width: 110px" />
+                    <col style="width: auto" />
+                </colgroup>
+                <tr>
+                    <th></th>
+                    <td></td>
+                    <th>Gender:</th>
+                    <td style="padding-right: 10px">
+                        <input data-bind="kendoDropDownList: { data: searchFilters.genderList, value: searchFilters.gender, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+                    </td>
+                </tr>
+                <tr>
+                    <th>Keywords:</th>
+                    <td>
+                        <input type="text"
+                               style="width: 240px; border-color: #2d2d2d"
+                               class="k-textbox"
+                               data-bind="value: searchFilters.keywords, valueUpdate:'afterkeydown', event: { keypress: searchByKeyCmd }" />
+                    </td>
+                    <th>Item Style:</th>
+                    <td>
+                        <input style="width: 280px"
+                               data-bind="kendoMultiSelect: { data: searchFilters.itemStyleList, value: searchFilters.itemStyles, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+                    </td>
+                    <th>Main License:</th>
+                    <td>
+                        <input style="width: 180px" data-bind="kendoDropDownList: { data: searchFilters.mainLicenseList, value: searchFilters.mainLicense, dataTextField: 'Text', dataValueField: 'ParentValue', optionLabel: 'Select...' }" />
+                    </td>
+                </tr>
+                <tr>
+                    <th>StyleId:</th>
+                    <td style="padding-right: 20px">
+                        <input type="text"
+                               class="k-textbox"
+                               style="border-color: #2d2d2d"
+                               data-bind="value: searchFilters.styleId, valueUpdate:'afterkeydown'" />
+                    </td>
+                    <th>Sleeve:</th>
+                    <td>
+                        <input style="width: 280px"
+                               data-bind="kendoMultiSelect: { data: searchFilters.sleeveList, value: searchFilters.sleeves, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...' }" />
+                    </td>
+                    <th>Sub License:</th>
+                    <td>
+                        <input id="SubLicense" style="width: 180px" data-bind="kendoDropDownList: {data: searchFilters.subLicenseList, value: searchFilters.subLicense, dataTextField: 'Text', dataValueField: 'Value', optionLabel: 'Select...', enabled: searchFilters.enableSubLicense }" />
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="text-align: left; padding-top: 5px">
+                        <button class="k-button"
+                                style="width: 110px; margin: 0px 0px 0px 0px; padding: 3px 20px 3px 20px"
+                                data-bind="click: search">
+                            <span class='glyphicon glyphicon-search am-icon'></span>Search
+                        </button>
+                        <button class="k-button"
+                                style="width: 100px; margin: 0px 0px 0px 10px; padding: 3px 20px 3px 20px"
+                                data-bind="click: clear">
+                            <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+                        </button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    
+    <div class="grid-small">
+        <div data-bind='component: {
+        name: "grid-pager",
+        params: { itemCount: grid.itemCount, pageIndex: grid.pageIndex, itemsPerPage: grid.itemsPerPage, refreshCallback: grid.reload }
+        }'></div>
+
+        <div data-bind='component: {
+         name: "fast-grid",
+         params: fastGridSettings }'></div>
+
+        <div data-bind='component: {
+        name: "grid-pager",
+        params: { itemCount: grid.itemCount, pageIndex: grid.pageIndex, itemsPerPage: grid.itemsPerPage, refreshCallback: grid.reload }
+        }'></div>
+    </div>
+</div>
+
+
+
+@Html.Partial("_TemplateGridPager")
+@Html.Partial("_TemplateFastGrid")
+
+<script type="text/x-kendo-template" id="style-buttons-column-template">
+    <a href='javascript: void(0)'
+       class='k-button'
+       style='margin-top:4px; width:90px' onclick='styleDescriptionListVm.editStyleDescription(this, "#=data.Id#")'>
+        <span class='glyphicon glyphicon-pencil am-icon'></span>Edit
+    </a>
+    
+    <div style="display: #=canCopy ? 'block' : 'none'#">
+        <a href='javascript: void(0)'
+           class='k-button'
+           style='margin-top:4px; width:110px' onclick='styleDescriptionListVm.copyDescription(this, "#=data.Id#")'>
+            <span class='glyphicon glyphicon-export am-icon'></span>Copy Info
+        </a>
+    </div>
+    
+    <div style="display: #=canPaste ? 'block' : 'none'#">
+        <a href='javascript: void(0)'
+           class='k-button'
+           style='margin-top:4px; width:110px' onclick='styleDescriptionListVm.pasteDescription(this, "#=data.Id#")'>
+            <span class='glyphicon glyphicon-import am-icon'></span>Paste Info
+        </a>
+    </div>
+</script>
+
+
+<script type="text/kendo-tmpl" id="style-row-template">
+    <tr class="k-master-row #=data._isAlt ? 'k-alt': ''#" row-uid="#=data.Id#">
+        <td>#=data.Id#</td>
+        <td>
+            <div class="image-box-holder" style="float: left; margin-right: 5px">
+                <img src='#=data.Thumbnail#' style="max-width: 75px" />
+            </div>
+            <div>#=data.StyleString#</div>
+            <div style='padding-top:3px' class="gray">#=tmpl.isNull(data.Name, '')#</div>            
+        </td>
+        <td>
+            <div><span class="remark">Main License: </span>#= tmpl.isNull(data.MainLicense)#</div>
+            <div><span class="remark">Sub License: </span>#= tmpl.isNull(data.SubLicense)#</div>
+            <div><span class="remark">Item Style: </span>#= tmpl.isNull(data.ItemStyle)#</div>
+        </td>
+        <td>
+            #=data.RemainingQuantity#
+        </td>
+        <td style="vertical-align: top; font-size: 12px">#= tmpl.isNull(data.ShortDescription, '') #</td>
+        <td style="vertical-align: top; font-size: 12px">
+            #=!dataUtils.isEmpty(data.BulletPoint1) ? "-" + data.BulletPoint1 : ''#
+            #=!dataUtils.isEmpty(data.BulletPoint2) ? "<br />-" + data.BulletPoint2 : ""#
+            #=(!dataUtils.isEmpty(data.BulletPoint3) ? "<br />..." : "")#
+        </td>
+        <td>#= tmpl.f(data.CreateDate, '@(DateHelper.DateFormat)')#</td>
+        <td>#= tmpl.t('style-buttons-column-template', data)#</td>
+    </tr>    
+</script>
+
+
+<script type="text/javascript">
+    var styleDescriptionListVm = null;
+
+    $(document).ready(function() {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        var settings = {
+            urls: {
+                getIdListByFilters: '@Url.Action("GetIdListByFilters", "Inventory")',
+                getAllUpdates: '@Url.Action("GetAllUpdates", "InventoryDescription")',
+
+                getStyles: '@Url.Action("GetAll", "InventoryDescription")',
+
+                editStyleDescription: '@Url.Action("EditStyleDescription", "InventoryDescription")',
+                setStyleDescription: '@Url.Action("SetDescription", "InventoryDescription")',
+            }
+        };
+
+        styleDescriptionListVm = new StyleDescriptionListViewModel(model, settings);
+
+        ko.applyBindings(styleDescriptionListVm, document.getElementById('page-content'));
+    });
+</script>

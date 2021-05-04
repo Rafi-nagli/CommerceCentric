@@ -1,0 +1,345 @@
+﻿@using Amazon.Core.Models
+@using Amazon.Web.ViewModels.Pages
+@model Amazon.Web.ViewModels.Emails.ViewEmailViewModel
+
+@{
+    ViewBag.Title = "View Email";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/feedback.ico" />
+}
+
+<style>
+    .toggle.btn {
+        height: 34px !important;
+        width: 70px !important;
+        margin-left: 50px;
+    }
+</style>
+
+<script>
+    var EmailViewModel = function(model, settings) {
+        var self = this;
+        ko.BaseViewModel.call(self);
+
+        self.settings = settings;
+        self.model = model;
+
+        self.subject = ko.observable(model.Subject);
+        self.subjectHtml = ko.observable(model.SubjectHtml);
+        self.body = ko.observable(model.Body);
+        self.fromEmail = ko.observable(model.FromEmail);
+        self.fromName = ko.observable(model.FromName);
+        self.orderNumber = ko.observable(model.OrderNumber);
+        self.escalated = ko.observable(model.IsEscalated);
+
+        self.folderName = ko.observable(model.FolderName);
+        self.responseNeeded = ko.observable(model.ResponseNeeded);
+        self.responseDismissed = ko.observable(model.ResponseDismissed);
+        self.responsePromised = ko.observable(model.ResponsePromised);
+        self.isSent = ko.observable(model.IsSend);
+        self.isSystem = ko.observable(model.IsSystem);
+        self.canReply = ko.observable(model.CanReply);
+        self.canAssign = ko.observable(model.CanAssign);
+        self.isReviewed = ko.observable(model.IsReviewed);
+
+        self.receiveDate = ko.observable(model.ReceiveDateString);
+        self.toEmail = ko.observable(model.ToEmail);
+
+        self.attachments = ko.observableArray(model.Attachments);
+
+        self.hasAttachments = ko.computed(function() {
+            return self.attachments().length > 0;
+        });
+
+        self.hasOrder = ko.computed(function() {
+            return !dataUtils.isEmpty(self.orderNumber());
+        });
+
+        self.assignedCallback = function(data) {
+            //location.reload();
+            window.location.href = '@Url.Action("ViewEmail", "Email")' + '?id=' + self.model.Id + "&orderNumber=" + data;
+        }
+
+        self.assignToOrder = function(data, e) {
+            var settings = {
+                assignEmailToOrderUrl: '@Url.Action("AssignEmailToOrder", "Email")',
+                getOrderIdListUrl: '@Url.Action("GetOrderIdList", "AutoComplete")',
+                submitCallback: self.assignedCallback
+            };
+            var dataModel = {
+                emailId: self.model.Id,
+                orderNumber: self.orderNumber()
+            };
+            var popupModel = new AssignToOrderPopupModel(dataModel,
+                settings);
+
+            popupModel.show();
+        }
+
+        self.setNoResponseNeeded = function(data, e) {
+            var sender = $(e.target);
+            console.log('setNoResponseNeeded');
+
+            var setNoResponseCallback = function() {
+                $.ajax({
+                    url: '@Url.Action("SetNoResponseNeeded", "Email")',
+                    data: {
+                        emailId: self.model.Id,
+                        orderNumber: self.model.OrderNumber,
+                    },
+                    success: function(result) {
+                        console.log(result);
+                        if (result.IsSuccess) {
+                            $(sender).closest('.response-folder').addClass('dismiss-folder');
+                            $(sender).closest('a').hide();
+                        }
+                    }
+                });
+            };
+
+            if ((self.model.EmailMarket == self.settings.markets.amazon
+                || self.model.EmailMarket == self.settings.markets.amazonEU)
+                && self.model.Type != self.settings.emailTypes.system) {
+                Message.popupAsync({
+                    title: 'Confirm',
+                    message: 'Please, keep in mind the message should also be separately marked as "no response needed" in the Amazon messages. Continue?',
+                    type: Message.YES_NO
+                }).done(function() {
+                    setNoResponseCallback();
+                }).fail(function() {
+
+                });
+            } else {
+                setNoResponseCallback();
+            }
+        }
+
+        self.escalated.subscribe(function (val) {
+            /*if (self.initEscalate) {
+                self.initEscalate = false;
+                return;
+            }*/
+            console.log('escalate ');
+            self.escalate(val);
+        });
+
+        self.escalate = function (val) {
+            $.ajax({
+                url: '@Url.Action("Escalate", "Email")',
+                data: {
+                    emailId: self.model.Id,
+                    escalated: val,
+                    orderNumber: self.model.OrderNumber
+                },
+                type: 'POST',
+                success: function(result) {
+                    console.log(result);
+                    if (result.IsSuccess) {
+                        //self.escalated(self.escalatedVal());
+                    }
+                }
+            });
+        }
+
+
+        self.markAsReviewed = function(data, e) {
+            var sender = $(e.target);
+            console.log('markAsReviewed');
+
+            $.ajax({
+                url: '@Url.Action("MarkAsReviewed", "Email")',
+                data: {
+                    emailId: self.model.Id,
+                    orderNumber: self.model.OrderNumber,
+                    orderId: self.model.OrderId,
+                },
+                success: function(result) {
+                    console.log(result);
+                    if (result.IsSuccess) {
+                        self.isReviewed(result.Data);
+                        //$(sender).closest('.response-folder').addClass('reviewed-folder');
+                    }
+                }
+            });
+        }
+
+        self.dismissResponsePromised = function(data, e) {
+            var sender = $(e.target);
+            console.log('dismissResponsePromised');
+            $.ajax({
+                url: '@Url.Action("DismissResponsePromised", "Email")',
+                data: {
+                    emailId: self.model.Id,
+                    orderNumber: self.model.OrderNumber,
+                },
+                success: function(result) {
+                    console.log(result);
+                    if (result.IsSuccess) {
+                        $(sender).closest('.response-folder').addClass('dismiss-folder');
+                        $(sender).closest('a').hide();
+                    }
+                }
+            });
+        }
+    }
+
+    var emailView = null;
+
+    $(document).ready(function () {
+        console.log("begin ready");
+
+        var settings = {
+            markets: {
+                amazon: '@((int)MarketType.Amazon)',
+                amazonEU: '@((int)MarketType.AmazonEU)',
+                amazonAU: '@((int)MarketType.AmazonAU)',
+            },
+            emailTypes: {
+                system: '@((int)IncomeEmailTypes.System)'
+            }
+        };
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        emailView = new EmailViewModel(model, settings);
+        ko.applyBindings(emailView, document.getElementById("page-content"));
+    });
+</script>
+
+
+<div id="page-content">
+    <div id="MessagePopupWindow0" style="display: none;"></div>
+    <div id="MessagePopupWindow1" style="display: none;"></div>
+
+    @Html.Partial("_AssignToOrder")
+
+    <ol class="breadcrumb">
+        <li><a href="@Url.Action("Index", "Email")">Emails</a></li>
+        <li class="active">View</li>
+        <li class="active" data-bind="html: subject"></li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="panel-body" style="padding: 5px">
+            <a style="width: 150px;"
+               class="btn btn-default"
+               data-bind="visible: canReply"
+               href="@Url.Action("ReplyTo", "Email")?replyToId=@Model.Id&orderNumber=@Model.OrderNumber">
+                <span class="glyphicon glyphicon-share-alt" area-hidden="true"></span> Reply
+            </a>
+
+            <button style="width: 150px; margin-left: 50px"
+                    class="btn btn-default"
+                    data-bind="click: assignToOrder, visible: !hasOrder() && canAssign()">
+                Assign To Order...
+            </button>
+
+            <input type="checkbox"
+                   data-toggle="toggle"
+                   data-onstyle="success"
+                   data-height="14"
+                   data-bind='bsChecked: escalated' /> Escalated
+
+            <button style="width: 150px; margin-left: 50px"
+                    class="btn btn-default"
+                    data-bind="click: markAsReviewed, visible: !isReviewed()">
+                Reviewed
+            </button>
+        </div>
+    </div>
+
+    <table style="width: 100%">
+        <tr>
+            <td style="vertical-align: top;">
+                <div class="panel panel-default center-block">
+                    <div class="panel-heading">
+                        <div>
+                            <span data-bind="visible: responseNeeded" style="display: none">
+                                <span class="folder response-folder" data-bind="css: { 'dismiss-folder': responseDismissed, 'reviewed-folder': isReviewed }">
+                                    Response Needed
+                                    <span data-bind="visible: !responseDismissed()">
+                                        <a href="javascript:;"
+                                           title="No response needed"
+                                           style="padding: 2px; margin-left: 2px; margin-right: -4px"
+                                           data-bind="click: setNoResponseNeeded">
+                                            <span class="glyphicon glyphicon-remove"></span>
+                                        </a>
+                                    </span>
+                                </span>
+                            </span>
+                            <span data-bind="visible: responsePromised" style="display: none">
+                                <span class="folder promise-folder">
+                                    Promised Answer
+                                    <a href="javascript:;"
+                                       title="Dismiss response promised"
+                                       data-bind="click: dismissResponsePromised"
+                                       style="padding: 2px; margin-left: 2px; margin-right: -4px">
+                                        <span class="glyphicon glyphicon-remove"></span>
+                                    </a>
+                                </span>
+                            </span>
+                            <span data-bind="visible: isSystem" style="display: none">
+                                <span class="folder system-folder">System</span>
+                            </span>
+                            <span data-bind="css: { 'sent-folder' : isSent(), 'inbox-folder' : !isSent() }, text: folderName"></span>
+                        </div>
+                        <span style="font-size: 22px;">
+                            <span data-bind="html: subjectHtml"></span>
+                        </span>
+                    </div>
+                    <div class="panel-body">
+                        <div class="form-group">
+                            <label>From:</label>
+                            <span data-bind="text: fromName"></span> <<span data-bind="text: fromEmail"></span>>
+                        </div>
+                        <div class="form-group">
+                            <label>Date:</label>
+                            <span data-bind="text: receiveDate"></span>
+                        </div>
+                        <div class="form-group">
+                            <label>To:</label>
+                            <span data-bind="text: toEmail"></span>
+                        </div>
+
+                        <div class="form-group" data-bind="visible: hasAttachments">
+                            <label>Attachments: </label>
+                            <div data-bind="foreach: attachments">
+                                <div><a target='_blank' data-bind="attr: { 'href': ViewUrl }, text: ServerFileName"></a></div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Message:</label>
+                            <span data-bind="html: body"></span>
+                        </div>
+                    </div>
+                </div>
+            </td>
+            @if (!String.IsNullOrEmpty(Model.OrderNumber))
+            {
+                <td style="width: 450px; padding-left: 20px; vertical-align: top">
+                    @Html.Partial("_OrderMessageSummary", new OrderHistoryControlViewModel()
+                    {
+                        OrderNumber = Model.OrderNumber,
+                        EmailId = Model.Id,
+                    })
+
+                    @Html.Partial("_OrderSummary", new OrderHistoryControlViewModel()
+                    {
+                        OrderNumber = Model.OrderNumber,
+                    })
+
+                    @Html.Partial("_OrderHistory", new OrderHistoryControlViewModel()
+                    {
+                        OrderNumber = Model.OrderNumber,
+                        IsCollapsed = false
+                    })
+                </td>
+            }
+        </tr>
+    </table>
+</div>

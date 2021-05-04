@@ -1,0 +1,493 @@
+﻿@using Amazon.Web
+@using Amazon.Web.Models
+@{
+    ViewBag.Title = "Terms and Conditions";
+}
+
+<script>
+    var AcceptTermsAndConditionsPopupModel = function (model, settings) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+
+        self.isAcceptedTerms = model.IsAcceptedTerms;
+        self.userId = model.UserId;
+
+        self.popupNode = null;
+        self.popup = null;
+
+        self.isAcceptedFlag = ko.observable(false);
+
+        self.requestAccept = function () {
+            if (self.isAcceptedTerms != 1)
+                self.show();
+        }
+
+        self.show = function () {
+            console.log($("#termsAndConditionsPopup").length);
+            $("#termsAndConditionsPopup").each(function (i) {
+                var popup = $(this).data("kendoWindow");
+                if (popup != null) {
+                    console.log("close previous setTracking popup");
+
+                    ko.cleanNode($(this)[0]);
+                    popup.close();
+                    popup.destroy();
+                }
+                else {
+                    $(this).remove();
+                }
+            });
+
+            console.log("termsAndConditionsPopupModel.create");
+
+            $('body').prepend("<div id='termsAndConditionsPopupModel'></div>");
+            self.popupNode = $('#termsAndConditionsPopupModel');
+
+            self.popupNode.kendoWindow({
+                modal: true,
+                width: "650px",
+                title: "Terms And Conditions",
+                visible: false,
+                actions: [
+                    
+                ],
+            });
+
+            self.popup = self.popupNode.data("kendoWindow");
+            self.popup.content($("#termsAndConditionsPopupContent").html());
+            self.popup.center().open();
+
+            ko.applyBindings(self, self.popupNode[0]);
+        };
+
+        self.submit = function () {
+            var defer = $.Deferred();
+            $.ajax({
+                url: self.settings.urls.acceptTerms,
+                data: {
+                },
+                success: function (result) {
+                    defer.resolve();
+                },
+                error: function () {
+                    defer.reject();
+                }
+            });
+
+            return defer;
+        }
+
+        self.onSave = function (data, e) {
+            console.log('termsAndConditionsPopupContent.onSave');
+
+            self.submit().done(function (result) {
+                self.popup.close();
+            }).fail(function (result) {
+                self.popup.close();
+            });
+        }
+
+        self.onDeclane = function (data, e) {
+            document.location = self.settings.urls.logout;
+        }
+
+        self.onClose = function () {
+            self.popup.close();
+        }
+    }
+</script>
+
+<script type="text/javascript">
+        $(document).ready(function () {
+
+            var data = {
+                IsAcceptedTerms: @(AccessManager.User != null ? (AccessManager.User.IsAcceptedTerms == true ? 1 : 0) : 0),
+                UserId: @(AccessManager.UserId)
+            };
+
+            var settings = {
+                urls: {
+                    acceptTerms: '@Url.Action("AcceptTerms", "Account")',
+                    logout: '@Url.Action("Logoff", "Account")',
+                }
+            };
+
+            var model = new AcceptTermsAndConditionsPopupModel(data, settings);
+            model.requestAccept();
+        })
+</script>
+<style>
+    .termAndConditionsContent h3 {
+        font-size: 11px;
+        font-weight: bold;
+    }
+
+    .termAndConditionsContent p, .termAndConditionsContent li {
+        font-size: 11px;
+    }
+
+    .termAndConditionsContent li {
+        margin-bottom: 4px;
+    }
+</style>
+<!-- ko stopBinding: true -->
+<div style="display: none">
+    <div id="termsAndConditionsPopupContent" class="termsAndConditionsPopupContent">
+        <div class="k-edit-form-container" style="width: auto; font-size: 13px">
+            <div class="inventory-popup termAndConditionsContent">
+                <div style="height: 500px; overflow-y: scroll">
+                    <h3>TERMS AND CONDITIONS</h3>
+
+                    <p>
+                        Thank you for your interest in the Services (as defined herein) provided by Vionix, Inc. (“Company”).  PLEASE READ THE TERMS OF THIS MASTER SERVICE AGREEMENT CAREFULLY.  This Master Services Agreement (“Agreement”) is entered into between yourself  (“You”, “Your”, “Licensee”) and Company as of the date You click “I ACCEPT” (the “Effective Date”) and sets forth the terms and conditions under which Company will provide the Services (as defined below) to You.  Company and Licensee may be referred to herein individually as “a Party” and together as “the Parties” herein.
+                    </p>
+                    <p>
+                        BY CLICKING THE CHECKBOX, YOU ARE ENTERING INTO A BINDING, LEGAL CONTRACT WITH COMPANY AND YOU AGREE TO BE BOUND BY ALL OF THE TERMS HEREIN. YOU ACKNOWLEDGE THAT YOU HAVE READ ALL OF THE TERMS AND CONDITIONS OF THIS AGREEMENT, YOU UNDERSTAND THEM AND AGREE TO BE LEGALLY BOUND BY THEM. If you do not accept and agree to be bound by all of the terms and conditions of this Agreement, you are not authorized to access or otherwise use the Services. If you are an individual accepting the Agreement on behalf of an entity, you represent and warrant that: (i) you have full legal authority to bind the applicable entity to the Agreement; (ii) you have read and understand the Agreement; and (iii) you agree, on behalf of the entity that you represent, to all of the terms and conditions of the Agreement. If you do not have the legal authority to bind the entity you represent, you may not use the Services.
+                    </p>
+
+                    <p>
+                        NOW, THEREFORE, in consideration of the mutual promises and the covenants contained herein, and for other good and valuable consideration, the receipt and sufficiency of which is hereby acknowledged by each party to the other, the parties, intending to be legally bound by the terms of this Agreement, hereby agree as follows:
+                    </p>
+                    </p>
+                    <h3>I.	DEFINITIONS</h3>
+
+                    <p>For the purposes of this Agreement, the terms set forth in this section have the meanings assigned to them below.</p>
+
+                    <ul>
+                        <li>
+                            “Company Materials” means all software, Updates, physical order processes, user manuals and other documentation provided by, or on behalf of, Company to the Licensee including Company programs, subscription, services, and all files, reports, analysis, data, and other materials and information provided through or as part of this Agreement.
+                        </li>
+                        <li>
+                            “Services” means all parts of the CommerCentric software solution (“Ccen”) and any other programs, software, manuals, consulting services as specifically requested and detailed in the applicable Addendum.
+                        </li>
+                        <li>
+                            “Term” means the initial term and all renewal terms of this Agreement.
+                        </li>
+                        <li>
+                            “Policies and Procedures” means Company’s rules, regulations, policies and procedures for access to and use of the Company Services, as changed from time to time and as made available or communicated to Licensee, or posted electronically on Company’s website.
+                        </li>
+                        <li>
+                            “Updates” means any changes, enhancements or modifications to the Services, documentation, and materials that are provided by Company to Licensee. The determination of whether or not to issue a change, enhancement or modification or to designate any change, enhancement or modification as an Update shall be, in each case, made solely by Company. Updates do not include new products, materials, services, documents or major enhancements and or early release versions of any new or existing products and services.
+                        </li>
+                        <li>
+                            “User” or “End User” means Licensee, Licensee’s employees and/or any other user of the Services authorized by Licensee.
+                        </li>
+                    </ul>
+
+                    <h3>II.	LICENSE</h3>
+                    <ol>
+                        <li>
+                            Company grants and Licensee accepts a non-exclusive, non-transferable, limited license to access and use the functionality of the Services during the term, subject to Licensee’s payment of all applicable fees and full compliance with the terms and conditions set forth in this Agreement.
+                        </li>
+                        <li>
+                            The Licensee acknowledges and agrees that the Services and other Company Materials are licensed solely for the internal use of Licensee’s organization in the ordinary course of business in the United States of America. The Licensee may not use the Services or other Company Materials for any other purposes, such as use them to provide services to other organizations, or integrate with other third party solutions or services, or any other such circumstances without prior written authorization from Company. Licensee agrees to not: (a) grant access to any Third party for any purpose whatsoever without the prior written consent of Company; (b) make the Services, in whole or in part, available to any other person, entity or business; (c) sell, sublicense, lease, permit, transfer, copy, reverse engineer, decompile or disassemble the Services, in whole or in part, or otherwise attempt to discover the source code to the software used in the Services; or (d) modify, alter, integrate, combine the Services or associated software with any other software or services not provided or approved by us. Licensee will obtain no rights to the Services except for the limited rights to use the Services expressly granted by this Agreement.
+                        </li>
+                        <li>
+                            Updates: So long as the subscription for Services is in effect, subject to the timely payment of Fees, the Licensee will be entitled to receive updates/upgrades from time to time.
+                        </li>
+                    </ol>
+
+                    <h3>III.	LICENSEE RESPONSIBILITIES</h3>
+                    <ol>
+                        <li>
+                            Licensee shall be responsible for all uses of Company Services by its Users regardless of whether such use is authorized or not by the Licensee or Company.
+                        </li>
+                        <li>
+                            Licensee shall be solely responsible for: (i) procuring, at its expense, the necessary environment at the Licensee’s location(s) including, without limitation, all computer hardware, software and equipment, Internet access and telecommunications services (collectively, the “Licensee Systems”); (ii) complying with all laws, rules and regulations related to the Licensee’s use of its Systems and the licensed Services hereunder; (iii) keeping its user name and password secret and confidential, and, for any communications or transactions that are made, using the same; and (iv) changing its user name and password if it believes that the same has been stolen or might otherwise be misused.
+                        </li>
+                        <li>
+                            Licensee agrees that it will not access or use the Services for any purpose other than the purposes contemplated herein. In particular:
+                            <ol type="a">
+                                <li>
+                                    Licensee will not reproduce, publish, or distribute content in connection with the Services that infringes any third party’s trademark, copyright, patent, trade secret, publicity, privacy, or other personal or proprietary right;
+                                </li>
+                                <li>
+                                    Licensee will comply with all applicable laws;
+                                </li>
+                                <li>
+                                    Licensee will not: (a) abuse or misuse the Services, including gaining, facilitating or attempting to gain unauthorized access to the Services; altering or destroying information in the programs except in accordance with accepted practices; or (b) use the Services in any manner that violates this Agreement.
+                                </li>
+                            </ol>
+                        </li>
+                        <li>
+                            In order to use the Services, each authorized User will be required to create a unique account and provide accurate, current and complete information in connection with the User’s use of the Services (“Account“).  Licensee agrees to ensure its Users maintain and promptly update Account information as necessary to maintain its accuracy. Company reserves the right to suspend or terminate access to and use of the Services, or any portion thereof, on the basis of inaccurate or incomplete Account information. Licensee is solely responsible for all activity that occurs when the Services are accessed through its Users’ Accounts, and each User must keep its account password secure. Licensee must notify Company immediately of any breach of security or unauthorized use of a User account. Company will not be liable for any losses or damages arising from Licensee’s or its User’s failure to protect its password or Account information and/or caused by any unauthorized use of an Account.
+                        </li>
+                        <li>
+                            Licensee acknowledges and agrees that Licensee is solely responsible for ensuring that each authorized User is aware of the material terms of this agreement, and that no person who is not an authorized User be allowed access to the Company Services, related documents and materials.
+                        </li>
+                    </ol>
+
+                    <h3>IV.	TERM OF LICENSE</h3>
+                    <ol>
+                        <li>
+                            Term:  The term of this Agreement will begin on the Effective Date and continue for a period of twelve (12) months or as otherwise stated in the applicable Addendum, automatically renewing thereafter on the same terms and conditions for an additional twelve (12) month period, unless terminated earlier as provided herein.  The initial term and all renewal terms are collectively referred to as the “Term.”   Either party can give notice of non-renewal, at least 30 days before the expiration of the term, at its sole or absolute discretion. If Licensee fails to give notice of non-renewal, Licensee shall be deemed to have agreed to the applicable renewal rate reflected through the monthly invoice, for the next twelve (12) month term.  For the purpose of clarity, this Agreement and/or any applicable Addendum will be in effect for a minimum of one (1) full twelve (12) month term.
+                        </li>
+                        <li>
+                            Termination:
+                            <ol type="a">
+                                <li>
+                                    Licensee may terminate this license upon 30 (thirty) days written notice if Company materially breaches any provisions of this Agreement, and such breach has not been cured after notice of the same within such 30 day period, and not otherwise.
+                                </li>
+                                <li>
+                                    Company may terminate this license automatically without notice if Licensee breaches any terms of this Agreement.
+                                </li>
+                                <li>
+                                    Notwithstanding anything to the contrary in this Agreement, Company may immediately terminate, suspend, or amend this Agreement, without liability: (a) to comply with any order issued or proposed to be issued by any governmental agency; (b) to comply with any provision of law; or (c) if performance of any term of this Agreement by either Party would cause it to be in violation of law.
+                                </li>
+                                <li>
+                                    Company shall also have the right to immediately terminate this Agreement if the Licensee discontinues business, or becomes insolvent, or if any action relating to the bankruptcy or insolvency of the Licensee is instituted.
+                                </li>
+                            </ol>
+                        </li>
+                        <li>
+                            Suspension of Access: Company may suspend access to the Services immediately pending Licensee’s cure of any breach of this Agreement, or in the event Company determines in its sole discretion that access to or use of the Services by Licensee may jeopardize the Services or the confidentiality, privacy, security, integrity or availability of information within the Services, or that Licensee has violated or may violate this Agreement, or has jeopardized or may jeopardize the rights of any third party, or that any person is or may be making unauthorized use of the Services. Company’s election to suspend the Services shall not waive or affect Company’s rights to terminate this Agreement as provided herein.
+                        </li>
+                        <li>
+                            Effects and Requirements Upon Termination:  This Agreement and the rights granted are effective until terminated.
+                            <ol type="a">
+                                <li>
+                                    Upon the effective date of termination of this Agreement, for any reason, Licensee shall promptly:
+                                    <ol type="i">
+                                        <li>
+                                            Return and deliver to Company all the Company Materials, documents, and manuals;
+                                        </li>
+                                        <li>
+                                            Discontinue use of Company Services; destroy copies of programs, materials, documents and manuals on the Licensee’s System;
+                                        </li>
+                                        <li>
+                                            Immediately render all sums and payments for all Fees due and owing to Company for the balance of the Term;
+                                        </li>
+                                        <li>
+                                            In the event of termination for any default or breach by the Licensee, pay to Company all expenses incurred by Company in the form of damages, additional costs and legal expenses, including reasonable attorney and expert fees;
+                                        </li>
+                                    </ol>
+                                </li>
+                                <li>
+                                    The foregoing rights and remedies of Company shall be cumulative without limiting any other additional rights and remedies available to Company at law, in equity or otherwise. If this Agreement is terminated for any reason, the rights of the Licensee arising under the Agreement shall terminate with immediate effect but the obligations of the Licensee that by their nature are meant to survive (i.e. unpaid license fees), shall survive such termination.
+                                </li>
+                            </ol>
+                        </li>
+                    </ol>
+
+                    <h3>V.	COMPENSATION</h3>
+                    <ol type="1">
+                        <li>
+                            Fees.  In consideration for the Services provided by Company during the Term, Licensee agrees to pay Company such compensation as described further in the applicable Addendum (“Fees”).
+                        </li>
+                        <li>
+                            Billing.  The Fees shall be due and payable in advance, on the date specified in the Addendum, or if not specified then within fifteen (15) days of receipt of invoice therefore and payment must be made in U.S. Dollars. Company will assess Licensee a late payment charge on any amount which remains unpaid five (5) days after it is due, computed at the rate of two percent (2%) per month or the highest allowable by law, whichever is lower, on the unpaid amount for every month the amount remains unpaid. Nothing mentioned herein will limit any additional rights and remedies available to Company at law, in equity and/or otherwise arising due to the default of payment by the Licensee.
+                        </li>
+                        <li>
+                            Taxes.  Licensee will be responsible for, and agrees to pay, all taxes imposed by the United States, any state or local government, or other taxing authority, on all goods and/or services provided under this Agreement.
+                        </li>
+                        <li>
+                            Licensee acknowledges and agrees that there shall be no refunds under this Agreement for any reason, any service delivered or scheduled to be delivered, whatsoever, including termination of this Agreement regardless of the cause of such termination. In case License requests early termination for any reason whatsoever, Licensee shall still be liable for all Fees due for the entire Term.  The Fees cover all costs that Company incurred for the creation and functioning of Licensee’s account for the agreed upon term hereof, and other expenses related thereto. In addition, if Licensee’s volume/load significantly increases, if multiple Users are sharing an Account, the Company ma, at its discretion,  impose additional fees related thereto.
+                        </li>
+                    </ol>
+                    <h3>VI.	OWNERSHIP</h3>
+                    <ol type="1">
+                        <li>
+                            All data, information, documents, materials, supplies and equipment (“Licensee Materials”) provided by Licensee to Company in connection with this Agreement shall be and remain the property of Licensee.  Licensee retains all intellectual property rights in such information and materials. Company is granted no right or license to use such information or materials except as follows: Licensee hereby grants to Company a royalty-free, non-exclusive, revocable, nontransferable, non-sublicensable, limited license to use the Licensee Materials as appropriate solely to perform the Services and develop and deliver the Deliverables.  Licensee represents and warrants that any and all Licensee Materials provided by it to Company, is the rightful property of Licensee or Licensee has full right to supply such items to Company.
+                        </li>
+                        <li>
+                            Licensee agrees that, as between Company and the Licensee, Company shall have sole and exclusive ownership of, and all right, title, and interest in and to, the Company Materials, including the Services, and all modifications and enhancements of the Services (including ownership of all copyrights and other intellectual property rights), subject only to the rights expressly granted to the Licensee under this Agreement. This Agreement does not provide the Licensee with title or ownership of any Company Material or Service, but only a limited right to use the same solely upon the terms expressly set forth in this Agreement.  For the purpose of clarity, nothing provided by Company under this Agreement, including the Company Materials or Services, is to be considered a “work for hire” and Company does not convey, transfer or assign any right, title and interest it may have now or in the future acquire, including but not limited to all intellectual property rights, to Licensee.
+                        </li>
+                        <li>
+                            All intellectual property rights in and to all documents, work product, and other materials that are furnished to Licensee under this Agreement or prepared by Company in the course of performing the work hereunder (“Deliverables”) shall be owned by Company. Conditioned on Licensee’s full payment of all fees due hereunder, Company hereby grants Licensee a license to use the Deliverables free of additional charge and on a non-exclusive, worldwide, non-transferable, non-sublicenseable, fully paid-up, royalty-free and perpetual basis to the extent necessary to enable Licensee to make reasonable use of them as intended.  All other rights are reserved.
+                        </li>
+                        <li>
+                            Feedback. Company may use any reports, comments, ratings, reviews and suggestions in any form regarding the Services that Licensee provides to Company (collectively, the “Feedback”). Licensee grants Company a worldwide, non-exclusive, irrevocable, perpetual, royalty-free right and license to incorporate and use the Feedback.
+                        </li>
+                        <li>
+                            Data.  By the nature of this Agreement, Company may have access to Licensee data including, but not limited to, personally identifiable information, and other Licensee data (collectively referred to as "Licensee Information"). Company agrees that said Licensee Information is Confidential and shall take all commercially reasonable steps to protect such Licensee Information and maintain its confidentiality.  Licensee understands and agrees that Company may share Licensee Information with third party service providers solely for the purpose of providing the Services hereunder, and such third party service providers will be held to the same standards as stated herein.
+                            <ol type="a">
+                                <li>
+                                    Unless otherwise explicitly stated herein, all Licensee Information shall remain the property of Licensee. Archival media containing Licensee Information shall be used by Company and its Third Party Service Providers solely for back-up purposes.
+                                </li>
+                                <li>
+                                    Licensee grants Company the right to use Licensee Information solely as needed for Company to perform its obligations under this Agreement.  However, Licensee agrees that Company shall have a limited right to use Licensee Information in the form of aggregate data for any purpose. Prior to any such use, all personally identifiable information shall be removed from such data. The right of Company to use aggregate data will survive termination of the Agreement.  In addition, Licensee agrees that Company and/or Third Party Service Providers may use Licensee data to improve the Services and Licensee’s experience with the Services.
+                                </li>
+                                <li>
+                                    Licensee understands and agrees that Licensee is responsible for maintaining and protecting backups of Licensee Information and Licensee Materials, as applicable, directly or indirectly processed using the Services and that Company is not responsible for exportation of, the failure to store, the loss, or the corruption of, Licensee Information or Licensee Materials.
+                                </li>
+                            </ol>
+                        </li>
+                    </ol>
+
+                    <h3>VII.	CONFIDENTIALITY</h3>
+                    <ol type="1">
+                        <li>
+                            During the term of this Agreement and in the discussions related to this Agreement prior to the Effective Date, each Party may disclose to the other Party certain information (either oral, written or digital) including, but not limited to, data, research, product plans, products, services, pricing, customer lists, mailing lists, marketing plans, opportunities, trade secrets, markets, software, developments, inventions, processes, designs, drawings, engineering, technical data, know-how, hardware configuration information, marketing or financial data (collectively, “Confidential Information”).  Confidential Information shall also include the terms of this Agreement. For purposes of this Agreement, the Party disclosing the Confidential Information shall be referred to as the “Disclosing Party” and the Party receiving the Confidential Information shall be the “Recipient.”  Recipient agrees to use at least the same degree of care, but not less than reasonable care, to prevent disclosure of Confidential Information to third parties as Recipient would use to protect its own Confidential Information.  Recipient shall not disclose to any third Party, nor permit any other person or entity access to the Disclosing Party’s Confidential Information, except as required by an employee, agent, officer, director, partner, or representative of such Party in order to perform the obligations or exercise rights under this Agreement. Each Party shall ensure that its employees, agents, officers, directors, partners, or representatives are advised of the confidential nature of the Confidential Information and are precluded by contract or other legal obligation from taking any action prohibited under this Section. A Party shall immediately notify the other Party in writing of all circumstances surrounding any possession, use, or knowledge of Confidential Information by any person or entity other than those authorized by this Agreement. Each Party agrees that Confidential Information shall be used for the sole purpose of performing its obligations or exercising its rights under this Agreement.
+                        </li>
+                        <li>
+                            The term “Confidential Information” shall not include any information which:  (a) at the time of the disclosure or thereafter is or becomes generally available to the public other than as a result of its disclosure by the Recipient in violation of this Agreement, (b) was or becomes available to the Recipient on a non-confidential basis from a source other than the Disclosing Party, (c) is independently developed by the Recipient without the use of any Confidential Information, or (d) was in the possession of the Recipient prior to being disclosed to the Recipient by the Disclosing Party.
+                        </li>
+                        <li>
+                            Upon termination of this Agreement, Recipient shall, upon the request of the Disclosing Party, return or destroy all Confidential Information of the Disclosing Party. Notwithstanding the foregoing, the Recipient may retain one (1) copy of all Confidential Information for legal and compliance purposes provided it maintains such copy in accordance with this Agreement and ceases using such data for business purposes. In the case of destruction, the Recipient shall certify in writing such destruction to the Disclosing Party within ten (10) days following written request for such certification.
+                        </li>
+                        <li>
+                            Recipient may disclose the Disclosing Party’s Confidential Information upon the order of any competent court or government agency. Prior to any such disclosure the Recipient shall, to the extent that doing so would not prejudice the Recipient or subject the Recipient to a fine or penalty, inform the Disclosing Party of such order and afford the Disclosing Party the opportunity to contest such disclosure.
+                        </li>
+                        <li>
+                            Each Party agrees that its obligations in this Section are necessary and reasonable in order to protect the Disclosing Party and its business, and each Party agrees that the remedy of damages would be inadequate to compensate the Disclosing Party for any breach by the Recipient of its obligations set out under this Section.  Accordingly, each Party agrees that, in addition to any other remedies that may be available, the Disclosing Party shall be entitled to seek injunctive relief against the threatened breach of this Agreement or the continuation of any such breach by the Recipient, without limiting any other rights and remedies to which the Disclosing Party may be entitled to at law, in equity or under this Agreement.
+                        </li>
+                    </ol>
+                    <h3>
+                        IX.	NON-SOLICITATION / BUSINESS INTERFERENCE
+                    </h3>
+                    <ol type="1">
+                        <li>
+                            Licensee recognizes Company has proprietary relationships with its employees, consultants and contractors (the “Protected Parties”). During the term of this Agreement and for a period of twenty-four (24) months from the date Company last provides Services to Licensee, whether under this Agreement, any Addendum or otherwise (the “Restricted Period”), the Licensee hereby agrees on behalf of itself, and any related parties, entities or subsidiaries, that it will not, without the prior written approval of Company, directly or indirectly:
+                            <ol type="a">
+                                <li>
+                                    induce, advise or counsel any Protected Parties to terminate, reduce or modify their relationship with Company,
+                                </li>
+                                <li>
+                                    solicit, recruit, hire, or engage any Protected Parties, or
+                                </li>
+                                <li>
+                                    otherwise interfere with or damage, or attempt to interfere with or damage, the relationship between Company and any Protected Parties.
+                                </li>
+                            </ol>
+                        </li>
+                        <li>
+                            Licensee is aware that the Protected Parties are bound by certain restrictions and obligations that, among other things, prevent them from working for Company’s current or previous clients and using, disclosing, relying upon or possessing any of Company’s Confidential Information. Licensee also understands that any violation of those restrictions may subject such Protected Parties to, among other things, injunctive and monetary remedies (including attorney’s fees). Licensee shall not at any time, directly or indirectly, either for itself or on behalf of any third party, induce, assist or cause any Protected Parties to breach, or otherwise fail to comply with, any restrictive covenant made by such Protected Parties to Company.
+                        </li>
+                        <li>
+                            Licensee agrees that, in addition to any other remedies that may be available, without the necessity of posting bond or proving actual damages, Company shall be entitled to seek injunctive relief against the threatened breach of this Section or the continuation of any such breach by the Licensee, without limiting any other rights and remedies to which the Company may be entitled to at law, in equity or under this Agreement.
+                        </li>
+                    </ol>
+
+                    <h3>VIII.	WARRANTIES</h3>
+                    <ol type="1">
+                        <li>
+                            Company represents that (a) it shall comply with all applicable laws in connection with its performance of the Services under this Agreement and obtain all licenses and permits required to perform the Services; and (b) it shall provide the Services set forth in this Agreement in a professional manner in accordance with applicable industry standards.
+                        </li>
+                        <li>
+                            Except as otherwise explicitly stated herein, Licensee understands and agrees that the Company Materials and Company Services and information contained therein or provided therewith are provided on an “as is” and “as available” basis only, without warranty of any kind, and all express, implied or statutory warranties, conditions, representations, including but not limited to, the implied warranties of title, merchantability, fitness for a particular purpose, accuracy, timeliness, completeness, adequacy and non-infringement or warranty arising out of course of performance, course of dealing or usage or trade are excluded by Company.  Furthermore, and without limitation, Company does not warrant that: A) information provided by the Services is correct, accurate, reliable or complete; B) the function of the Services will be uninterrupted or error-free; or C) the use of the Services will result in any particular results.  Licensee is solely responsible for any and all acts or omissions taken or made in reliance on the Services or the information contained therein, including inaccurate or incomplete information.
+                        </li>
+                        <li>
+                            Without limiting the foregoing, Company does not warrant the quality, accuracy, or suitability of information provided through the Company Services for any purpose.  Licensee agrees that Company has made no agreements, representations or warranties other than those expressly set forth in this Agreement, and that no future agreement, representation or warranty of Company with regard to Services provided under this agreement shall be effective unless expressly stated in an amendment to this Agreement signed by both Parties. Any past results received by Licensee with respect to the Services are not indicative of future results.
+                        </li>
+                    </ol>
+                    <h3>
+                        IX.	INDEMNIFICATION
+                    </h3>
+                    <ol type="1">
+                        <li>
+                            Licensee will indemnify, defend and hold harmless Company, and its directors, officers, employees, agents and representatives from and against any and all losses, damages, demands, claims, costs, penalties, injuries, interest, or expenses (including without limitation reasonable attorney fees and costs) (“Losses”) howsoever caused, arising out of or relating to (i) the use or misuse of the Services or any portion thereof by Licensee or any of Licensee’s Users; (ii) any breach or alleged breach of any representations, warranties, obligations or responsibilities contained herein; (iii) the modification of the Services or any information contained therein, integration, alteration or the combination of all or part of the Services with any other software, program, product or device that is not expressly permitted under this Agreement, by or at the request of the Licensee, or the User, regardless of whether or not Company gave its consent to or performed such combination, integration, alteration or modification; (iv) Licensee’s violation of federal, state or local laws, rules or regulations; or (v) the actions of any person gaining access to the Services under a User ID assigned to Licensee.
+                        </li>
+                        <li>
+                            Company agrees to defend, indemnify and hold harmless Licensee from and against all Losses, arising out of any claim that the Company Services infringes or misappropriates any third party intellectual property. If the Company Services becomes the subject of an intellectual property infringement claim, Company may, at its sole option, (a) procure for you a license to continue using the Company Services in accordance with this Agreement; (b) replace or modify the allegedly infringing portion of the Company Services to avoid the infringement, or (iii) terminate this Agreement and refund any prepaid fees as applicable to the period after termination. This section sets forth Licensee’s sole remedy in the event of any third party infringement claim regarding the Company Services.
+                        </li>
+                        <li>
+                            The indemnifying Party may not enter into any settlement that would admit any wrongdoing by or impose any liability on the part of the indemnified Party, or impose any obligation on the indemnified Party, without the indemnified Party’s prior written consent. Each Party’s indemnification obligations under this Agreement will be reduced to the extent the other Party is held to have been contributorily negligent or otherwise at fault.  Any claim or action against Company must be brought within twelve (12) months after the event first giving rise to the claim. Each Party shall have a duty to mitigate its damages for which the other Party is or may be responsible
+                        </li>
+                    </ol>
+
+                    <h3>X.	LIMITATION OF LIABILITY</h3>
+
+                    <ol type="1">
+                        <li>
+                            It is expressly agreed that in no event shall Company, or any officers, directors, stockholders, agents, and employees, be liable for any special, direct, indirect, consequential, or exemplary damages, including but not limited to, loss of profits or revenues, loss of use, or loss of information or data, whether a claim for any such liability or damages is premised upon breach of contract, breach of warranty, negligence, strict liability, or any other theory of liability, even if Company has been apprised of the possibility or likelihood of such damages occurring.
+                        </li>
+                        <li>
+                            Licensee acknowledges and agrees that the Fees and other charges which Company is charging under this agreement do not include any consideration for assumption by Company of the risk of Licensee’s indirect, consequential or incidental damages or of unlimited direct damages.  Notwithstanding anything in this agreement to the contrary, Company’s aggregate liability under this agreement, regardless of theory of liability, shall be limited to the aggregate fees actually paid by Licensee under this agreement for the six (6) month period preceding the event first giving rise to the claim.
+                        </li>
+                        <li>
+                            Notwithstanding anything to the contrary herein, Company’s sole and exclusive liability and Licensee’s sole and exclusive remedy for all claims of defects in the Services will be, in Company’s sole discretion, to either: (A) re-perform such Services; or (B) fully or partially credit or refund the Fees paid by Licensee for such Services.
+                        </li>
+                        <li>
+                            Because some states or jurisdictions do not allow the exclusion or the limitation of liability for consequential or incidental damages, in such states or jurisdictions, our liability shall be limited to the maximum extent permitted by law.
+                        </li>
+                    </ol>
+
+                    <h3>
+                        XI.	MISCELLANEOUS
+                    </h3>
+                    <ol type="1">
+                        <li>
+                            Independent Contractor:  The Parties to the Agreement are independent contractors and nothing in the Agreement shall be deemed to make either Party an agent, employee, or partner of the other Party.  Neither Party shall have any authority to bind, commit, or otherwise obligate the other Party in any manner whatsoever.
+                        </li>
+                        <li>
+                            Entire Agreement: This Agreement constitutes the entire agreement between the Parties as to its subject matter, and supersedes all previous and contemporaneous agreements, proposals or representations, written or oral, concerning the subject matter of this Agreement.  No representation, undertaking or promise shall be taken to have been given or be implied from anything said or written in negotiations between the Parties prior to this Agreement except as expressly stated in this Agreement.
+                        </li>
+                        <li>
+                            Governing Law and Dispute Resolution: This Agreement and any action related thereto will be governed and interpreted by and under the laws of the State of Florida, without giving effect to any conflicts of laws principles that require the application of the law of a different state.  In the event of a dispute, the parties will work together in good faith to try to reach resolution.  In the event that the parties are unable to resolve a dispute after sixty (60) days, the parties agree to resolve any claim, dispute, or controversy (excluding any claims for injunctive or other equitable relief which may be brought in federal or state courts situated in Broward County, Florida) arising out of or in connection with or relating to this Agreement, or the breach or alleged breach thereof (collectively, “Claims”), by binding arbitration.  The arbitration will be conducted in Broward County, Florida, under the auspices of the American Arbitration Association (“AAA”), in accordance with the AAA’s Commercial Arbitration Rules then in effect.  The United Nations Convention on Contracts for the International Sale of Goods does not apply to this Agreement.
+                        </li>
+                        <li>
+                            Attorneys’ Fees:  The prevailing Party in any dispute under this Agreement shall be entitled to recover all costs actually incurred in connection therewith, including, without limitation, reasonable attorneys’ fees.
+                        </li>
+                        <li>
+                            Publicity:  Company may publicly refer to Licensee as a client of Company, including on Company’s website and in sales presentations, and may use Licensee’s logo and sales volume for such purposes.
+                        </li>
+                        <li>
+                            Modifications and Waivers: Company may change the Services by providing Licensee not less than thirty (30) days’ notice, and the terms under which they are provided to Licensee (including terms set forth in this Agreement) at any time. If such change materially alters the Services, then upon receipt of such a notice or notification of the change in the terms of the Agreement electronically provided within the Services or in writing Licensee may terminate this Agreement by giving written notice to us on or before the effective date of the change. Licensee agrees that Licensee’s failure to give notice of termination prior to the effective date of the change in Services constitutes acceptance of the change, which shall thereupon become part of this Agreement.   Other than as described above, this Agreement may not be modified except by a writing signed by authorized representatives of both Parties. A waiver by any Party of its rights under this Agreement shall not be binding unless contained in a writing signed by an authorized representative of the Party waiving its rights. The non-enforcement or waiver of any provision on any occasion shall not constitute a waiver of such provision on any other occasions unless expressly so agreed in writing. It is agreed that no usage of trade or other regular practice or method of dealing between or among the Parties to this Agreement shall be used to modify, interpret, supplement, or alter in any manner the terms of this Agreement.
+                        </li>
+                        <li>
+                            Enforceability/Injunctive Relief: It is understood and agreed by the Parties to this Agreement that it is their intention that if a court of competent jurisdiction shall determine that any of the terms of this Agreement are invalid or otherwise unenforceable, that such court shall substitute terms, therefore, with such court determines are enforceable, so as to result in the enforcement of the original terms to the maximum extent permitted by law. The Licensee agrees that any non-compliance with the terms of this Agreement, or any unauthorized or improper use of any Company trademarks or Company Materials will cause irreparable damage to Company. The Licensee therefore agrees that if the Licensee engages in any one or more of such noncompliance, unauthorized use and improper use of Company trademarks or Company Materials, during or after the Term of License, Company shall be entitled to both temporary and permanent injunctive relief against the Licensee from any court of competent jurisdiction, in addition to all other remedies which Company may have at law, in equity or otherwise.
+                        </li>
+                        <li>
+                            Notices: Any notices or communication under this Agreement shall be in writing and by electronic mail.  Each party may change its email address for receipt of notice by giving notice of such change to the other party.  For contractual purposes, Company and Licensee consent to receive communications from each other in an electronic form, and Licensee agrees that all terms and conditions, agreements, notices, disclosures, and other communications that Company provides to you electronically satisfy any legal requirement that such communications would satisfy if it were in writing.
+                        </li>
+                        <li>
+                            No Third Party Beneficiaries: Nothing express or implied in this Agreement is intended to confer, nor shall confer, upon any person or entity other than the Parties, their licensors, and their respective successors or assigns any rights, remedies, obligations, or liabilities whatsoever.
+                        </li>
+                        <li>
+                            Export Control Law.  The Services, and any software or documentation delivered to Licensee under this Agreement are subject to export control laws and regulations and may also be subject to import and export laws of the jurisdiction in which it was accessed, used, or obtained, if outside those jurisdictions. Licensee agreed that it shall abide by all applicable export control laws, rules, and regulations applicable to the Services, software and documentation. Licensee represents and warrants that it is not located in or under the control of or a resident of any country, person, or entity prohibited to receive the Services, software or documentation due to export restrictions and that Licensee will not export, re-export, transfer, or permit the use of the Services, software or documentation, in whole or in part, to or in any of such countries or to any of such persons or entities.
+                        </li>
+                        <li>
+                            Government Use.  Company’s Services, software and documentation, as applicable, were developed exclusively at private expense and are a “commercial item” as defined in Federal Acquisition Regulation (“FAR”) 2.101, and any supplement is provided with no greater than RESTRICTED RIGHTS. Such Services, software and documentation, and related items consist of “commercial computer software,” “commercial computer software documentation,” and commercial technical data as defined in the applicable acquisition regulations, including FAR 2.101 and FAR Part 12. Use, duplication, release, modification, transfer, or disclosure ("Use") of the Services, software and documentation are restricted by this Agreement and in accordance with Defense Federal Acquisition Regulation Supplement (“DFARS”) Section 227.7202 and FAR Section 12.212, and the Services, software and documentation are licensed (i) only as commercial items; and (ii) with only the rights granted to commercial end users pursuant to this Agreement. Such Use is further restricted by FAR 52.227-14, 252.227-7015, or similar acquisition regulations, as applicable and amended. Except as described herein, all other Use is prohibited. This Section is in lieu of, and supersedes, any other FAR, DFARS, or other clause addressing government rights under this Agreement or any other contract under which the Services, software or documentation is acquired or licensed.
+                        </li>
+                        <li>
+                            Interpretation: Section headings are for reference only, and shall not be construed as substantive parts of this Agreement. Each capitalized term used in this Agreement  shall have the meaning attributed to it in any part of this Agreement.
+                        </li>
+                        <li>
+                            Survival: The provisions of this Agreement that by their nature contemplate survival of this Agreement shall survive any termination or expiration of this Agreement.
+                        </li>
+                        <li>
+                            Force Majeure: Neither Party shall be liable to the other Party for any delay or failure of said Party to perform its obligations hereunder (except for payment obligations) if such delay or failure arises from any cause or causes beyond the reasonable control of such Party.  Such causes shall include, but are not limited to, acts of God, floods, fires, loss of electricity or other utilities, or delays by either Party in providing required resources or support or performing any other requirements hereunder.
+                        </li>
+                        <li>
+                            No Assignment:  Licensee may not assign or transfer this Agreement, or its rights and obligations herein, without Company’s prior written consent, and any attempted assignment or transfer in violation of the foregoing will be null and void.  The terms of this Agreement will be binding upon the Parties and their respective successors and permitted assigns
+                        </li>
+                        <li>
+                            Advice of Counsel & Authority: Each Party acknowledges: (a) having fully read this Agreement in its entirety; (b) having had full opportunity to study and review this Agreement; (c) having been advised that counsel for us has acted solely on our behalf in connection with the negotiation, preparation, and execution of this Agreement; (d) having been advised that all Parties have the right to consult and should consult independent counsel respecting their rights and duties under this Agreement; and (e) having had access to all such information as has been requested. The individuals, corporations or entities entering into this Agreement represent and warrant that they are competent and capable of entering into a binding contract, and that they are authorized to enter into this Agreement on behalf of the Parties.
+                        </li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="k-edit-buttons k-state-default popup-button-panel" style="position: static">
+                <table style="margin-left: auto">
+                    <tr>
+                        <td colspan="2" style="padding: 5px 5px 10px 5px">
+                            <input type="checkbox" data-bind="checked: isAcceptedFlag" style="margin-right: 2px; margin-bottom: 2px; vertical-align:bottom" /> <span style="vertical-align:bottom">I accept these terms and conditions.</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="margin-right: 5px">
+                            <button tabindex="-1"
+                                    data-bind="click: onSave, enable: isAcceptedFlag(), css: { 'k-state-disabled': !isAcceptedFlag() }"
+                                    class="k-button"
+                                    style="width: 75px">
+                                <span class="k-icon k-update"></span>
+                                <span>Ok</span>
+                            </button>
+                        </td>
+                        <td style="vertical-align: bottom; width: 90px">
+                            <button class="k-button k-button-icontext k-grid-cancel"
+                                    data-bind="click: onDeclane" style="width: 75px">
+                                <span class="k-icon k-cancel" ></span>Cancel
+                            </button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- /ko -->

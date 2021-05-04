@@ -1,0 +1,114 @@
+﻿@using Amazon.Web.ViewModels
+@using Kendo.Mvc.UI
+
+
+@{
+    ViewBag.Title = "Monitor orders";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<script src="~/Scripts/knockout-kendo.min.js" type="text/javascript"></script>
+<script type="text/javascript">
+    function addTracking() {
+        var url = '@Url.Action("AddOrderToTrack", "OrderToTrack")';
+        popupWindow.initAndOpen(url, 'Add Tracking', 450);
+    };
+
+    function deleteTracking(sender, Id) {
+        if (confirm('Are you sure you want to delete tracking?')) {
+            $.ajax({
+                url: '@Url.Action("DeleteTracking", "OrderToTrack")',
+                data: { Id: Id },
+                async: false,
+                success: function () {
+                    $('#grid').data('kendoGrid').dataSource.read();
+                }
+            });
+        }
+    }
+</script>
+
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/orders.ico" />
+}
+
+<div id="page-content">
+
+    <ol class="breadcrumb">
+        <li><a href="#">Tracking</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="k-toolbar k-grid-toolbar">
+        <div>
+            <a href="#" class="k-button k-button-icontext k-grid-add" style="margin-right: 20px" onclick="addTracking()">
+                <span class="k-icon k-add"></span>
+                Add new tracking
+            </a>
+        </div>
+    </div>
+    <div>
+        @(Html.Kendo().Grid<OrderToTrackViewModel>()
+              .Name("grid")
+              .Editable(e => e.Mode(GridEditMode.InLine))
+              .Columns(columns =>
+              {
+                  columns.Bound(c => c.OrderNumber)
+                      .ClientTemplate("<div><a class='order-num' target='_blank' href='#=SellerOrderUrl#'>#=OrderNumber#</a></div>");
+
+                  columns.Bound(c => c.PersonName)
+                      .Title("Buyer name");
+
+                  columns.Bound(c => c.OrderDate)
+                      .Format("{0:MM.dd.yyyy HH:mm}");
+
+                  columns.Bound(c => c.EstDeliveryDate)
+                      .Format("{0:MM.dd.yyyy HH:mm}");
+
+                  columns.Bound(c => c.ActualDeliveryDate)
+                      .Format("{0:MM.dd.yyyy HH:mm}");
+
+                  columns.Bound(c => c.TrackingNumber)
+                      .ClientTemplate(
+                          "#if (TrackingNumber != null) {# <a target='_blank' href='#=TrackingUrl#'>#=TrackingNumber#</a> #} else {# <span>-</span> #}#"
+                          + "<div class='ramark gray'>#if (FromMailPage) {# (mail page) #} else {# (order page) #}#</div>");
+                  columns.Bound(c => c.Comment)
+                      .Width(150);
+
+                  columns.Bound(c => c.LastUpdateDate)
+                      .Width(180)
+                      .ClientTemplate("<div>Status: #=tmpl.isNull(TrackingStateEvent, '-')# (<span class='gray'>from:</span> #=tmpl.isNullFormat(TrackingStateDate, 'MM.dd.yyyy', '-')#)</div>"
+                                      + "<div class='remark'><span class='gray'>Last Updated:</span> #=tmpl.isNullFormat(LastUpdateDate, 'MM.dd.yyyy', '-')#</div>")
+                      .Title("Last Update");
+
+                  columns.Command(command => command.Edit())
+                      .Width(105);
+                  
+                  columns.Bound(c => c.TrackingId)
+                      .Title("")
+                      .Width(105)
+                      .ClientTemplate("<a href='javascript: void(0)' class='k-button' onclick='deleteTracking(this, \"${TrackingId}\")'><span class='glyphicon glyphicon-remove am-icon'></span>Delete</a>");
+              })
+              .Pageable(conf => conf.Enabled(true))
+              .DataSource(dataSource => dataSource
+                  .Ajax()
+                  .PageSize(50)
+                  .Sort(conf => conf.Add(s => s.OrderDate).Descending())
+                  .Model(conf =>
+                  {
+                      conf.Id(m => m.OrderNumber);
+                      conf.Field(m => m.PersonName).Editable(false);
+                      conf.Field(m => m.OrderDate).Editable(false);
+                      conf.Field(m => m.EstDeliveryDate).Editable(false);
+                      conf.Field(m => m.ActualDeliveryDate).Editable(false);
+                      conf.Field(m => m.TrackingNumber).Editable(false);
+                      conf.Field(m => m.TrackingId).Editable(false);
+                      conf.Field(m => m.LastUpdateDate).Editable(false);
+                      conf.Field(m => m.OrderNumber).Editable(false);
+                  })
+                  .Read(read => read.Action("GetToTrack", "OrderToTrack"))
+                  .Update(update => update.Action("UpdateComment", "OrderToTrack"))
+              ))
+    </div>
+</div>

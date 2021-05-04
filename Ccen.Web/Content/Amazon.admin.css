@@ -1,0 +1,10 @@
+﻿
+.debug-status {
+    
+    background: #efefef;
+}
+
+.debug-status td {
+    padding-left: 5px;
+    padding-right: 5px;
+}

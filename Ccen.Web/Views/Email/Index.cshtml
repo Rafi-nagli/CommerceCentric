@@ -1,0 +1,538 @@
+﻿@using Amazon.Core.Models
+@using Amazon.Core.Models.Stamps
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels
+@using Amazon.Web.ViewModels.Emails
+@using Kendo.Mvc.UI
+
+@model Amazon.Web.Models.SearchFilters.EmailFilterViewModel
+
+@{
+    ViewBag.Title = "Emails";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+    <link rel="shortcut icon" href="/Content/Images/feedback.ico" />
+}
+
+<script type="text/javascript">
+    //ORDERS GENERAL
+    function getStatusClass(status) {
+        switch (status) {
+            case @((int)TrackingNumberStatusEnum.Green):
+                return "green";
+            case @((int)TrackingNumberStatusEnum.Yellow):
+                return "yellow";
+            case @((int)TrackingNumberStatusEnum.Red):
+                return "red";
+            case @((int)TrackingNumberStatusEnum.Black):
+                return "black";
+        }
+        return "black";
+    }
+
+
+    var EmailsModel = function (gridId, model, settings) {
+        var self = this;
+        ko.BaseViewModel.call(self);
+
+        self.settings = settings;
+        self.model = model;
+
+        //Search
+        self.isSearchResult = ko.observable(false);
+        self.buyerName = ko.observable('');
+        self.orderNumber = ko.observable(model.OrderNumber);
+
+        self.minDate = new Date(2000, 1, 1);
+        self.maxDate = new Date();
+        self.maxDate.setHours(23);
+        self.maxDate.setMinutes(59);
+
+        self.dateFrom = ko.observable('');
+        self.dateTo = ko.observable('');
+
+        self.onlyIncoming = ko.observable(self.model.OnlyIncoming);
+        self.onlyIncoming.subscribe(function () { self.search(); });
+
+        self.includeSystem = ko.observable(self.model.IncludeSystem);
+        self.includeSystem.subscribe(function () { self.search(); });
+
+        self.onlyWithoutAnswer = ko.observable(self.model.OnlyWithoutAnswer);
+        self.onlyWithoutAnswer.subscribe(function () { self.search(); });
+
+        self.responseStatus = ko.observable(self.model.ResponseStatus);
+        self.responseStatus.subscribe(function () { self.search(); });
+        self.responseStatusList = settings.responseStatusList;
+
+        self.market = ko.observable(null);
+        self.marketList = settings.marketList;
+        self.market.subscribe(function() { self.search(); });
+
+        //Grid
+        self.gridId = gridId;
+        self.gridNode = $(gridId);
+        self.grid = $(gridId).data("kendoGrid");
+
+        //Search
+
+        self.search = function (isSearch) {
+            var params = self.getGridParams();
+
+            self.resetRowNumber(0);
+
+            if (self.grid.dataSource.page() != 1) {
+                self.grid.dataSource.page(1); //May call read
+            }
+            self.grid.dataSource.read(params);
+        };
+
+        self.setSearchOrder = function(orderNumber) {
+            console.log("setSearchOrder: " + orderNumber);
+            self.orderNumber(orderNumber);
+            self.search();
+        };
+
+        self.orderIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetOrderIdList", "AutoComplete")',
+                parameterMap: function(data, action) {
+                    console.log("action=" + action);
+                    if (action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.searchByKeyCmd = function(data, event) {
+            if (event.keyCode == 13)
+                self.search(true);
+            return true;
+        };
+
+        self.getGridParams = function() {
+            console.log("getGridParams");
+
+            var onlyWithoutAnswer = self.onlyWithoutAnswer();
+            var onlyIncoming = self.onlyIncoming();
+            var includeSystem = self.includeSystem();
+            var responseStatus = self.responseStatus();
+            var from = kendo.toString(self.dateFrom(), 'MM/dd/yyyy');
+            var to = kendo.toString(self.dateTo(), 'MM/dd/yyyy');
+            var orderNumber = self.orderNumber();
+            var buyerName = self.buyerName();
+            var market = self.market();
+
+            return {
+                onlyWithoutAnswer: onlyWithoutAnswer,
+                onlyIncoming: onlyIncoming,
+                includeSystem: includeSystem,
+                responseStatus: responseStatus,
+                dateFrom: from,
+                dateTo: to,
+                buyerName: buyerName,
+                orderNumber: orderNumber,
+                market: market,
+            };
+        };
+
+        self.clear = function() {
+            self.isSearchResult(false);
+
+            self.onlyIncoming(self.model.OnlyIncoming);
+            self.onlyWithoutAnswer(self.model.OnlyWithoutAnswer);
+            self.responseStatus(self.model.ResponseStatus);
+            self.dateFrom('');
+            self.dateTo('');
+            self.buyerName('');
+            self.orderNumber('');
+            self.market(null);
+        };
+
+        self.clearAndSearch = function() {
+            self.clear();
+            self.search(false);
+        };
+
+        self.searchByButton = function() {
+            self.search(true);
+        };
+
+        self.composeEmailUrl = ko.computed(function() {
+            var baseUrl = self.settings.composeEmailUrl;
+            if (!dataUtils.isEmpty(self.orderNumber())) {
+                baseUrl += "?orderNumber=" + self.orderNumber();
+            }
+            return baseUrl;
+        });
+
+        self.setNoResponseNeeded = function(sender, emailId, orderNumber, emailMarket, emailType) {
+            console.log('setNoResponseNeeded');
+
+            var setNoResponseCallback = function() {
+                $.ajax({
+                    url: '@Url.Action("SetNoResponseNeeded", "Email")',
+                    data: {
+                        emailId: emailId,
+                        orderNumber: orderNumber,
+                    },
+                    success: function(result) {
+                        console.log(result);
+                        if (result.IsSuccess) {
+                            $(sender).closest('.response-folder').addClass('dismiss-folder');
+                            $(sender).closest('a').hide();
+                        }
+                    }
+                });
+            };
+
+            if ((emailMarket == self.settings.markets.amazon
+                || emailMarket == self.settings.markets.amazonEU)
+                && emailType != self.settings.emailTypes.system) {
+                Message.popupAsync({
+                    title: 'Confirm',
+                    message: 'Please, keep in mind the message should also be separately marked as "no response needed" in the Amazon messages. Continue?',
+                    type: Message.YES_NO
+                }).done(function() {
+                    setNoResponseCallback();
+                }).fail(function() {
+
+                });
+            } else {
+                setNoResponseCallback();
+            }
+        }
+
+        self.dismissResponsePromised = function(sender, emailId, orderNumber) {
+            console.log('dismissResponsePromised');
+            $.ajax({
+                url: '@Url.Action("DismissResponsePromised", "Email")',
+                data: {
+                    emailId: emailId,
+                    orderNumber: orderNumber,
+                },
+                success: function(result) {
+                    console.log(result);
+                    if (result.IsSuccess) {
+                        $(sender).closest('.response-folder').addClass('dismiss-folder');
+                        $(sender).closest('a').hide();
+                    }
+                }
+            });
+        }
+
+        self.onDataBound = function(e) {
+            var grid = e.sender;
+            var data = grid.dataSource.data();
+            if (data.length === 0) {
+                $('<div style="padding: 15px">No records found</div>').prependTo($(".k-grid table tbody"));
+            }
+        }
+
+        helper.ui.addTopPager(self.grid);
+
+        self.search(false);
+    };
+
+</script>
+
+<div id="page-content">
+
+    <ol class="breadcrumb">
+        <li><a href="#">Emails</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+
+    <div class="panel panel-default">
+        <div class="filters">
+            <table>
+                <colgroup>
+                    <col style="width: 100px" />
+                    <col style="width: 210px" />
+                    <col style="width: 100px" />
+                    <col style="width: 450px" />
+                </colgroup>
+                <tr>
+                    <th class="right-block">Receive Date: </th>
+                    <td>
+                        <table>
+                            <tr>
+                                <th>From</th>
+                                <td>
+                                    <input data-bind="kendoDatePicker: { value: dateFrom, format: 'MM/dd/yyyy', min: minDate, max: maxDate }" />
+                                </td>
+                                <th>To</th>
+                                <td>
+                                    <input data-bind="kendoDatePicker: { value: dateTo, format: 'MM/dd/yyyy', min: minDate, max: maxDate }" />
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            <table>
+                <colgroup>
+                    <col style="width: 100px" />
+                    <col style="width: 210px" />
+                    <col style="width: 100px" />
+                    <col style="width: 210px" />
+                    <col style="width: 210px" />
+                    <col style="width: 210px" />
+                </colgroup>
+                <tr>
+                    <th>Order #:</th>
+                    <td>
+                        <input type="text"
+                               style="width: 200px"
+                               data-bind="kendoAutoComplete: {
+                                   value: orderNumber,
+                                   data: {},
+                                   minLenght: 3,
+                                   dataSource: orderIdSource },
+                                valueUpdate: 'afterkeydown',
+                                event: { keypress: searchByKeyCmd }"
+                               class="k-textbox" />
+                    </td>
+                    <th class="right-block">Buyer Name:</th>
+                    <td>
+                        <input type="text"
+                               data-bind="value: buyerName, valueUpdate: 'afterkeydown',
+                                      event: { keypress: searchByKeyCmd }"
+                               class="k-textbox"/>
+                    </td>
+                    @*<th>
+                        <input type="checkbox" data-bind="checked: onlyWithoutAnswer" /> Show without answer
+                    </th>*@
+                    @*<th>
+                        <input type="checkbox" data-bind="checked: onlyIncoming"/> Show only incoming
+                    </th>*@
+                </tr>
+                <tr>
+                    <th>Market:</th>
+                    <td>
+                        <input style="width: 180px"
+                               data-bind="kendoDropDownList: {
+                                       value: market,
+                                       data: marketList,
+                                       optionLabel: 'All',
+                                       dataTextField: 'Text', 
+                                       dataValueField: 'Value' }"/>
+                    </td>
+                    <td colspan="2">
+                        <input style="width: 180px"
+                               data-bind="kendoDropDownList: {
+                                       value: responseStatus,
+                                       data: responseStatusList,
+                                       dataTextField: 'Text',
+                                       dataValueField: 'Value' }" />
+                    </td>
+                    <td>
+                        <input type="checkbox" data-bind="checked: includeSystem" /> Include System
+                    </td>
+                </tr>
+            </table>
+            <button class="k-button"
+                    style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                    data-bind="click: searchByButton">
+                <span class='glyphicon glyphicon-search am-icon'></span>Search
+            </button>
+            <button class="k-button"
+                    style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                    data-bind="click: clearAndSearch">
+                <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+            </button>
+        </div>
+    </div>
+
+    <div class="k-toolbar k-grid-toolbar">
+        <a data-bind="attr: { 'href': composeEmailUrl }"
+           target="_blank"
+           class="btn btn-default">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Compose Email
+        </a>
+    </div>
+
+    @(Html.Kendo().Grid<EmailViewModel>()
+          .Name("grid")
+          .Columns(columns =>
+          {
+              columns.Bound(c => c.OrderNumber)
+                  .Width(170)
+                  .ClientTemplate("#= tmpl.t('orderid-column-template', data)#");
+              columns.Bound(c => c.ReceiveDate)
+                  .ClientTemplate("#= tmpl.t('receivedate-column-template', data)#")
+                  .Width(145);
+              columns.Bound(c => c.FromName)
+                  .Title("Subject")
+                  .ClientTemplate("#= tmpl.t('subject-column-template', data)#");
+              columns.Bound(o => o.Id)
+                  .ClientTemplate("#= tmpl.t('actions-column-template', data)#")
+                  .Title("")
+                  .Width(140);
+          })
+          .Pageable(conf => conf.Enabled(true).Refresh(true))
+          .AutoBind(false)
+          .Events(e => e.DataBound("onDataBound"))
+          .DataSource(dataSource => dataSource
+              .Ajax()
+              .Model(conf => conf.Id(m => m.Id))
+              .Sort(conf => conf.Add(o => o.OrderDate).Descending())
+              .PageSize(20)
+                      .Read(read => read.Action("GetAllEmails", "Email").Data("GetGridParams")))
+    )
+</div>
+
+<script type="text/kendo-tmpl" id="orderid-column-template">
+    <div>#if (OrderNumber != null) {# <a target='_blank' href='#=OrderUrl#'>#=OrderNumber#</a> #} else {# [no order] #}#</div>
+    <div class='remark'>
+        <span class='gray'>Order Date:</span> #=tmpl.f(OrderDate, 'MM.dd.yyyy')#
+    </div>
+    #if (Label != null && Label.TrackingNumber != null) {#
+        <div>
+            <a class='tracking-number #=getStatusClass(Label.TrackingNumberStatus)#'
+               target='_blank'
+               href='#=Label.TrackingUrl#'>#=Label.TrackingNumber#</a>
+        </div>
+    #} else {#
+        <div>-</div>
+    #}#
+</script>
+
+<script type="text/kendo-tmpl" id="receivedate-column-template">
+    <div>#=tmpl.isNullFormat(ReceiveDate, 'MM.dd.yyyy HH:mm', '-')#</div>
+    #if (HasDueDate) {#
+        #if (DueHours >= 0) {#
+            <div class="folder due-date-folder">Due: #=DueHours# hrs</div>            
+        #} else {#
+            @*<div class="folder due-date-folder">Over SLA</div>*@
+            <div class="folder due-date-folder">Overdue</div>
+        #}#
+    #}#
+    #if (ResponsePromised) {#
+        <div class="folder due-date-folder">Due: Promised</div>    
+    #}#
+</script>
+
+<script type="text/kendo-tmpl" id="subject-column-template">
+    <div>
+        #if (ResponseNeeded) {#
+        <span class="folder response-folder #=ResponseDismissed?'dismiss-folder':''# #=IsReviewed?'reviewed-folder':''#">
+            Response Needed
+            #if (!ResponseDismissed) {#
+            <a href="javascript:;"
+               title="No response needed"
+               style="padding: 2px; margin-left: 2px; margin-right: -4px"
+               onclick="emailsVM.setNoResponseNeeded(this, #=Id#, '#=OrderNumber#', '#=EmailMarket#', '#=EmailType#')">
+                <span class="glyphicon glyphicon-remove"></span>
+            </a>
+            #} else {#
+            &nbsp;
+            #}#
+        </span>
+        #}#
+        #if (IsEscalated) {#
+        <span class="folder response-folder">
+            Escalated
+        </span>
+        #}#
+        #if (ResponsePromised) {#
+        <span class="folder promise-folder">
+            Promised Answer
+            <a href="javascript:;"
+               title="Dismiss response promised"
+               style="padding: 2px; margin-left: 2px; margin-right: -4px"
+               onclick="emailsVM.dismissResponsePromised(this, #=Id#, '#=OrderNumber#')">
+                <span class="glyphicon glyphicon-remove"></span>
+            </a>
+        </span>
+        #}#
+        #if (IsSystem) {#
+        <span class="folder system-folder">System</span>
+        #}#
+        #if (HasAttachments) {#
+        <span class='glyphicon glyphicon-paperclip am-icon'></span>
+        #}#
+        <span class="folder #=IsSent?'sent-folder':'inbox-folder'#">#=FolderName#</span>
+        <a target='_blank' href='#=ViewEmailUrl#'>#=Subject#</a>
+    </div>
+    <div>
+        <span style="#=EmailMarketShortName=='-' ? 'display: none' : ''#">
+            <span class="flag-#=EmailMarketShortName#" style="width: 20px; height: 14px; margin-top:4px; margin-right: 2px; background-size: 20px 20px; display:block; float:left"></span>
+        </span>
+        #if (IsSent) {#
+            #=tmpl.isNull(ToName, '-')# <span class='remark'><<a href='mailto: #=ToEmail#'>#=ToEmail#</a>></span>
+        #} else {#
+            #=tmpl.isNull(FromName, '-')# <span class='remark'><<a href='mailto: #=FromEmail#'>#=FromEmail#</a>></span>
+        #}#
+    </div>
+</script>
+
+
+<script type="text/kendo-tmpl" id="actions-column-template">
+    <div class="action-group">
+        #if (!IsSent && !IsSystem && CanReply) {#
+            <a class="btn btn-default"
+               target='_blank'
+               href="#=ReplyEmailUrl#">
+                <span class="glyphicon glyphicon-share-alt" area-hidden="true"></span> Reply
+            </a>
+        #}#
+        #if (OrderNumber != null && !IsSent && !IsSystem) {#
+        <a class='btn btn-default'
+           target='_blank'
+           href="@Url.Action("ComposeEmailFromTemplate", "Email")?orderNumber=#=OrderNumber#&type=@(EmailTypes.LostPackage)&replyToId=#=Id#">Lost Package</a>
+        #}#
+    </div>
+</script>
+
+<script>
+    var emailsVM = null;
+
+    $(document).ready(function () {
+        console.log("begin ready");
+
+        var settings = {
+            composeEmailUrl: '@Url.Action("ComposeEmail", "Email")',
+            marketList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MarketList)),
+            responseStatusList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ResponseStatusList)),
+            markets: {
+                amazon: '@((int)MarketType.Amazon)',
+                amazonEU: '@((int)MarketType.AmazonEU)',
+                amazonAU: '@((int)MarketType.AmazonAU)',
+            },
+            emailTypes: {
+                system: '@((int)IncomeEmailTypes.System)'
+            }
+        };
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        emailsVM = new EmailsModel('#grid', model, settings);
+        ko.applyBindings(emailsVM, document.getElementById("page-content"));
+    });
+
+    function onDataBound(e) {
+        if (emailsVM != null)
+            emailsVM.onDataBound(e);
+    }
+
+    function GetGridParams() {
+        console.log("GetGridParams");
+        if (emailsVM != null)
+            return emailsVM.getGridParams();
+        return {};
+    }
+</script>

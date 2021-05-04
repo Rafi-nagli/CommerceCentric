@@ -1,0 +1,113 @@
+﻿@using Amazon.Web.HtmlExtend
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.ScanOrders.ScanOrderItemViewModel
+@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var ScanItemModel = function(model) {
+        var self = this;
+
+        self.id = model.Id;
+        self.barcode = ko.observable(model.Barcode);
+
+        self.styleErrorMessage = ko.observable('');
+        self.styleId = ko.observable('');
+        self.styleIdLoading = ko.observable(false);
+        self.styleId.subscribe(function() {
+            self.styleErrorMessage('');
+            self.styleIdLoading(true);
+            $.ajax({
+                url: '@Url.Action("GetStyleSizes", "AutoComplete")',
+                data: { styleString: self.styleId(), onlyWithQty: false },
+                cache: false,
+                success: function(data) {
+                    self.styleIdLoading(false);
+                    if (data.Data != null && data.Data.length > 0) {
+                        self.sizeList(data.Data);
+                    } else {
+                        self.styleErrorMessage('StyleId is not found');
+                        self.sizeList([]);
+                    }
+                }
+            });
+        });
+
+        self.styleIdSource = new kendo.data.DataSource({
+            type: "aspnetmvc-ajax",
+            //minLength: 3,
+            transport: {
+                read: '@Url.Action("GetStyleIdList", "AutoComplete")',
+                parameterMap: function (data, action) {
+                    console.log("action=" + action);
+                    if(action === "read") {
+                        console.log("filter=" + data.filter.filters[0].value);
+                        return {
+                            filter: data.filter.filters[0].value
+                        };
+                    } else {
+                        return data;
+                    }
+                }
+            },
+            pageSize: 20,
+            serverPaging: true,
+            serverFiltering: true
+        });
+
+        self.styleItemId = ko.observable(model.StyleItemId);
+        self.sizeList = ko.observable([]);
+    };
+
+
+    $(document).ready(function() {
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var scanOrderModel = new ScanItemModel(model);
+
+        ko.applyBindings(scanOrderModel, document.getElementById('edit-container'));
+    });
+</script>
+
+
+<div id="edit-container" class="inventory-popup">
+    @Html.ValidationSummary(true)
+
+    @Html.HiddenFor(m => m.Id)
+    @Html.HiddenFor(m => m.Barcode)
+    @Html.HiddenFor(m => m.ScanOrderId)
+    @Html.HiddenFor(m => m.Quantity)
+
+    <div class="k-edit-form-container" style="margin-bottom: 15px">
+        <div>
+            <div class="editor-label" style="width: 30%">Barcode:</div>
+            <div class="editor-field" style="padding-top: 5px">
+                <span data-bind="text: barcode"></span>
+            </div>
+        </div>
+        <div>
+            <div class="editor-label" style="width: 30%">Style Id:</div>
+            <div class="editor-field" style="padding-top: 5px">
+                <input style='width: 180px' class="k-textbox" name="InputStyleString" data-bind="kendoAutoComplete: {
+                    value: styleId,
+                    data: {},
+                    minLenght: 3,
+                    dataSource: styleIdSource }"/>
+                <div data-bind="text: styleErrorMessage" class="red"></div>
+            </div>
+        </div>
+        <div>
+            <div class="editor-label" style="width: 30%">Size/Color:</div>
+            <div class="editor-field" style="padding-top: 5px">
+                <input id="InputStyleItemId"
+                        name="InputStyleItemId"
+                        style="width: 100px"
+                        data-bind="kendoDropDownList: {data: sizeList, value: styleItemId, dataTextField: 'Text', dataValueField: 'Value' }"/>
+            </div>
+        </div>
+        <div class="clear"></div>
+
+    </div>
+
+</div>

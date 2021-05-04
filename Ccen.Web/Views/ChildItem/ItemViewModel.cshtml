@@ -1,0 +1,264 @@
+﻿@using Kendo.Mvc.UI
+@using Amazon.Core.Models
+@model Amazon.Web.ViewModels.Products.EditItemsViewModel
+
+@{
+    Layout = null;
+}
+
+<script>
+    var ItemModel = function(model, settings) {
+        var self = this;
+
+        self.model = model;
+        self.settings = settings;
+
+        self.listings = ko.observableArray(model.Listings);
+        self.selectedItemId = ko.observable(model.SelectedItemId);
+
+        self.isVisible = function(itemId) {
+            return self.selectedItemId() == itemId;
+        };
+
+        self.listings().forEach(function(entry) {
+            entry.isActive = ko.computed(function() {
+                return entry.ItemId == self.selectedItemId();
+            });
+
+            entry.isFBA = ko.observable(entry.IsFBA);
+            entry.canEdit = ko.computed(function() {
+                return !entry.isFBA();
+            });
+
+            entry.isWalmartMarket = ko.computed(function () {
+                return entry.Market == self.settings.markets.walmart;
+            });
+
+            entry.itemCurrentPrice = ko.observable(entry.ItemCurrentPrice);
+
+            entry.isPrime = ko.observable(entry.IsPrime);
+            entry.isPrime.subscribe(function () {
+                if (entry.isWalmartMarket()) {
+                    if (entry.isPrime()) {
+                        entry.itemCurrentPrice(dataUtils.roundToTwoPrecision(entry.itemCurrentPrice() + 5));
+                    } else {
+                        entry.itemCurrentPrice(dataUtils.roundToTwoPrecision(entry.itemCurrentPrice() - 5));
+                    }
+                }
+            })
+
+            entry.formattedColor = ko.computed(function() {
+                return tmpl.isNull(entry.Color, '-');
+            });
+
+            entry.switchToMarket = function(entry) {
+                self.selectedItemId(entry.ItemId);
+            };
+
+            entry.hasLinkQty = ko.computed(function() {
+                return marketUtils.hasLinkQty(entry.MarketplaceId);
+            });
+
+            entry.flagCss = ko.computed(function() {
+                return "flag-" + entry.MarketShortName;
+            });
+
+            entry.styleErrorMessage = ko.observable('');
+            entry.styleId = ko.observable("");
+            entry.styleIdLoading = ko.observable(false);
+            entry.styleId.subscribe(function() {
+                entry.styleErrorMessage('');
+                entry.styleIdLoading(true);
+                $.ajax({
+                    url: '@Url.Action("GetStyleSizes", "AutoComplete")',
+                    data: { styleString: entry.styleId(), onlyWithQty: false },
+                    cache: false,
+                    success: function(data) {
+                        entry.styleIdLoading(false);
+                        if (data.Data != null && data.Data.length > 0) {
+                            data.Data.unshift({
+                                Text: "Select...",
+                                Value: null
+                            });
+                            entry.sizeList(data.Data);
+                        } else {
+                            entry.styleErrorMessage('StyleId is not found');
+                            entry.sizeList([]);
+                        }
+                    }
+                });
+            });
+
+            entry.styleItemId = ko.observable(entry.StyleItemId);
+            entry.sizeList = ko.observable([]);
+
+            entry.styleIdSource = new kendo.data.DataSource({
+                type: "aspnetmvc-ajax",
+                //minLength: 3,
+                transport: {
+                    read: '@Url.Action("GetStyleIdList", "AutoComplete")',
+                    parameterMap: function (data, action) {
+                        console.log("action=" + action);
+                        if(action === "read") {
+                            console.log("filter=" + data.filter.filters[0].value);
+                            return {
+                                filter: data.filter.filters[0].value
+                            };
+                        } else {
+                            return data;
+                        }
+                    }
+                },
+                pageSize: 20,
+                serverPaging: true,
+                serverFiltering: true
+            });
+
+            entry.styleId(entry.StyleString);
+        });
+    };
+
+    $(document).ready(function() {
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+            actionUpdateItem: '@Url.Action(MVC.ChildItem.OnUpdateItem())',
+            markets: {
+                walmart: '@((int) MarketType.Walmart)',
+            },
+        };
+
+        var itemModel = new ItemModel(model, settings);
+        ko.applyBindings(itemModel, document.getElementById('edit-container'));
+    });
+</script>
+
+<div id="edit-container" class="item-child-popup">
+    <div style="position: relative; background: #e5e5e5; border: 1px solid #ccc; text-align: right; margin: -9px 0px -12px 0px;">
+        <div data-bind="foreach: listings">
+            <div style="float: right; margin-right: 10px; padding-bottom: 4px" data-bind="css: { 'btn-red-line' : isActive }">
+                <button class="k-button k-flat-button flag-button" data-bind="click: switchToMarket, css: flagCss"></button>
+            </div>
+        </div>
+        <div style="float:right; padding: 6px 10px 0px 0px;">Switch market</div>
+        <div class="clear"></div>
+    </div>
+
+    <div class="k-edit-form-container" style="padding-top: 20px;">
+        @Html.HiddenFor(m => m.SelectedItemId)
+
+        <div data-bind="foreach: listings">
+            <div data-bind="visible: $root.isVisible(ItemId)">
+                <input type="hidden" name="ItemId" data-bind="value: ItemId, attr: { name: 'Listings[' + $index() + '].ItemId' }" />
+                <input type="hidden" name="ListingEntityId" data-bind="value: ListingEntityId, attr: { name: 'Listings[' + $index() + '].ListingEntityId' }" />
+                <input type="hidden" name="ASIN" data-bind="value: ASIN, attr: { name: 'Listings[' + $index() + '].ASIN' }" />
+                <input type="hidden" name="Market" data-bind="value: Market, attr: { name: 'Listings[' + $index() + '].Market' }" />
+                <input type="hidden" name="MarketplaceId" data-bind="value: MarketplaceId, attr: { name: 'Listings[' + $index() + '].MarketplaceId' }" />
+                <input type="hidden" name="IsPrime" data-bind="value: isPrime, attr: { name: 'Listings[' + $index() + '].IsPrime' }" />
+
+                <div class="editor-label">ASIN</div>
+                <div class="editor-field">
+                    <input type="text"
+                           data-bind='value: ASIN, attr: { name: "Listings[" + $index() + "].ASIN" }'
+                           class="k-state-disabled k-textbox"
+                           disabled="true" />
+                </div>
+                <div class="editor-label">Parent ASIN</div>
+                <div class="editor-field">
+                    <input type="text"
+                           data-bind='value: ParentASIN, attr: { name: "Listings[" + $index() + "].ParentASIN", disabled: !canEdit() }'
+                           class="k-textbox" />
+
+                </div>
+
+                <div data-bind="visible: !isFBA()">
+                    <div class="editor-label">Style Id</div>
+                    <div class="editor-field">
+                        <input style='width: 180px' class="k-textbox" name="StyleId" data-bind="
+                        attr: { name: 'Listings[' + $index() + '].StyleString' },
+                        kendoAutoComplete: {
+                           value: styleId,
+                           data: {},
+                           minLenght: 3,
+                           dataSource: styleIdSource }" />
+                        <div data-bind="text: styleErrorMessage" class="red"></div>
+                    </div>
+
+                    <div class="editor-label">Size/Color</div>
+                    <div class="editor-field">
+                        <input id="StyleItemId"
+                               name="StyleItemId"
+                               style="width: 100px"
+                               data-bind="attr: { name: 'Listings[' + $index() + '].StyleItemId' },
+                                kendoDropDownList: {data: sizeList, value: styleItemId, dataTextField: 'Text', dataValueField: 'Value' }" />
+                        <div style="margin-bottom: 4px;"><span class='gray'>on market:</span> <span data-bind="text: Size"></span> / <span data-bind="text: formattedColor"></span></div>
+                    </div>
+
+                    <div class="editor-label">UPC</div>
+                    <div class="editor-field">
+                        <input type="text"
+                               data-bind='value: Barcode, attr: { name: "Listings[" + $index() + "].Barcode" }'
+                               class="k-textbox" />
+
+                    </div>
+
+                    <div class="editor-label">Market Quantity</div>
+                    <div class="editor-field">
+                        <input type="number"
+                               data-bind='value: RealQuantity, attr: { name: "Listings[" + $index() + "].RealQuantity" }'
+                               class="k-state-disabled k-textbox"
+                               disabled="true" />
+
+                    </div>
+
+                    <div class="editor-label">On Hold</div>
+                    <div class="editor-field">
+                        <div data-bind="visible: !hasLinkQty()">
+                            <input type="checkbox"
+                                   class="cmn-toggle cmn-toggle-round"
+                                   data-bind='checked: OnHold, attr: { name: "Listings[" + $index() + "].OnHold", id: "Listings_" + $index() + "_OnHold" }' />
+                            <label data-bind='attr: { for: "Listings_" + $index() + "_OnHold" }'></label>
+                        </div>
+                        <div data-bind="visible: hasLinkQty" class="note">
+                            Quantity tied to US, can’t be onHold separately
+                        </div>
+                    </div>
+
+                    <div class="editor-label">Use Style Image</div>
+                    <div class="editor-field">
+                        <input type="checkbox"
+                               class="cmn-toggle cmn-toggle-round"
+                               data-bind='checked: UseStyleImage, attr: { name: "Listings[" + $index() + "].UseStyleImage" }' />
+                    </div>
+
+                    <div class="editor-label">Display Quantity</div>
+                    <div class="editor-field">
+                        <input type="number"
+                               data-bind='value: DisplayQuantity, attr: { name: "Listings[" + $index() + "].DisplayQuantity" }'
+                               class="k-textbox" />
+
+                    </div>
+                </div>
+
+                <div class="editor-label">Price, <span data-bind="text: ItemCurrentPriceCurrency"></span></div>
+                <div class="editor-field">
+                    <input type="text"
+                           data-bind='value: itemCurrentPrice, attr: { name: "Listings[" + $index() + "].ItemCurrentPrice" }'
+                           class="k-textbox" />
+
+                </div>
+
+                <div data-bind="visible: isWalmartMarket">
+                    <div class="editor-label">Free 2nd day</div>
+                    <div class="editor-field">
+                        <input type="checkbox" data-bind='checked: isPrime' /> Free 2nd day
+                    </div>                    
+                </div>
+
+                
+                <div class="clear"></div>
+            </div>
+
+        </div>
+    </div>
+
+</div>

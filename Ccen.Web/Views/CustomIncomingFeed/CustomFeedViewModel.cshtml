@@ -1,0 +1,671 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.ViewModels.Inventory
+@using Amazon.Web.Models
+
+@{
+    Layout = null;
+}
+
+
+<script type="text/javascript">
+    var CustomFeedModel = function(model, settings) {
+        var self = this;
+
+        self.isLoaded = ko.observable(false);
+
+        //self.popupNode = null;
+        //self.popup = null;
+
+        self.settings = settings;
+        self.model = model;
+
+        self.messages = ko.observableArray([]);
+        self.checkFtpMessages = ko.observableArray([]);
+
+        self.submitCallback = settings.submitCallback;
+
+        self.wizardStep = ko.observable(0);
+        self.setStep = function (step) {
+            console.log(step);
+            self.wizardStep(step);
+        }
+        self.getStep = function () {
+            return self.wizardStep();
+        }
+
+        self.id = ko.observable(model.Id);
+        self.feedName = ko.observable(model.FeedName).extend({
+                required: {
+                    message: "*",
+                }
+        });
+
+        self.dropShipperId = ko.observable(model.DropShipperId);
+        self.dropShipperList = ko.observable(self.settings.dropShipperList);
+        if (self.dropShipperId() == null
+            && self.dropShipperList().length > 0) {
+            console.log(self.dropShipperList()[0].Value);
+            self.dropShipperId(self.dropShipperList()[0].Value);
+        }
+
+        self.dsProductType = ko.observable(model.OverrideDSProductType);
+        self.dsProductTypeList = ko.observable(self.settings.dsProductTypeList);
+
+        self.dsFeedType = ko.observable(model.OverrideDSFeedType);
+        self.dsFeedTypeList = ko.observable(self.settings.dsFeedTypeList);
+
+        console.log("dsProductType: " + self.dsProductType());
+        console.log("dsFeedType: " + self.dsFeedType());
+
+        self.ftpSite = ko.observable(model.FtpSite);
+        self.ftpFolder = ko.observable(model.FtpFolder);
+        self.username = ko.observable(model.UserName);
+        self.password = ko.observable(model.Password);
+        //self.protocol = ko.observable("");
+        self.isPassiveMode = ko.observable(model.IsPassiveMode);
+        self.isSFTP = ko.observable(model.IsSFTP);
+
+        self.dsProductType.subscribe(function () {
+            self.updateFeedFields();
+        });
+
+        self.dsFeedType.subscribe(function () {
+            self.updateFeedFields();
+        });
+
+        self.prepareFieldRow = function (r) {
+            r.customFieldName = ko.observable(r.CustomFieldName);
+            r.customFieldValue = ko.observable(r.CustomFieldValue);
+        };
+
+        var fields = model.Fields;
+        fields.forEach(function (f) { self.prepareFieldRow(f); });
+        self.fields = ko.observableArray(fields);
+
+        self.allSourceFields = ko.observableArray([]);
+
+        self.updateFeedFields = function () {
+            var dataModel = {
+                dsFeedType: self.dsFeedType(),
+                dsProductType: self.dsProductType(),
+            }
+            $.ajax({
+                url: self.settings.urls.getFeedFields,
+                data: dataModel,
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                type: 'GET',
+                success: function (result) {
+                    if (result.IsSuccess) {
+                        console.log("onSuccess");
+                        console.log(result);
+                        var fields = result.Data;
+                        fields.forEach(function (f) { self.prepareFieldRow(f); });
+
+                        self.fields(fields);
+
+                        $(".droptarget").kendoDropTargetArea({
+                            //filter: ".test1, .test2",
+                            filter: ".droptarget",
+                            dragenter: droptargetOnDragEnter,
+                            dragleave: droptargetOnDragLeave,
+                            drop: droptargetOnDrop
+                        });
+                    }
+                },
+                error: function (result) {
+                    console.log("onError");
+                    console.log(result);
+                }
+            });
+        };
+
+        self.addField = function (f) {
+            var newRow = {
+                Id: 0,
+                SourceFieldName: f.FieldName,
+                CustomFieldName: f.FieldName,
+                CustomFieldValue: "",
+            };
+            self.prepareFieldRow(newRow);
+            self.fields.push(newRow);
+        }
+
+        self.removeField = function (f) {
+            f.customFieldName(null);
+        }
+
+        self.getModel = function () {
+            var dataModel = {
+                Id: self.id(),
+                FeedName: self.feedName(),
+
+                DropShipperId: self.dropShipperId(),
+                OverrideDSProductType: self.dsProductType(),
+                OverrideDSFeedType: self.dsFeedType(),
+
+                FtpSite: self.ftpSite(),
+                FtpFolder: self.ftpFolder(),
+                UserName: self.username(),
+                Password: self.password(),
+                IsPassiveMode: self.isPassiveMode(),
+                IsSFTP: self.isSFTP(),
+
+                Fields: $.map(self.fields(), function (val, key) {
+                    return {
+                        Id: val.Id,
+                        SourceFieldName: val.SourceFieldName,
+                        CustomFieldName: val.customFieldName(),
+                        CustomFieldValue: val.customFieldValue(),
+                    }
+                }),
+            };
+            return dataModel;
+        }
+
+        self.onUploadSuccess = function (e) {
+            console.log("onUploadSuccess");
+            var data = e.response;
+            console.log(data);
+            if (data.IsSuccess) {
+                self.allSourceFields(data.Data);
+
+                $(".draggable").kendoDraggable({
+                    hint: function (element) {
+                        return $(element).clone();
+                    },
+                    dragstart: draggableOnDragStart,
+                    dragend: draggableOnDragEnd
+                });
+            }
+
+            //if (data != null && data.length > 0 && data[0].length > 0) {
+            //    console.log(data[0][0]);
+            //    self.fileName(data[0][0].ServerFileName);
+                //self.attachedFile(data[0][0]);
+            //}
+
+            //$.publish("PV_Grid_Access_OnAddNewRecord_Event");
+        }
+
+        self.onUploadError = function (e) {
+            console.log("onUploadError");
+            console.log(e);
+            //self.uploadedFile(null);
+            self.messages.push(new MessageString("Unable to upload attachment", MessageStatus.ERROR));
+        }
+
+        self.checkConnection = function () {
+            var dataModel = self.getModel();
+
+            $.ajax({
+                url: self.settings.urls.checkConnection,
+                data: JSON.stringify({ model: dataModel }),
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                type: 'POST',
+                success: function (result) {
+                    console.log("onSuccess");
+                    console.log(result);
+                    self.checkFtpMessages(result.Messages);
+                },
+                error: function (result) {
+                    console.log("onError");
+                    console.log(result);
+                    self.checkFtpMessages(result.Messages);
+                }
+            });
+        }
+
+        self.submit = function () {
+            var defer = $.Deferred();
+            var dataModel = self.getModel();
+
+            $.ajax({
+                url: self.settings.urls.submit,
+                data: JSON.stringify({ model: dataModel }),
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                type: 'POST',
+                success: function(result) {
+                    console.log("onSuccess");
+                    console.log(result);
+                    if (result.IsSuccess) {
+                        defer.resolve();
+                    } else {
+                        defer.reject();
+                        self.messages(result.Messages);
+                    }
+                },
+                error: function (result) {
+                    console.log(result);
+                    self.messages(result.Messages);
+                    defer.reject();
+                }
+            });
+            return defer;
+        }
+
+        self.onSave = function(data, e) {
+            console.log('onSave');
+
+            if (self.validate()) {
+                $(e.target).showLoading("updating...");
+                self.submit().done(function () {
+                    popupWindow.customAction('Refresh');
+                    if (self.submitCallback != null)
+                        self.submitCallback(null);
+                    self.onClose();
+                }).always(function() {
+                    $(e.target).hideLoading();
+                });
+            }
+        }
+
+        self.onClose = function() {
+            console.log('onClose');
+            //self.closeEvent();
+            //self.popup.close();
+            popupWindow.close();
+        }
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function () {
+            return self.errors().length === 0;
+        });
+
+        self.validate = function () { // function(data, e) {
+            if (self.isValid()) { //validator.validate() &&
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                self.wizardStep(0);
+
+                return false;
+            }
+        };
+
+        //self.errors = ko.validation.group(self, { deep: true });
+        //self.isValid = ko.computed(function() {
+        //    return self.errors.length == 0;
+        //});
+        //self.onSubmit = function(e) { // function(data, e) {
+        //    //console.log(data);
+        //    console.log(e);
+        //    console.log("save click");
+
+        //    //var validator = $("#form").kendoValidator().data('kendoValidator');
+
+        //    //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+        //    //http://jsfiddle.net/KHFn8/3238/
+        //    if (self.errors().length == 0) { //validator.validate() &&
+        //        console.log("validate true");
+
+        //        return true;
+        //    } else {
+        //        console.log("validate false");
+        //        self.errors.showAllMessages();
+        //        e.preventDefault();
+        //        return false;
+        //    }
+        //};
+
+        self.isLoaded(true);
+    };
+
+    $(document).ready(function() {
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        //var node = document.getElementById('upload-sale-container');
+        //ko.applyBindings(viewModel, node);
+
+        //$('#operation-container').parent().next().find("#submit").click(viewModel.onSubmit);
+
+        var settings = {
+            urls: {
+                submit: '@Url.Action(MVC.CustomIncomingFeed.Submit())',
+                checkConnection: '@Url.Action(MVC.CustomIncomingFeed.CheckConnection())',
+                getFeedFields: '@Url.Action(MVC.CustomIncomingFeed.GetSourceFields())',
+            },
+            dropShipperList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.DropShipperList)),
+            dsFeedTypeList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.DSFeedTypeList)),
+            dsProductTypeList: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.DSProductTypeList)),
+        };
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var customFeedModel = new CustomFeedModel(model, settings);
+
+        //$("#").kendoSortable({
+        //    filter: ">div",
+        //    cursor: "move",
+        //    connectWith: "#main-content",
+        //    placeholder: placeholder,
+        //    hint: hint
+        //});
+
+        //$("#main-content").kendoSortable({
+        //    filter: ">div",
+        //    cursor: "move",
+        //    connectWith: "#sidebar",
+        //    placeholder: placeholder,
+        //    hint: hint
+        //});
+
+        ko.applyBindings(customFeedModel, document.getElementById('custom-feed-container'));
+
+        $('#custom-feed-container input[type=checkbox][data-toggle^=toggle]').bootstrapToggle({
+            size: 'mini',
+        });
+    });
+</script>
+
+<script>
+    function draggableOnDragStart(e) {
+        $(e.target).addClass("hollow");
+        //$("#droptarget").html("<div class='test1'>(Drop here)</div><div class='test2'>(Drop here)</div>");
+    }
+
+    function droptargetOnDragEnter(e) {
+        $(e.dropTarget).addClass("dragover");
+    }
+
+    function droptargetOnDragLeave(e) {
+        $(e.dropTarget).removeClass("dragover");
+    }
+
+    function droptargetOnDrop(e) {
+        var koModel = ko.dataFor(e.dropTarget[0]);
+        var name = $(e.draggable)[0].currentTarget.find('span').text();
+        koModel.customFieldName(name);
+        $(e.dragTarget).removeClass("hollow");
+    }
+
+    function draggableOnDragEnd(e) {
+        var draggable = $(e.target);
+
+        //if (!draggable.data("kendoDraggable").dropped) {
+        // drag ended outside of any droptarget
+        //$("#droptarget").html("<div class='test1'>(Try again)</div><div class='test2'>(Try again)</div>");
+        //}
+
+        draggable.removeClass("hollow");
+    }
+
+    $(document).ready(function () {
+        console.log("draggable enable");
+
+        $("#droptarget").kendoDropTargetArea({
+            filter: ".droptarget",
+            dragenter: droptargetOnDragEnter,
+            dragleave: droptargetOnDragLeave,
+            drop: droptargetOnDrop
+        });
+    });
+</script>
+
+<style>
+    .droptarget {
+        padding: 3px 7px;
+        border: 1px solid #ccc;
+        min-width: 90px;
+        border-radius: 3px;
+        display: block;
+        min-height: 14px;
+    }
+
+    .draggable {
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        display: block;
+        min-width: 100px;
+        margin: 2px;
+        padding: 3px 7px;
+        cursor: move;
+    }
+
+    .dragover {
+        background-color: #ffd800;
+    }
+</style>
+
+<!-- ko stopBinding: true -->
+<div>
+    <div id="custom-feed-container">
+        @Html.ValidationSummary(true)
+
+        <div class="inventory-popup">
+            <div class="k-edit-form-container" style="width: auto">
+
+                <div style="padding-top: 10px">
+                    <ul class="nav nav-tabs" style="padding-top: 10px;">
+                        <li role="presentation" data-bind="css: { 'active': wizardStep() == 0 }"><a href="javascript:;" data-bind="click: function() { setStep(0); }">General</a></li>
+                        <li role="presentation" data-bind="css: { 'active': wizardStep() == 1 }"><a href="javascript:;" data-bind="click: function() { setStep(1); }">Fields</a></li>
+                    </ul>
+                </div>
+
+                <div class="style-panel" data-bind="visible: getStep() == 0">
+                    <table>
+                        <tr>
+                            <td style="vertical-align: top">
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">General</div>
+                                    <div class="panel-body">
+                                        <table>
+                                            <tr>
+                                                <td>Feed Name: </td>
+                                                <td>
+                                                    <input class="k-textbox" style="width: 250px" autocomplete="off" type="text" data-bind="value: feedName" />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Dropshipper: </td>
+                                                <td>
+                                                    <input style="width:150px"
+                                                           data-bind="kendoDropDownList: {data: dropShipperList, value: dropShipperId, dataTextField: 'Text', dataValueField: 'Value' }" />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Product Type: </td>
+                                                <td>
+                                                    <input style="width:150px"
+                                                           data-bind="kendoDropDownList: {data: dsProductTypeList, value: dsProductType, dataTextField: 'Text', dataValueField: 'Value' }" />
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="vertical-align: top">
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">FTP</div>
+                                    <div class="panel-body" style="height: 400px">
+                                        <table>
+                                            <tr>
+                                                <td style="padding-top: 10px">FTP Server: </td>
+                                                <td style="padding-top: 10px">
+                                                    <input class="k-textbox" style="width: 250px" autocomplete="off" type="text" data-bind="value: ftpSite" />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding-top: 10px">Remote Folder: </td>
+                                                <td style="padding-top: 10px">
+                                                    <input class="k-textbox" style="width: 250px" autocomplete="off" type="text" data-bind="value: ftpFolder" />
+                                                </td>
+                                            </tr>
+                                            <tr style="padding-top: 15px">
+                                                <td>Username: </td>
+                                                <td>
+                                                    <input class="k-textbox" autocomplete="off" style="width: 250px" type="text" data-bind="value: username" />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Password: </td>
+                                                <td>
+                                                    <input class="k-textbox" autocomplete="off" type="password" data-bind="value: password" />
+                                                </td>
+                                            </tr>
+                                            <tr style="margin-top: 15px">
+                                                <td>Passive Mode: </td>
+                                                <td>
+                                                    <input type="checkbox"
+                                                           data-toggle="toggle"
+                                                           data-onstyle="success"
+                                                           data-height="16"
+                                                           data-bind="bsChecked: isPassiveMode" />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>SFTP: </td>
+                                                <td>
+                                                    <input type="checkbox"
+                                                           data-toggle="toggle"
+                                                           data-onstyle="success"
+                                                           data-height="16"
+                                                           data-bind="bsChecked: isSFTP" />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td></td>
+                                                <td style="padding-top: 4px">
+                                                    <button class="k-button" type="button" data-bind="click: checkConnection">Check Connection</button>
+                                                    <div>
+                                                        <messages params="{ messages: checkFtpMessages }"></messages>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="style-panel" data-bind="visible: getStep() == 1">
+                    <table style="vertical-align: top">
+                        <colgroup>
+                            <col style="width: 530px" />
+                            <col style="width: 250px" />
+                        </colgroup>
+                        <tr>
+                            <td style="vertical-align: top">
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">Feed Fields</div>
+                                    <div class="panel-body" style="height: 400px;overflow-y: scroll">
+                                        <table id="droptarget">
+                                            <thead>
+                                                <tr>
+                                                    <th>Feed Field</th>
+                                                    <th>Income Field</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody data-bind="foreach: fields">
+                                                <tr>
+                                                    <td style="width: 150px">
+                                                        <span data-bind="text: SourceFieldName"></span>
+                                                    </td>
+                                                    <td style="width: 210px">
+                                                        <div class="droptarget" data-bind="text: customFieldName"></div>
+                                                    </td>
+                                                    <td style="width: 25px">
+                                                        <button style="width: 22px; margin: 0px; padding: 0px 5px"
+                                                                class="k-button"
+                                                                data-bind="click: $root.removeField">
+                                                            <span style="font-size: 11px" class="glyphicon glyphicon-remove am-icon"></span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="vertical-align: top">
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">Available Fields</div>
+                                    <div>
+                                        <span class="gray" style="padding: 10px">Load fields from sample feed:</span>
+                                        <input type="file" name="files" data-bind="kendoUpload: {
+                                           async: {
+                                               saveUrl: '@Url.Action("UploadSampleFeed", "CustomIncomingFeed")',
+                                               autoUpload: true,
+                                           },
+                                           showFileList: false,
+                                           multiple: false,
+                                           success: onUploadSuccess,
+                                           error: onUploadError
+                                           }" />
+                                    </div>
+                                    <div class="panel-body" style="height: 320px;overflow-y: scroll">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>Feed Fields</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody data-bind="foreach: allSourceFields">
+                                                <tr>
+                                                    <td>
+                                                        <div class="draggable">
+                                                            <img src="~/Images/drag-area-icon.png" height="12px" />
+                                                            <span data-bind="text: FieldName"></span>
+                                                        </div>
+
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div>
+                    <messages params="{ messages: messages }"></messages>
+                </div>
+
+                <div class="clear"></div>
+
+                <div class="k-edit-buttons k-state-default popup-button-panel"
+                     style="position: static">
+                    <table style="margin-left: auto">
+                        <tr>
+                            <td>
+                                <button tabindex="300"
+                                        data-bind="click: onSave"
+                                        type="button"
+                                        class="k-button k-button-icontext k-grid-update">
+                                    <span class="k-icon k-update"></span>Save
+                                </button>
+                            </td>
+
+                            <td>
+                                <button class="k-button k-button-icontext k-grid-cancel"
+                                        tabindex="301"
+                                        type="button"
+                                        data-bind="click: onClose">
+                                    <span class="k-icon k-cancel"></span>Cancel
+                                </button>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+<!-- /ko -->

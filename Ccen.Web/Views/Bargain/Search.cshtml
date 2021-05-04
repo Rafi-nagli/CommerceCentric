@@ -1,0 +1,273 @@
+﻿@using Amazon.Core.Models
+@using Amazon.Web.Models
+@using Amazon.Web.Models.SearchFilters
+@using Amazon.Web.ViewModels
+@using Amazon.Web.ViewModels.Bargains
+@using Amazon.Web.ViewModels.CustomBarcodes
+@using Kendo.Mvc.UI
+
+@{
+    ViewBag.Title = "Bargains Search";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<script src="~/Scripts/knockout-kendo.min.js" type="text/javascript"></script>
+<script type="text/javascript">
+
+    var BargainListModel = function(gridId, model, settings) {
+        var self = this;
+        ko.BaseViewModel.call(self);
+
+        self.settings = settings;
+        self.model = model;
+
+        //Search
+        self.filter = {
+            keywords: ko.observable("pajama")
+                .extend(ko.validation.patterns.requred("*")),
+            minPrice: ko.observable(0)
+                .extend(ko.validation.patterns.requredNumber("*")),
+            maxPrice: ko.observable(5)
+                .extend(ko.validation.patterns.requredNumber("*")),
+        };
+        
+        //Grid
+        self.gridId = gridId;
+        self.gridNode = $(gridId);
+        self.grid = $(gridId).data("kendoGrid");
+        
+        self.onExport = function(data, e) {
+            console.log("export");
+            var sender = $(e.target);
+
+            var params = self.getGridParams();
+            helper.ui.showLoading(sender);
+
+            $.ajax({
+                url: self.settings.urls.exportUrl,
+                data: params,
+                success: function(result) {
+                    if (result.IsSuccess) {
+                        console.log('result url=' + result.Data);
+                        window.open(result.Data, "_blank", "");
+                    } else {
+                        Message.popupAsync({
+                            title: 'Error',
+                            message: result.Message,
+                            type: Message.CLOSE
+                        });
+                    }
+                    helper.ui.hideLoading(sender);
+                }
+            });
+        }
+
+        //Search
+
+        self.search = function () {
+            console.log("search");
+
+            if (self.isValid()) {
+                var params = self.getGridParams();
+
+                self.resetRowNumber(0);
+
+                if (self.grid.dataSource.page() != 1) {
+                    self.grid.dataSource.page(1); //May call read
+                }
+                self.grid.dataSource.read(params);
+            } else {
+                self.grid.dataSource.data([]);
+            }
+        };
+
+        self.searchByKeyCmd = function (data, event) {
+            if (event.keyCode == 13)
+                self.search(true);
+            return true;
+        };
+
+        self.getGridParams = function () {
+            console.log("getGridParams");
+
+            var params = {
+                keywords: self.filter.keywords(),
+                minPrice: self.filter.minPrice(),
+                maxPrice: self.filter.maxPrice(),
+            };
+            console.log(params);
+            return params;
+        };
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function() {
+            return self.errors().length === 0;
+        });
+
+        self.clear = function () {
+            self.filter.keywords(null);
+            self.filter.minPrice(null);
+            self.filter.minPrice(null);
+
+            self.grid.dataSource.data([]);
+        };
+
+        self.clearAndSearch = function () {
+            self.clear();
+            self.search();
+        };
+
+        self.searchByButton = function () {
+            self.search();
+        };
+
+        helper.ui.addTopPager(self.grid);
+
+        self.search();
+    };
+
+</script>
+
+<div id="page-content">
+
+    <div class="info-panel" style="padding-bottom: 10px">
+        <ol class="breadcrumb">
+            <li><a href="#">Products</a></li>
+            <li class="active">@ViewBag.Title</li>
+        </ol>
+
+        <div class="panel panel-default">
+            <div class="filters">
+                <table>
+                    <colgroup>
+                        <col style="width: 100px"/>
+                        <col style="width: 210px"/>
+                        <col style="width: 100px"/>
+                        <col style="width: 210px"/>
+                    </colgroup>
+                    <tr>
+                        <th>Keywords:</th>
+                        <td>
+                            <input type="text" data-bind="value: filter.keywords, valueUpdate: 'afterkeydown'" class="k-textbox"/>
+                        </td>
+                        <th>Price, min:</th>
+                        <td>
+                            <input type="text" data-bind="value: filter.minPrice, valueUpdate: 'afterkeydown'" class="k-textbox"/>
+                        </td>
+                        <th>max:</th>
+                        <td>
+                            <input type="text" data-bind="value: filter.maxPrice, valueUpdate: 'afterkeydown'" class="k-textbox"/>
+                        </td>
+                    </tr>
+                </table>
+                <div style="padding-top: 10px">
+                    <button class="k-button"
+                            style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                            data-bind="click: searchByButton">
+                        <span class='glyphicon glyphicon-search am-icon'></span>Search
+                    </button>
+                    <button class="k-button"
+                            style="margin: 5px 10px 0px 0px; padding: 3px 20px 3px 20px"
+                            data-bind="click: clearAndSearch">
+                        <span class='glyphicon glyphicon-ban-circle am-icon'></span>Clear
+                    </button>
+
+                    <button class="k-button"
+                            style="margin: 5px 10px 0px 20px; padding: 3px 20px 3px 20px"
+                            data-bind="click: onExport">
+                        <img src="/Images/excel.png" width="20" style="margin-right: 2px" />Export...
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @(Html.Kendo().Grid<BargainViewModel>()
+          .Name("grid")
+          .Columns(columns =>
+          {
+              columns.Bound(c => c.Barcode).Width(100);
+              columns.Bound(c => c.Size).Width(80);
+              columns.Bound(c => c.Color).Width(80);
+
+              columns.Bound(c => c.Barcode)
+                  .Sortable(false)
+                  .Filterable(false)
+                  .Title("Name")
+                  .ClientTemplate("#=tmpl.t('name-column-template', data)#");
+
+              columns.Bound(c => c.ASIN)
+                .ClientTemplate("<a href='#=AmazonUrl#' target='_blank'>#=tmpl.isNull(ASIN, '')#</a>")
+                .Title("ASIN")
+                .Width(125);
+              columns.Bound(c => c.AmazonPrice)
+                .ClientTemplate("#=tmpl.isNullFormat(AmazonPrice, '$0.00', '-')#")
+                .Title("Amazon Price")
+                .Width(125);
+              columns.Bound(c => c.AmazonInStock)
+              .ClientTemplate("#=AmazonInStock ? 'InStock' : '-'#")
+                .Title("Amazon In Stock")
+                .Width(125); ;
+
+              columns.Bound(c => c.WalmartItemId)
+                .ClientTemplate("<a href='#=WalmartUrl#' target='_blank'>#=tmpl.isNull(WalmartItemId, '')#</a>")
+                .Title("Walmart ItemId")
+                .Width(125);
+              columns.Bound(c => c.WalmartPrice)
+                .ClientTemplate("#=tmpl.isNullFormat(WalmartPrice, '$0.00', '-')#")
+                .Title("Walmart Price")
+                .Width(125);
+              columns.Bound(c => c.WalmartInStock)
+                .ClientTemplate("#=WalmartInStock ? 'InStock' : '-'#")
+                .Title("Walmart In Stock")
+                .Width(125);
+          })
+          .Pageable(conf => conf.Enabled(true).Refresh(true))
+          .AutoBind(false)
+
+          .DataSource(dataSource => dataSource
+              .Ajax()
+              .Sort(conf => conf.Add(o => o.ASIN).Descending())
+              .PageSize(25)
+              .Read(read => read.Action("GetAll", "Bargain").Data("GetGridParams"))))
+    
+</div>
+
+<script type="text/x-kendo-template" id="name-column-template">
+    <div style="float: left; margin-right: 5px">
+        <div class="image-box-holder">
+            <img src='#=data.WalmartThumbnail#' style="max-width: 75px" />
+        </div>
+    </div>
+    
+    <div style='padding-top:3px'>#=data.Name#</div>
+</script>
+
+<script>
+    var bargainList = null;
+
+    $(document).ready(function () {
+        console.log("begin ready");
+
+        var settings = {
+            urls: {
+                exportUrl: '@Url.Action("Export", "Bargain")',
+            }
+        };
+
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        bargainList = new BargainListModel('#grid', model, settings);
+        ko.applyBindings(bargainList, document.getElementById("page-content"));
+    });
+
+
+    function GetGridParams() {
+        console.log("GetGridParams");
+        if (bargainList != null)
+            return bargainList.getGridParams();
+        return {};
+    }
+    
+</script>

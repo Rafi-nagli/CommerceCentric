@@ -1,0 +1,300 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.HtmlExtend
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Inventory
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Inventory.StyleSizeHistoryViewModel
+@{
+    Layout = null;
+}
+
+
+<script type="text/javascript">
+    var StyleHistoryModel = function(model, settings) {
+        var self = this;
+        ko.BaseViewModel.call(self);
+
+        self.isLoaded = ko.observable(false);
+
+        self.settings = settings;
+        self.model = model;
+
+        self.includeSnapshoot = ko.observable(false);
+        self.includeSnapshoot.subscribe(function() {
+            self.search();
+        });
+
+        self.records = ko.observableArray([]);
+
+        self.styleItemId = ko.observable(model.StyleItemId);
+
+        self.getGridParams = function() {
+            return {
+                styleItemId: self.styleItemId(),
+                includeSnapshoot: self.includeSnapshoot(),
+            }
+        }
+
+        self.prepareRow = function(row) {
+            if (row.UserName == "Admin")
+                row.UserName = null;
+
+            var html = 'n/a';
+            if (row.Type == '@((int)QuantityChangeSourceType.AddNewBox)'
+                || (row.Type == '@((int)QuantityChangeSourceType.AddSpecialCase)'
+                    && row.NewQuantity < 0)) { //NOTE: SP minus = return, back to inventory
+                html = "<span class='green'>+" + Math.abs(row.NewQuantity) + "</span>";
+            }
+            if (row.Type == '@((int)QuantityChangeSourceType.Initial)') {
+                html = "<span class='green'>=" + row.NewQuantity + "</span>";
+            }
+            if (row.Type == '@((int)QuantityChangeSourceType.EnterNewQuantity)') {
+                if (row.NewQuantity == null) {
+                    html = "use box qty";
+                } else {
+                    var delta = row.Tag != null ? row.Tag : (row.NewQuantity - row.OldQuantity);
+                    html = "<span class='green'>+" +  delta + "</span>";
+                }
+            }
+            if (row.Type == '@((int)QuantityChangeSourceType.UseBoxQuantity)') {
+                html = "<span class='green'>" + row.OldQuantity + "-> box qty</span>";
+            }
+
+            if ((row.Type == '@((int)QuantityChangeSourceType.AddSpecialCase)'
+                && row.NewQuantity > 0)) {
+                html = "<span class='red'>-" + Math.abs(row.NewQuantity) + "</span>";
+            }
+
+            if (row.Type == '@((int)QuantityChangeSourceType.OrderCancelled)') {
+                html = "<span class='red'>+" + Math.abs(row.NewQuantity) + "</span>";
+            }
+            if (row.Type == '@((int)QuantityChangeSourceType.NewOrder)'
+                || row.Type == '@((int)QuantityChangeSourceType.SentToFBA)'
+                || row.Type == '@((int)QuantityChangeSourceType.SentToStore)') {
+                html = "<span class='green'>-" + Math.abs(row.NewQuantity) + "</span>";
+            }
+
+            if (row.Type == '@((int)QuantityChangeSourceType.Removed)'
+                || row.Type == '@((int)QuantityChangeSourceType.RemoveBox)'
+                || row.Type == '@((int)QuantityChangeSourceType.RemoveSpecialCase)') {
+                html = "<span class='red'>-" + row.OldQuantity + "</span>";
+            }
+
+            if (row.Type == '@((int)QuantityChangeSourceType.RemainingChanged)') {
+                if (row.OldQuantity != row.NewQuantity)
+                    html = "<span class='gray'>=" + row.OldQuantity + " -> =" + row.NewQuantity + "</span>";
+                else
+                    html = "<span class='gray'>=" + row.NewQuantity + "</span>";
+            }
+
+            row.changeHtml = html;
+
+            row.FormattedObject = "-";
+            if (!dataUtils.isNullOrEmpty(row.SourceEntityName))
+                row.FormattedObject = row.SourceEntityName;
+
+            row.isDisabled = ko.observable(row.Type == '@((int)QuantityChangeSourceType.RemainingChanged)');
+
+            if (row.Type == '@((int)QuantityChangeSourceType.NewOrder)') {
+                row.FormattedType = "New order";
+                row.FormattedObject = "<a href='@Url.Action("Orders", "Order")?orderId=" + row.Tag + "' target='blank'>" + row.Tag + "</a>";
+            }
+
+            if (row.Type == '@((int)QuantityChangeSourceType.OrderCancelled)') {
+                row.FormattedType = "Order Canceled";
+                row.FormattedObject = "<a href='@Url.Action("Orders", "Order")?orderId=" + row.Tag + "' target='blank'>" + row.Tag + "</a>";
+            }
+
+            if (row.Type == '@((int)QuantityChangeSourceType.AddSpecialCase)') {
+                if (row.Tag == '@((int)QuantityOperationType.Exchange)')
+                    row.FormattedType = 'Exchange';
+                if (row.Tag == '@((int)QuantityOperationType.Return)') 
+                    row.FormattedType = 'Return';
+                if (row.Tag == '@((int)QuantityOperationType.Replacement)')
+                    row.FormattedType = 'Replacement';
+                if (row.Tag == '@((int)QuantityOperationType.Lost)')
+                    row.FormattedType = 'Lost';
+                if (row.Tag == '@((int)QuantityOperationType.Damaged)')
+                    row.FormattedType = 'Damaged';
+                if (row.Tag == '@((int)QuantityOperationType.InvalidBox)')
+                    row.FormattedType = 'InvalidBox';
+                if (row.Tag == '@((int)QuantityOperationType.SoldOutside)')
+                    row.FormattedType = 'SoldOutside';
+                if (row.Tag == '@((int)QuantityOperationType.CompensationGift)')
+                    row.FormattedType = 'CompensationGift';
+                if (row.Tag == '@((int)QuantityOperationType.ReturnOnHold)')
+                    row.FormattedType = 'ReturnOnHold';
+                if (row.Tag == '@((int)QuantityOperationType.ExchangeOnHold)')
+                    row.FormattedType = 'ExchangeOnHold';
+                if (row.Tag == '@((int)QuantityOperationType.Wholesale)')
+                    row.FormattedType = 'Wholesale';
+                if (row.Tag == '@((int)QuantityOperationType.StoreManual)')
+                    row.FormattedType = 'StoreManual';
+                if (row.Tag == '@((int)QuantityOperationType.FromMailPage)')
+                    row.FormattedType = 'FromMailPage';
+                if (row.Tag == '@((int)QuantityOperationType.InPendingWhenInventory)')
+                    row.FormattedType = 'InPendingWhenInventory';
+
+                if (!dataUtils.isNullOrEmpty(row.SourceEntityName)
+                    && row.Tag == '@((int)QuantityOperationType.Return)')
+                    row.FormattedObject = "<a href='@Url.Action("Orders", "Order")?orderId=" + row.SourceEntityName + "' target='blank'>" + row.SourceEntityName + "</a>";
+            }
+            return row;
+        }
+
+        self.search = function(sender) {
+            var params = self.getGridParams();
+
+            self.records.removeAll();
+
+            helper.ui.showLoading(sender, "loading...");
+            $.ajax({
+                url: self.settings.urls.getHistory,
+                data: params,
+                success: function(result) {
+                    helper.ui.hideLoading(sender);
+
+                    if (result.IsSuccess) {
+                        console.log('success');
+                        $.each(result.Data, function(i, n) {
+                            self.records.push(self.prepareRow(n));
+                        });
+                    }
+                }
+            });
+        }
+
+        self.search($("#loadingHolder"));
+    };
+
+
+    var historyVm = null;
+
+    $(document).ready(function() {
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+            gridId: "historyGrid",
+            urls: {
+                getHistory: '@Url.Action("GetAll", "InventoryHistory")',
+            },
+        };
+
+        historyVm = new StyleHistoryModel(model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(historyVm, $('#view-style-history-container')[0]);
+    });
+
+    function GetGridParams() {
+        console.log("GetGridParams");
+        if (historyVm != null)
+            return historyVm.getGridParams();
+        return {};
+    }
+</script>
+
+<div id="view-style-history-container">
+    @Html.ValidationSummary(true)
+
+    @Html.HiddenFor(m => m.StyleItemId)
+
+    <div class="inventory-popup">
+        <div class="k-edit-form-container" style="width: auto">
+            <div style="padding-bottom: 15px">
+                <div>
+                    <input type="checkbox" data-bind="checked: includeSnapshoot" /> Display Snapshoots
+                </div>
+
+                <div class="k-widget k-grid k-secondary grid-small"
+                     style="padding-right: 15px; background-color: #f5f5f5">
+                    <table style="">
+                        <colgroup>
+                            <col style="width: 120px" />
+                            <col style="width: 160px" />
+                            <col style="width: 160px" />
+                            <col style="width: auto" />
+                            <col style="width: 90px" />
+                            <col style="width: 90px" />
+                        </colgroup>
+                        <thead class="k-grid-header">
+                            <tr>
+                                <th class="k-header">When</th>
+                                <th class="k-header">Type</th>
+                                <th class="k-header">Object</th>
+                                <th class="k-header">Change</th>
+                                <th class="k-header">Remaining</th>
+                                <th class="k-header">By</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+                <div style="margin-left: 8px">
+                    <div id="loadingHolder"></div>
+                </div>
+                <div class="k-widget k-grid k-secondary grid-small"
+                     style="height: 350px; overflow-y: scroll">
+                    <table style="width: 100%;">
+                        <colgroup>
+                            <col style="width: 120px" />
+                            <col style="width: 160px" />
+                            <col style="width: 160px" />
+                            <col style="width: auto" />
+                            <col style="width: 90px" />
+                            <col style="width: 90px" />
+                        </colgroup>
+                        <tbody data-bind='foreach: records'>
+                            <tr class="k-master-row" data-bind="css: { 'k-disabled': isDisabled(), 'k-alt': ($index() % 2 == 1) }">
+                                <td>
+                                    <span data-bind="textFormatted: UpdateDate, ifEmpty: '-', pattern: 'MM.dd.yyyy HH:mm'"></span>
+                                </td>
+                                <td>
+                                    <span data-bind="html: FormattedType"></span>
+                                </td>
+                                <td>
+                                    <span data-bind="html: FormattedObject"></span>
+                                </td>
+                                <td>
+                                    <span data-bind="html: changeHtml"></span>
+                                </td>
+                                <td>
+                                    <span data-bind="textFormatted: Remaining, ifEmpty: '-'"></span>
+                                </td>
+                                <td>
+                                    <span data-bind="textFormatted: UserName, ifEmpty: 'system'"></span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="clear"></div>
+
+    <div class="k-edit-buttons k-state-default popup-button-panel"
+         style="position: static">
+        <table style="margin-left: auto">
+            <tr>
+                <td>
+                    <button class="k-button k-button-icontext k-grid-cancel"
+                            type="reset"
+                            id="cancel"
+                            tabindex="301"
+                            onclick="popupWindow.close(2)">
+                        <span class="k-icon k-cancel"></span>Close
+                    </button>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>

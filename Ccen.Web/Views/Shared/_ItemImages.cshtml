@@ -1,0 +1,224 @@
+﻿@using Kendo.Mvc.UI
+@using Amazon.Web.Models
+@using Amazon.Core.Models
+@model Amazon.Web.ViewModels.IImagesContainer
+
+<script type="text/javascript">
+    var ImageCategories = {
+        deleted: @((int)StyleImageCategories.Deleted)
+    };
+
+    var StyleImagesModel = function(model) {
+        var self = this;
+
+        self.prepareImage = function(row) {
+            row.hasDirectImage = ko.computed(function() {
+                return !dataUtils.isEmpty(row.DirectThumbnailUrl);
+            });
+            row.hasUploadedImage = ko.computed(function() {
+                return !dataUtils.isEmpty(row.UploadedImageUrl);
+            });
+            row.category = ko.observable(row.Category);
+
+            row.isVisible = ko.computed(function () {
+                return row.category() != ImageCategories.deleted;
+            });
+        };
+
+        model.Images.forEach(function(entry) {
+            console.log(entry);
+            self.prepareImage(entry);
+        });
+
+        self.images = ko.observableArray(model.Images);
+        self.imageCategoryList = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(OptionsHelper.ImageCategories));
+
+
+        self.addImage = function()
+        {
+            var image = {
+                Id: 0,
+                DirectThumbnailUrl: "",
+                DirectImageUrl: "",
+                UploadedImageUrl: "",
+                UploadedFileName: "",
+                Label: "-",
+                Category: 0,
+                IsDefault: false,
+            };
+            self.prepareImage(image);
+            self.images.push(image);
+        }
+    }
+
+    var onImageSelect = function (e) {
+        $.each(e.files, function (index, value) {
+            var ext = value.extension.toLowerCase();
+            var ok = ext == ".jpg"
+                || ext == ".jpeg"
+                || ext == ".png"
+                || ext == ".bmp";
+
+            if (!ok) {
+                e.preventDefault();
+                alert("Please upload image files");
+            }
+        });
+    };
+
+    self.onUploadSuccess = function (e) {
+        console.log("onUploadSuccess");
+        var data = e.response;  
+        if (data == null || data == undefined || (Object.keys(data).length === 0 && data.constructor === Object)) {
+            return;
+        }
+        if (data.toString().length > 0) {
+            alert(data);
+        }
+
+        //$.publish("PV_Grid_Access_OnAddNewRecord_Event");
+    }
+
+    var onUploadError = function (e, s) {
+        console.log("onUploadError", e, s);
+    }
+
+
+    var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+    var styleImagesVm = new StyleImagesModel(model);
+
+    ko.applyBindings(styleImagesVm,
+        document.getElementById('styleImages'));
+</script>
+
+<style>
+    form div.image-title {
+        font-weight: normal;
+        padding-top: 2px;
+    }
+
+    form div.image-upload {
+        overflow: hidden;
+        padding-top: 3px;
+        padding-bottom: 2px;
+    }
+
+        form div.image-upload .k-dropzone {
+            padding-top: 0px;
+        }
+
+
+    form div.image-direct {
+        overflow: hidden;
+        padding-bottom: 0px;
+    }
+
+    form div.image-upload label {
+        font-weight: normal;
+        display: inline;
+        float: left;
+        margin-top: 5px;
+    }
+
+    form div.upload div.file-preview {
+        background: #ccc;
+        border: 1px solid #000;
+        display: inline-block;
+        float: left;
+        margin-right: 1em;
+        width: 60px;
+        height: 60px;
+        text-align: center;
+    }
+</style>
+
+<!-- ko stopBinding: true -->
+<div id="styleImages">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+
+            <div style="width: 200px">
+                Images
+                <a href="javascript:;"
+                   data-bind="click: addImage"
+                   class="k-button">
+                    <span class="k-icon k-add"></span>Add
+                </a>
+            </div>
+
+        </div>
+        <div class="panel-body">
+
+            <div style="padding-left: 30px">
+                <div data-bind="foreach: images">
+                    <div data-bind="visible: isVisible">
+                        <input type="hidden" data-bind="value: Id, attr: { 'name' : 'Images[' + $index() + '].Id' }" />
+                        <div class="image-title">
+                            Image <span data-bind="text: ($index() + 1)"></span>
+                            (<span data-bind="text: Label"></span>)@*: <input style="margin-left: 5px; vertical-align: middle; margin-bottom: 5px" type="checkbox" data-bind="checked: IsDefault, attr: { 'name' : 'Images[' + $index() + '].IsDefault' }" /> Main*@
+                        </div>
+
+                        <table style="margin-bottom: 0px">
+                            <tr>
+                                <td style="vertical-align: top">
+                                    <div class="image-box-holder"
+                                         data-bind="visible: hasDirectImage">
+                                        <img style='border: 0; max-height: 70px;' data-bind="attr: { 'src': DirectThumbnailUrl }" />
+                                    </div>
+                                    <div class="image-zoom-icon" data-bind="visible: hasDirectImage">
+                                        <a data-bind="attr: { 'href': DirectImageUrl }" target="_blank" class="k-button" style="margin: 0px">
+                                            <span class="glyphicon glyphicon-zoom-in"></span>
+                                        </a>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <label>Type: </label>
+                                        <input data-bind="attr: { 'name' : 'Images[' + $index() + '].Category' }, kendoDropDownList: {data: $parent.imageCategoryList, value: category, dataTextField: 'Text', dataValueField: 'Value' }" />
+                                    </div>
+                                    <div class="image-direct" style="padding-top: 3px">
+                                        <span>Set link:</span>
+                                        <input type="text"
+                                               data-bind="value: DirectImageUrl, attr: { 'name' : 'Images[' + $index() + '].DirectImageUrl' }"
+                                               class="k-textbox"
+                                               style="width: 220px" />
+                                    </div>
+                                    <ul style="padding-bottom: 4px; padding-top: 4px"
+                                        class="k-upload-files k-reset"
+                                        data-bind="visible: hasUploadedImage">
+                                        <li class="k-file k-file-success">
+                                            <span class="gray">Uploaded image: </span>
+                                            <span data-bind="text: UploadedFileName"></span>
+                                        </li>
+                                    </ul>
+                                    <div class="image-upload">
+                                        <label>or Upload:</label>
+                                        <div>
+                                            <input tabindex="6" type="file" data-bind="attr: { 'name': 'Image' + ($index() + 1) }, kendoUpload: {
+                                       async: {
+                                           saveUrl: '@Url.Action("SaveWithCheck", "Image")',
+                                           removeUrl: '@Url.Action("Remove", "Image")',
+                                           autoUpload: true,                                           
+                                       },
+                                       showFileList: true,
+                                       multiple: false,
+                                       select: onImageSelect,
+                                     success: onUploadSuccess,
+                                           error: onUploadError
+                                       }" />
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="clear"></div>
+
+        </div>
+    </div>
+</div>
+
+<!-- /ko -->

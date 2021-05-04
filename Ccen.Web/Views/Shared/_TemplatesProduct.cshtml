@@ -1,0 +1,579 @@
+﻿@using Amazon.Core.Models
+@using Amazon.DTO
+@using eBay.Api
+
+<script>
+    //CONSTS
+    var amazonMarket = @((int)MarketType.Amazon);
+    var amazonEUMarket = @((int)MarketType.AmazonEU);
+    var amazonAUMarket = @((int)MarketType.AmazonAU);
+    var amazonINMarket = @((int)MarketType.AmazonIN);
+    var ebayMarket = @((int)MarketType.eBay);
+    var magentoMarket = @((int)MarketType.Magento);
+    var walmartMarket = @((int)MarketType.Walmart);
+    var walmartCAMarket = @((int)MarketType.WalmartCA);
+    var jetMarket = @((int)MarketType.Jet);
+    var shopifyMarket = @((int)MarketType.Shopify);
+
+    function showNormalImage(id) {
+        console.log("showNormalImage: " + id);
+        $('#NormalImage_' + id).show();
+        $('#LargeImage_' + id).hide();
+    }
+    function showLargeImage(id) {
+        console.log("showLargeImage: " + id);
+        $('#NormalImage_' + id).hide();
+        $('#LargeImage_' + id).show();
+    }
+</script>
+
+
+<script type="text/javascript">
+    function composePossibleMappings(weight, styleSize, styleColor) {
+        var styleItemName = styleSize;
+        if (!dataUtils.isEmpty(styleColor))
+            styleItemName += "/" + styleColor;
+
+        if (weight == null || weight == 0 || weight == '') {
+            if (styleSize != null && styleSize != '') {
+                return "<div class='text-warning remark'>-> " + styleItemName + "</div><div class='text-warning remark'>Style has a size without weight</div>";
+            } else {
+                return "<div class='text-danger remark'>Please set a reference to style variation</div>";
+            }
+        }
+        return "<div class='gray remark'>-> " + styleItemName + "</div>";
+    }
+
+    function composeRelatedMarketUrls(markets) {
+        var render = "";
+        if (markets != null) {
+            for (var i = 0; i < markets.length; i++) {
+                var market = markets[i];
+                var flagCss = "flag-" + market.MarketShortName;
+                render += "<div><a target='_blank' class='flag-link " + flagCss + "' href='" + market.ProductUrl + "'></a></div>";
+            }
+        }
+        return render;
+    }
+
+    function composeErrorTooltip(messages) {
+        var render = "";
+        if (messages != null) {
+            for (var i = 0; i < messages.length; i++) {
+                render += "<li><span class=''>" + tmpl.isNullFormat(messages[i].CreateDate, 'dd/MM/yyyy HH:mm', 'n/a') + "</span>: <div>" + (messages[i].Message || "").replace(/'/g, '\\\'').replace(/"/g, '\\\"').replace(/</g, '&lt;').replace(/>/g, '&gt;') + "</div></li>";
+            }
+        }
+        if (!dataUtils.isEmpty(render)) {
+            render = "<b>Details:</b>" + "<ul>" + render + "</ul>";
+        }
+
+        return render;
+    }
+
+    function composeFeedInfoTooltip(info) {
+        var render = "";
+        if (info == null) {
+            render = 'No feed info';
+        }
+        else {
+            render += "<div>Feed ID: " + info.AmazonIdentifier + "</div>";
+            render += "<div>Submit Date: " + tmpl.isNullFormat(info.SubmitDate, 'dd/MM/yyyy HH:mm', '-') + "</div>";
+            render += "<div><a href='javascript: downloadURI(\"" + info.FeedUrl + "\", \"" + info.RequestFilename + "\")'>download feed</a></div>";
+        }
+        return render;
+    }
+
+    function showErrorTooltip(itemId) {
+        $.ajax({
+            url: '@Url.Action("GetItemErrors", "Item")' + "?itemId=" + itemId,
+            dataType: 'json',
+            type: 'GET',
+            success: function (result) {
+                var message = composeErrorTooltip(result.Data);
+                Message.popup(message, Message.POPUP_INFO);
+            }
+        });
+    }
+
+    function showFeedInfoTooltip(itemId) {
+        $.ajax({
+            url: '@Url.Action("GetItemFeedInfo", "Item")' + "?itemId=" + itemId,
+            dataType: 'json',
+            type: 'GET',
+            success: function (result) {
+                var message = composeFeedInfoTooltip(result.Data);
+                Message.popup(message, Message.POPUP_INFO);
+            }
+        });
+    }
+
+    function downloadURI(uri, name) {
+        var link = document.createElement("a");
+        link.download = name;
+        link.href = uri;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(function () {
+            documet.body.removeChild(link);
+        }, 50);
+    }
+
+    function composeRemainingStyleItems(styleItems, sizes) {
+        var labels = [];
+        if (styleItems == null)
+            return labels;
+
+
+        styleItems = $.makeArray(styleItems);
+
+        //console.log(styleItems);
+        //console.log(typeof(styleItems));
+        var styleList = styleItems.distinct(function(s1, s2) {
+            return s1.StyleId == s2.StyleId;
+        });
+        var sizeList = styleItems.distinct(function(s1, s2) {
+            return s1.StyleSize == s2.StyleSize;
+        });
+
+        var rows = [];
+        var rowHeader = $.map(sizeList, function(s) { return s.StyleSize; });
+        rowHeader.splice(0, 0, "");
+        var columnHeader = $.map(styleList, function(s) { return "<a class='asin' target='_blank' href='" + s.StyleUrl + "'>" + s.StyleString + "</a>"; });
+
+        for (var i = 0; i < styleList.length; i++) {
+            var styleId = styleList[i].StyleId;
+            var row = [];
+
+            for (var j = 0; j < sizeList.length; j++) {
+                var size = sizeList[j].StyleSize;
+
+                var styleItem = styleItems.firstOrDefault(function(si) {
+                    return si.StyleSize == size && si.StyleId == styleId;
+                });
+
+                var sizeItems = [];
+                if (styleItem != null) {
+                    sizeItems = $.grep(sizes, function(s) {
+                        return s.StyleItemId == styleItem.StyleItemId;
+                    });
+                }
+
+                var realQuantity = null;
+                if (sizeItems.length > 0) {
+                    realQuantity = sizeItems.reduce(function(prevVal, item) {
+                        return prevVal + item.RealQuantity;
+                    }, 0);
+                }
+                if (styleItem != null) {
+                    row.push({
+                        RemainingQuantity: styleItem.RemainingQuantity,
+                        RealQuantity: realQuantity,
+                        LinkedListingCount: styleItem.LinkedListingCount,
+                    });
+                } else {
+                    row.push({
+                        RemainingQuantity: null,
+                        RealQuantity: null,
+                        LinkedListingCount: 0
+                    });
+                }
+            }
+            rows.push(row);
+        }
+
+        var render = "<table class='size-matrix'>";
+        render += "<tr>";
+        for (var i = 0; i < rowHeader.length; i++) {
+            var c = ((i + 1) % 2 == 0) ? 'alt-h' : '';
+            render += "<th class='" + c + "'>" + rowHeader[i] + "</th>";
+        }
+        render += "</tr>";
+
+        for (var i = 0; i < rows.length; i++) {
+            render += "<tr>";
+            render += "<th>" + columnHeader[i] + "</th>";
+
+            for (var j = 0; j < rows[i].length; j++) {
+                var item = rows[i][j];
+                var colorCss = "";
+
+                var altCss = (j % 2 == 0) ? 'alt' : '';
+                var noLstCss = "";
+
+                @* Show in Yellow (например [15]) , для тех размеров которых нету в данном листинге но есть в каком то другом, в данном маркетплейсе.
+                    Show in red, размеры которых нет ни в одном листинге , в данном маркетплейсе.*@
+                var value = tmpl.isNull(item.RemainingQuantity, '-');
+                if (item.RealQuantity == null)
+                {
+                    noLstCss = "no-lst";
+                    var qty = item.RemainingQuantity;
+                    if (qty != null)
+                    {
+                        if (qty > 0) {
+                            if (item.LinkedListingCount == 0) {
+                                colorCss = "red";
+                            } else {
+                                colorCss = "yellow";
+                            }
+                        }
+
+                        value = "[" + value + "]";
+                    }
+                }
+
+                render += "<td style='width: 20px' class='" + altCss + " " + noLstCss + "'>" + "<span class='" + colorCss + "'>" + value + "</span></td>";
+            }
+
+            render += "</tr>";
+        }
+        render += "</table>";
+
+        return render;
+    }
+
+</script>
+
+
+<script type="text/kendo-tmpl" id="amazon-asin-column-template">
+    #if (!ASIN) {#
+        <span>[Empty]</span>
+    #} else {#
+        <a target='_blank' href='#=SellerMarketUrl#'>#=ASIN#</a>
+ 
+        <ul class='asin-note-list'>
+            #if (!IsAmazonUpdated) {#
+            <li><span class='note'>not found on Amazon</span></li> #} else {# #}#
+            #if (HasChildWithFakeParentASIN) {#
+            <li><span class='note'>has childs with empty Parent ASIN on Amazon</span></li> #} else {# #}#
+            #if (HasPriceDifferencesWithAmazon) {#
+            <li><span class='remark text-warning'>has price differences with Amazon</span></li> #}#
+            #if (HasQuantityDifferencesWithAmazon) {#
+            <li><span class='remark text-warning'>has qty differences with Amazon</span></li> #}#
+            #if (HasChildWithDefect) {#
+            <li><span class='remark text-warning'>listings have defects</span></li>
+            #}#
+        </ul>
+    #}#
+    
+    #if (OnHold) {#
+        <div class='info-rect'>On Hold</div>
+    #}#
+</script>
+
+<script type="text/kendo-tmpl" id="walmart-asin-column-template">
+    #if (!ASIN) {#
+        <span>[Empty]</span>
+    #} else {#
+        #if (SourceMarketIdIncludeChild != null) {#
+            <a target='_blank' href='#=MarketUrl#'>#=ASIN#</a>
+        #} else {#
+            #=ASIN#
+        #}#
+    #}#
+    <div class="note"><span class='gray'>Status:</span> <span>#=FormattedPublishedStatus#</span></div>
+
+    #if (OnHold) {#
+        <div class='info-rect'>On Hold</div>
+    #}#
+    
+    <div>
+        <span class="gray">Market Ids:</span>
+        #if (ChildItems.length == 0) {#
+            <span>-</span>
+        #}#
+
+        #for (var i = 0; i < 3; i++) {#
+            #if (i < ChildItems.length) {#
+                <div><a target="_blank" href="#=ChildItems[i].MarketUrl#">#=ChildItems[i].SourceMarketId#</a></div>
+            #}#
+        #}#
+        
+        #if (ChildItems.length > 3) {#
+            <a data-toggle="collapse" data-target="\\#collapse_itemIds_#=Id#" href="\\#collapse_itemIds_#=Id#">show all</a>
+            <div id="collapse_itemIds_#=Id#" class="collapse">
+                #for (var i = 3; i < ChildItems.length; i++) {#
+                    <div><a target="_blank" href="#=ChildItems[i].MarketUrl#">#=ChildItems[i].SourceMarketId#</a></div>
+                #}#
+            </div>
+        #}#
+    </div>   
+</script>
+
+<script type="text/kendo-tmpl" id="general-asin-column-template">
+    #if (!ASIN) {#
+        <span>[Empty]</span>
+    #} else {#
+        #if (SourceMarketId != null) {#
+            <a target='_blank' href='#=MarketUrl#'>#=ASIN#</a>
+        #} else {#
+            #=ASIN#
+        #}#
+    #}#
+    <div><span class='gray'>Status:</span> <span>#=FormattedPublishedStatus#</span></div>
+
+    #if (OnHold) {#
+        <div class='info-rect'>On Hold</div>
+    #}#
+</script>
+
+
+<script type="text/kendo-tmpl" id="image-column-template">
+    <a target='_blank' href='#=MarketUrl#'><img src='#=Thumbnail#' style='border:0; max-height: 75px; max-width: 75px' /></a>
+</script>
+
+<script type="text/kendo-tmpl" id="image-name-column-template">
+    <div class="image-box-holder" style="float: left; margin-right: 5px">
+        @*NOTE: width: 75px, require for eBay pictures, while we haven't logic to create thumbnail for them*@
+        <a target='_blank' href='#=MarketUrl#'><img src='#=Thumbnail#' style="max-width: 75px; max-height: 75px" /></a>
+    </div>
+    <div style='padding-top:3px'><a target='_blank' style="color: black" href='#=MarketUrl#'>#=AmazonName#</a></div>
+</script>
+
+<script type="text/kendo-tmpl" id="rank-column-template">
+    <div><span class='gray'>Rank:</span><span>#=tmpl.isNullFormat(Rank, '0,000', '-')#</span></div>
+</script>
+
+<script type="text/kendo-tmpl" id="position-column-template">
+    <div><span class='gray'>Position:</span> #=tmpl.isNullOrEmpty(Positions, '-')#</div>
+</script>
+
+<script type="text/kendo-tmpl" id="price-column-template">
+    <div><span>#=PriceRange#</span></div>
+    @*#if (SalePrice != null) {#
+        <div style="padding-top: 3px"><span class='remark gray'>Sale price:</span> #=tmpl.f(SalePrice, Currency + '0.00')#</div>
+        <ul class="remark gray" style="padding: 0px; margin: 0px; padding-left: 15px">
+            #if (MaxPiecesOnSale != null) {#
+                <li>from: #=tmpl.isNullFormat(SaleStartDate, 'MM.dd.yyyy', '-')#</li>
+                <li>max: #=tmpl.isNull(MaxPiecesOnSale, '-')#</li>
+                <li>sold: #=PiecesSoldOnSale#</li>
+            #}#
+        </ul>
+    #}#*@
+</script>
+
+<script type="text/kendo-tmpl" id="remaining-styleitem-column-template">
+    #if (ASIN) {#
+        <span>#=composeRemainingStyleItems(StyleItems, ChildItems)#</span>
+        <div style="margin: 3px 3px 0px 0px; text-align: right">
+            #if (SKU) {#
+                <span class="gray">Parent SKU:</span> #=SKU#
+            #} else {#
+                <span class="gray">Parent SKU:</span> -
+            #}#
+        </div>
+    #} else {#
+        <span></span>
+    #}#
+</script>
+
+
+<!--ITEM TEMPLATE-->
+
+<script type="text/kendo-tmpl" id="item-currentprice-column-template">
+    #=tmpl.f(ItemCurrentPrice, Currency + "0.00")#
+    #if (ItemCurrentPrice != AmazonCurrentPrice) {#
+        <div class='text-warning remark'>(on Market: #=tmpl.isNullFormat(AmazonCurrentPrice, Currency + '0.00', '-')#)</div>
+    #}#
+    #if (SalePrice != null) {#
+        <div>
+            <div><span class='gray'>Sale price:</span> #=tmpl.f(SalePrice, Currency + '0.00')#</div>
+            <ul class="remark gray" style="padding: 0px; margin: 0px; padding-left: 15px">
+                <li>from: #=tmpl.isNullFormat(SaleStartDate, 'MM.dd.yyyy', '-')# - to: #=tmpl.isNullFormat(SaleEndDate, 'MM.dd.yyyy', '-')#</li>
+                <li>
+                    max: #=tmpl.isNull(MaxPiecesOnSale, '-')#
+                    #if (MaxPiecesOnSale != null) {#
+                        <span>, sold: #=PiecesSoldOnSale#</span>
+                    #}#
+                </li>
+            </ul>
+        </div>
+    #}#
+    #if (BusinessPrice != null) {#
+        <div><span class='gray'>Biz Price:</span> #=tmpl.isNullFormat(BusinessPrice, Currency + '0.00', '-')#</div>
+    #}#
+    #if (IsFBA) {#
+        <div><span class='gray'>FBA Fee:</span> #=tmpl.isNullFormat(FBAFee, Currency + '0.00', '-')#</div>
+    #}#
+</script>
+
+<script type="text/kendo-tmpl" id="item-image-column-template">
+    <div class="product-image-holder" id="NormalImage_#=ItemId#">
+        <a target='_blank' href="#=MarketUrl#"><img src='#=Thumbnail#' /></a>
+        
+        <div class="product-image-actions">
+            <span class="off">SL</span>
+            <a class="on"
+               href="javascript:;"
+               onclick="showLargeImage('#=ItemId#')"
+               style="margin-left:5px">UL</a>
+        </div>
+    </div>
+    <div class="product-image-holder"
+         id="LargeImage_#=ItemId#"
+         style="display: none">
+        <a target='_blank' href="#=MarketUrl#"><img src='#=LargeThumbnail#' /></a>
+        
+        <div class="product-image-actions">
+            <a class="on"
+               href="javascript:;"
+               onclick="showNormalImage('#=ItemId#')">SL</a>
+            <span class="off">UL</span>
+        </div>
+    </div>
+</script>
+
+<script type="text/kendo-tmpl" id="item-lowestprice-column-template">
+    #=tmpl.isNullFormat(LowestPrice, Currency + '0.00', '-')#
+    #if (BuyBoxStatus==@((int) BuyBoxStatusCode.Win)) {#
+        <span> (win)</span>
+    #}#
+    #if (BuyBoxStatus ==@((int) BuyBoxStatusCode.NotWin)) {#
+        <span class="gray"> (not win)</span>
+    #}#
+    #if (BuyBoxStatus ==@((int) BuyBoxStatusCode.NoWinner)) {#
+        <span class="gray"> (no winner)</span>
+    #}#
+    #if (BuyBoxStatus ==@((int)BuyBoxStatusCode.Undefined) || BuyBoxStatus ==@((int)BuyBoxStatusCode.None)) {#
+        <span class="gray"> (no info)</span>
+    #}#
+</script>
+
+<script type="text/kendo-tmpl" id="item-qty-column-template">
+    #if (IsFBA) {#
+        <div><span class='gray'>Available:</span> #=RealQuantity# <span>(FBA)</span></div>
+    #} else {#
+        <div><span class='gray'>Market Qty:</span> #=RealQuantity# 
+            @*<span class="gray remark">(#=AutoQuantityUpdateDateAgoDateFormatted# ago)</span>*@
+        </div>
+        #if (OnHold) {#
+            <div class='info-rect'>On Hold</div>
+        #}#   
+        #if (StyleOnHold) {#
+            <div class="info-rect">On Hold [from style]</div>
+        #}#
+        #if (StyleItemOnHold) {#
+            <div class="info-rect">On Hold [from style size]</div>
+        #}#
+        #if (DisplayQuantity != null) {#
+            <div><span class='remark gray'>Display:</span> #=tmpl.isNull(DisplayQuantity, '-')#</div>
+        #}#
+        #if ((DisplayQuantity == null && RealQuantity != AmazonRealQuantity) 
+            || (DisplayQuantity != null && Math.min(RealQuantity, DisplayQuantity) != AmazonRealQuantity)) {#
+        <span class='text-warning remark'>(from Market: #=tmpl.isNull(AmazonRealQuantity, '-' )#)</span>
+        #}#   
+        #if (RestockDate != null) {# 
+            <div><span class='gray remark'>Restock:</span> #=tmpl.isNullFormat(RestockDate, 'MM.dd.yyyy', '-')#</div>
+        #}#
+    #}# 
+
+
+</script>
+
+<script type="text/kendo-tmpl" id="ebay-item-qty-column-template">
+    <div>#=RealQuantity#</div>
+</script>
+
+<script type="text/kendo-tmpl" id="item-remaining-qty-column-template">
+    <div><span class='gray'>Remaining:</span> #=tmpl.isNull(RemainingQuantity, '-')#</div>
+    <div class="remark"><span class='gray'>Received:</span> #=tmpl.isNull(TotalQuantity, '-')#</div>
+    <div class="remark"><span class='gray'>Sold Online:</span> #=SoldByAmazon# #if (SoldByAmazon != TotalSoldByAmazon) {# (#=TotalSoldByAmazon#) #}#</div>
+    <div class="remark"><span class='gray'>Sold in Store:</span> #=SoldByInventory# #if (SoldByInventory != TotalSoldByInventory) {# (#=TotalSoldByInventory#) #}#</div>
+    <div class="remark"><span class='gray'>Sent to FBA:</span> #=SoldByFBA# #if (SoldByFBA != TotalSoldByFBA) {# (#=TotalSoldByFBA#) #}#</div>
+    <div class="remark"><span class='gray'>Special Cases:</span> #=SoldBySpecialCase# #if (SoldBySpecialCase != TotalSoldBySpecialCase) {# (#=TotalSoldBySpecialCase#) #}#</div>
+</script>
+
+<script type="text/kendo-tmpl" id="item-style-column-template">
+    <div><a class='asin' target='_blank' href='#=StyleUrl#'>#=StyleString#</a></div>
+    <div><span class="gray">SKU:</span> #=tmpl.isNull(SKU, '-')#</div>
+    <div><span class="gray">Type:</span> #=tmpl.isNull(ListingType, '-')#</span></div>
+    <div><span class="gray">Open date:</span> #=tmpl.isNullFormat(OpenDate, 'MM.dd.yyyy', '-')#</div>
+</script>
+
+<script type="text/kendo-tmpl" id="amazon-item-asin-column-template">
+    #if (Market == amazonMarket) {#
+    <a target='_blank' href='#=SellerMarketUrl#'>#=ASIN#</a>
+    #}#
+    #if (Market == amazonEUMarket) {#
+    <a target='_blank' href='#=SellerMarketUrl#'>#=ASIN#</a>
+    #}#
+
+    #if (IsAmazonParentASIN == false) {#
+    <span class='note'>empty Parent ASIN on Amazon</span>
+    #}#
+    #if (HasListingDefects) {#
+    <span class='remark text-warning'>has defects on Amazon</span>
+    #}#
+
+    @*<div class='flag-link-current flag-#=MarketShortName#'></div>
+        #=composeRelatedMarketUrls(RelatedMarkets)#*@
+
+    <div class="note">
+        <span class='gray'>Status:</span>
+        <span>#=FormattedPublishedStatus#</span>
+
+        #if (HasItemMessages) {#
+        <span>
+            <a href="javascript: showErrorTooltip(#=ItemId#)">
+                <span class="glyphicon glyphicon-exclamation-sign text-danger"
+                      style="font-size: 14px; vertical-align: middle; margin: 0px 0px 2px 0px"></span>
+            </a>
+        </span>
+        #}#
+    </div>
+</script>
+
+<script type="text/kendo-tmpl" id="walmart-item-asin-column-template">
+    @*<a target='_blank' href='#=MarketUrl#'>#=ASIN#</a>*@
+    <div>
+        <span class="gray">Market Id:</span>
+        #if (!dataUtils.isEmpty(SourceMarketId)) {#
+        <a target="_blank" href="#=MarketUrl#">#=SourceMarketId#</a>
+        #} else {#
+        <span>-</span>
+        #}#
+    </div>
+
+    <div class="note">
+        <span class='gray'>Status:</span> <span>#=FormattedPublishedStatus#</span>
+        #if (HasItemMessages) {#
+        <span>
+            <a href="javascript: showErrorTooltip(#=ItemId#)">
+                <span class="glyphicon glyphicon-exclamation-sign text-danger"
+                      style="font-size: 14px; vertical-align: middle; margin: 0px 0px 2px 0px"></span>
+            </a>
+        </span>
+        #}#
+    </div>
+
+    <div class="note"><a href="javascript: showFeedInfoTooltip(#=ItemId#)">view feed</a></div>
+</script>
+
+<script type="text/kendo-tmpl" id="general-item-asin-column-template">
+    #if (SourceMarketId != null) {#
+        <a target='_blank' href='#=SellerMarketUrl#'>#=ASIN#</a>
+    #} else {#
+        #=ASIN# 
+        #if (Market != jetMarket && PublishedStatus != '@((int)PublishedStatuses.None)') {#
+            <span class='gray'>(not uploaded to market)</span> 
+        #} else {# #}#
+    #}#
+    <div class="note">
+        <span class='gray'>Status:</span> <span>#=FormattedPublishedStatus#</span>
+        #if (HasItemMessages) {#
+        <span>
+            <a href="javascript: showErrorTooltip(#=ItemId#)">
+                <span class="glyphicon glyphicon-exclamation-sign text-danger"
+                      style="font-size: 14px; vertical-align: middle; margin: 0px 0px 2px 0px"></span>
+            </a>
+        </span>
+        #}#
+    </div>
+</script>
+
+<script type="text/kendo-tmpl" id="item-size-column-template">
+    #=tmpl.isNull(Size, "-")# 
+    #if (ColorVariation != null && ColorVariation != '') {#
+        / #=ColorVariation#
+    #}#
+    #=composePossibleMappings(Weight, StyleSize, StyleColor)#
+</script>

@@ -1,0 +1,140 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.HtmlExtend
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Inventory.StyleLocationViewModel
+@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var StyleLocationModel = function(model, settings) {
+        var self = this;
+
+        self.isLoaded = ko.observable(false);
+
+        self.settings = settings;
+        self.model = model;
+
+        self.id = model.StyleId;
+        self.type = model.Type;
+
+        self.styleString = model.StyleString;
+        
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function() {
+            return self.errors().length === 0;
+        });
+        self.onSubmit = function(data, e) { // function(data, e) {
+            //console.log(data);
+            console.log(e);
+            console.log("save click");
+
+            //var validator = $("#form").kendoValidator().data('kendoValidator');
+
+            //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+            //http://jsfiddle.net/KHFn8/3238/
+            if (self.isValid() && locationVm.isValid()) { //validator.validate() &&
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                locationVm.errors.showAllMessages();
+                e.preventDefault();
+                return false;
+            }
+        };
+
+        self.isLoaded(true);
+    };
+
+    $(document).ready(function() {
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+
+        };
+
+        var viewModel = new StyleLocationModel(model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(viewModel, $('#edit-location-container')[0]);
+    });
+</script>
+
+<div id="edit-location-container">
+    @Html.ValidationSummary(true)
+
+    @Html.HiddenFor(m => m.Id)
+    @Html.HiddenFor(m => m.StyleId)
+
+    <div class="inventory-popup">
+        <div class="k-edit-form-container" style="width: auto">
+            <div>
+                <div style="padding: 5px 15px 0px 15px">
+                    <table class="noborder" style="width: 100%; padding-bottom: 0px">
+                        <tr>
+                            <td style="vertical-align: top;">
+                                <span class="gray">Style:</span>
+                                <span style="font-size: 14px" data-bind="text: styleString"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align: top; padding-top: 10px; width: 90px">
+                                <img height='75' style='border: 0' src='@Model.Thumbnail'/>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align: top; padding-top: 10px; width: 200px">
+                                <div class="style-panel" style="padding-bottom: 0px">
+                                    <div style="padding: 10px 0px 5px 0px">Locations</div>
+                                    @Html.Partial("_ItemLocations", Model.Locations)
+                                    <div class="clear"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="clear"></div>
+
+    <div class="k-edit-buttons k-state-default popup-button-panel"
+         style="position: static">
+        <table style="margin-left: auto">
+            <tr>
+                <td>
+                    <button type="submit"
+                            id="submit"
+                            tabindex="300"
+                            data-bind="click: onSubmit"
+                            class="k-button k-button-icontext k-grid-update">
+                        <span class="k-icon k-update"></span>Save
+                    </button>
+                </td>
+                <td>
+                    <button class="k-button k-button-icontext k-grid-cancel"
+                            type="reset"
+                            id="cancel"
+                            tabindex="301"
+                            onclick="popupWindow.close()">
+                        <span class="k-icon k-cancel"></span>Cancel
+                    </button>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>

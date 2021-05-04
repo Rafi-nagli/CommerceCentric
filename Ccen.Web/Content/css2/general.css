@@ -1,0 +1,335 @@
+﻿.amz {
+    font-size: 14px !important;
+}
+
+.amz .page {
+    
+}
+
+/*Align*/
+.right-block {
+    text-align: right;
+}
+
+.left-block {
+    text-align: left;
+}
+
+/* MISC  
+----------------------------------------------------------*/
+.clear
+{
+    clear: both;
+}
+
+.bold {
+    font-weight: bold;
+}
+
+a[disabled="disabled"] {
+    pointer-events: none;
+}
+
+/*Colors*/
+
+.gray {
+    color: #888;
+}
+
+.green {
+    color: green;
+}
+
+.yellow {
+    color: orange;
+}
+
+.red {
+    color: #ff0000;
+}
+
+.white {
+    color: white;
+}
+
+.black {
+    color: #333;
+}
+
+/* Validation */
+
+.field-validation-error
+{
+    color: #ff0000;
+    display: block;
+}
+
+.field-validation-error-inline {
+    color: #ff0000;
+    padding-left: 2px;
+}
+
+.field-validation-valid
+{
+    display: none;
+}
+
+.input-validation-error
+{
+    border: 1px solid #ff0000;
+    background-color: #ffeeee;
+}
+
+.validation-summary-errors
+{
+    font-weight: normal;
+    color: #ff0000;
+    padding: 4px 0px;
+}
+
+.validation-summary-valid
+{
+    display: none;
+}
+
+.validationMessage {
+    display: block;
+    color: #ff0000 !Important;
+}
+
+/*Header*/
+
+#page-header .title {
+    padding: 0px 0px 5px 30px;
+}
+
+#page-header .title h1 {
+    font-weight:bold; color:#666; font-size:32px
+}
+
+#page-header {
+    /*background: #47b1e8;
+    color: white;*/
+    margin-bottom: 10px;
+}
+
+#page-header .amz-login-info {
+    padding-bottom: 4px;
+}
+
+#page-header .logout-block
+{
+    padding-right: 35px;
+    text-align:right;
+}
+
+
+/*#page-header .content a {
+    color: white;
+}
+
+#page-header .content a:hover, #page-header .content a:focus {
+    color: #efefef;
+}*/
+
+
+
+/*Menu*/
+
+.menu {
+    padding-bottom: 5px;
+}
+
+.menu .k-menu .k-item>.k-link {
+    padding-left: 1.8em;
+    padding-right: 1.8em;
+}
+
+.menu .k-header {
+    /*background-color: #47b1e8;
+    color: white;*/
+}
+
+.main {
+    padding: 0px 30px 15px 30px;
+}
+
+
+
+/*Title*/
+
+/*.page-content .page-title {
+    padding: 10px 0px 5px 0px;
+}*/
+
+.page-content .breadcrumb {
+    margin-bottom: 10px; 
+    margin-top: 15px;
+}
+
+.page-content .breadcrumb .a {
+    font-size: 90%;
+}
+
+.page-content .breadcrumb .active {
+    color: #333;
+    font-size: 110%;
+}
+
+
+
+/*Filters*/
+
+.panel .filters {
+    padding: 5px 10px 5px 10px;
+}
+
+.panel .filters .checkbox {
+    
+}
+
+.panel .filters .filter-button {
+    margin: 5px 10px 0px 0px; 
+    padding: 3px 20px 3px 20px
+}
+
+.panel .filters td, .panel .filters th {
+    padding: 3px;
+    font-weight: normal;
+}
+
+.panel .filters th {
+    text-align: right;
+}
+
+.panel .filters .data-picker {
+    width: 120px;
+}
+
+
+
+/*Toolbar*/
+
+.k-toolbar .toolbar-label {
+    margin: 2px 3px 0px 5px;
+    vertical-align: baseline;
+}
+
+.k-toolbar .toolbar-label td {
+    padding: 2px 0px 2px 15px;
+}
+
+.k-toolbar .toolbar-button {
+    margin-left: 20px;
+}
+
+.k-toolbar .toolbar-link {
+    cursor: pointer;
+    padding: 1px 4px;
+}
+
+.k-toolbar .number {
+    font-weight: bold;
+}
+
+.k-toolbar .label {
+    font-size: 100%;
+}
+
+/* Utils */
+
+.note {
+    color: #999;
+    display: block;
+}
+
+.note, .remark, .remark-tip {
+    font-size: 85%;
+}
+
+.text-normal {
+    font-size: 14px;
+}
+
+
+/* GRID */
+.am-row-disabled {
+    color: #8d8d8d;
+}
+
+.am-row-disabled td {
+    color: #8d8d8d;
+}
+
+.am-row-disabled td a {
+    color: #8d8d8d;
+}
+
+.am-row-disabled-bg {
+    background-color: #efefef;
+}
+
+.am-row-disabled-bg td {
+    background-color: #efefef;
+}
+
+.am-row-disabled-bg td a {
+    background-color: #efefef;
+}
+
+
+
+.grid-small {
+    font-size: 13px !important;
+}
+
+/*Image*/
+.image-box-holder {
+    width: 75px; 
+    height: 75px; 
+    border: 1px lightgray solid; 
+    background-color: #efefef;
+    text-align: center;
+}
+
+.image-box img {
+    max-width: 75px;
+    max-height: 75px;
+    border: 0px;
+}
+
+.image-zoom-icon {
+    position: relative;
+    margin-top: -31px;
+}
+
+.k-grid tbody .image-zoom-icon .k-button,
+.image-zoom-icon .k-button {
+    min-width: 24px; 
+    opacity: 0.8; 
+    font-size: 16px; 
+    line-height: 0.9em; 
+    padding: 6px; 
+    margin-left: 0px; 
+    border-radius: 0px
+}
+
+.image-zoom-icon .glyphicon {
+    color: #444;
+}
+
+
+
+
+
+/* Messages */
+.warning-list  {
+    padding-left: 7px; 
+    padding-top: 5px; 
+}
+
+.warning-list .block-items {
+    padding-left: 20px;
+    padding-top: 2px;
+    padding-bottom: 5px;
+}

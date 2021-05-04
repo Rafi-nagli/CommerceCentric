@@ -1,0 +1,221 @@
+﻿
+<script>
+    var ShippingByCarrierGraphViewModel = function (settings) {
+        var self = this;
+
+        self.chart = null;
+        self.chartData = null;
+
+        self.settings = settings;
+
+        self.selectedPeriod = ko.observable(0);
+        self.selectedCarrier = ko.observable(null);
+
+        self.periods = [
+            {
+                label: 'yesterday',
+                value: 0,
+            },
+            {
+                label: 'week',
+                value: 1,
+            },
+            {
+                label: 'month',
+                value: 2,
+            },
+            {
+                label: 'year',
+                value: 3,
+            }
+        ];
+               
+        $.each(self.periods, function (i, n) {
+            n.isSelected = ko.computed(function () {
+                return self.selectedPeriod() == n.value;
+            });
+            n.select = function () {
+                self.selectedPeriod(n.value);
+                self.requestData();
+            }
+        });
+
+
+        self.onBack = function () {
+            self.selectedCarrier(null);
+            self.requestData();
+        }
+        
+        self.requestData = function () {
+            while (self.chart.series.length > 0)
+                self.chart.series[0].remove(true);
+
+            self.chart.showLoading();
+
+            $.ajax({
+                cache: false,
+                url: '@Url.Action("GetShippingByCarrier", "Dashboard")',
+                data: {
+                    periodType: self.selectedPeriod(),
+                    selectedCarrier: self.selectedCarrier(),
+                },
+                success: function (result) {
+                    self.chart.hideLoading();
+
+                    if (result.IsSuccess) {
+                        console.log('setCategories');
+                        self.chart.xAxis[0].setCategories(result.Data.Labels, true);
+                        for (var i = 0; i < result.Data.Labels.length; i++) {
+                            result.Data.UnitSeries[0][i] = {
+                                y: result.Data.UnitSeries[0][i],
+                                name: result.Data.Labels[i].Name,
+                                id: result.Data.Labels[i].Name
+                            };                                
+                        };
+                        self.chartData = result.Data;
+                        self.showChartData();
+                    }
+                }
+            });
+        };
+
+        self.showChartData = function () {
+            while (self.chart.series.length > 0)
+                self.chart.series[0].remove(true);
+            self.chart.yAxis[0].setExtremes(null, null);
+
+            if (self.chartData == null)
+                return;
+
+            self.chart.yAxis[0].setTitle({
+                text: 'units'
+            });
+            self.chart.addSeries({
+                name: 'Shipping Carrier',
+                innerSize: '50%',
+                data: self.chartData.UnitSeries[0],
+                tooltip: {
+                    pointFormat: '<b>{point.y}</b> ({point.percentage:.1f}%)'
+                },
+                dataLabels: {
+                    format: '<span style="font-weight: normal">{point.name}</span><br/>{point.y:,.0f} ({point.percentage:.1f}%)'
+                },
+                point: {
+                    events: {
+                        click: function (e) {
+                            console.log('click');
+                            console.log(e);
+                            console.log(this.id);
+                            console.log(e.point.name);
+
+                            
+                            if (self.selectedCarrier() == null && this.id != null) {
+                                self.selectedCarrier(this.id);
+                                //self.selectedFeatureName(e.point.name);
+                                self.requestData();
+                            }
+                        }
+                    }
+                },
+            });            
+        }
+
+        self.init = function () {
+            self.chart = new Highcharts.Chart({
+                chart: {
+                    renderTo: 'shippingByCarrierGraph',
+                    plotBackgroundColor: null,
+                    plotBorderWidth: null,
+                    plotShadow: false,
+                    type: 'pie',
+                    events: {
+                        load: function () {
+                            self.chart = this;
+                            self.requestData();
+                        }
+                    },
+                    //spacing: [0,0,0,0]
+                },
+                credits: {
+                    enabled: false
+                },
+                title: {
+                    text: ""
+                },
+                tooltip: {
+                    pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+                },
+                //legend: {
+                //    layout: 'horizontal',
+                //    align: 'center',
+                //    verticalAlign: 'bottom',
+                //    borderWidth: 0
+                //},
+                plotOptions: {
+                    pie: {
+                        size: '55%',
+                        allowPointSelect: true,
+                        cursor: 'pointer',
+                        dataLabels: {
+                            enabled: true,
+                            format: '<b>{point.name}</b>: {point.percentage:.1f} %',
+                            style: {
+                                color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+                            }
+                        },
+                    }
+                },
+            });
+        }
+
+        self.init();
+    }
+
+    var shippingByCarrierGraphViewModel = null;
+
+    $(document).ready(function () {
+        shippingByCarrierGraphViewModel = new ShippingByCarrierGraphViewModel();
+        ko.applyBindings(shippingByCarrierGraphViewModel, document.getElementById("shipping-by-carrier-graph"));
+    });
+</script>
+
+
+<div id="shipping-by-carrier-graph">
+    <div class="graph-button-top-panel row">
+        <div class="col-lg-4">
+
+        </div>
+        <div class="col-lg-4" style="text-align: center">
+            <button type="button"
+                    class="btn btn-success"
+                    style="padding-top: 2px; width: 64px"
+                    data-bind="click: onBack, visible: selectedCarrier() != null">
+                Back
+            </button>
+            <span style="margin-top: 4px" data-bind="text: selectedCarrier"></span>
+        </div>
+        <div class="col-lg-4"
+             style="text-align:right">
+        </div>
+    </div>
+
+    <div id="shippingByCarrierGraph" style="min-width: 350px; height: 300px; max-width: 650px; margin: 0 auto"></div>
+
+    <div class="graph-button-bottom-panel row">
+        <div class="col-lg-2" style="text-align: right">
+
+        </div>
+        <div class="col-lg-8"
+             data-bind="foreach: periods">
+            <button type="button"
+                    class="btn btn-default"
+                    data-bind="css: { 'btn-success': isSelected, 'btn-default': !isSelected() }, click: select">
+                <span data-bind="text: label"></span>
+            </button>
+        </div>
+        <div class="col-lg-2" style="text-align: left">
+
+        </div>
+        <div class="clearfix"></div>
+    </div>
+</div>

@@ -1,0 +1,74 @@
+﻿@model IList<Amazon.Web.General.ViewModels.Inventory.StyleItemPublishViewModel>
+
+<script type="text/javascript">
+    var PublishModel = function(model) {
+        var self = this;
+
+        model.forEach(function(entry) {
+            entry.isPublished = ko.observable(entry.IsPublished);
+            entry.price = ko.observable(entry.Price)
+                .extend({
+                    required: {
+                        message: "*",
+                        onlyIf: function() {
+                            return entry.isPublished();
+                        }
+                    }
+                });
+        });
+
+        self.publishes = ko.observableArray(model);
+
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function() {
+            return self.errors().length === 0;
+        });
+    };
+</script>
+<script type="text/javascript">
+    var publishVm = null;
+
+    $(document).ready(function() {
+        var publishItems = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+
+        publishVm = new PublishModel(publishItems);
+
+        ko.applyBindings(publishVm, document.getElementById('stylePublishes'));
+    });
+</script>
+
+<!-- ko stopBinding: true -->
+
+<div id="stylePublishes">
+    <div class="clear"></div>
+    <div class="style-publish-block">
+        <div class="k-widget k-grid k-secondary grid-small">
+            <table>
+                <colgroup>
+                    <col style="width: 100px" />
+                    <col style="width: 100px" />
+                </colgroup>
+                <thead class="k-grid-header">
+                    <tr>
+                        <th class="k-header">Market</th>
+                        <th class="k-header">Published</th>
+                        <th class="k-header">Reqular Price</th>
+                    </tr>
+                </thead>
+                <tbody data-bind='foreach: publishes'>
+                    <tr class="k-master-row">
+                        <td>
+                            <input type="hidden" data-bind='value: Market, attr: { name: "Publishes[" + $index() + "].Market" }' />
+                            <input type="hidden" data-bind='value: MarketplaceId, attr: { name: "Publishes[" + $index() + "].MarketplaceId" }' />
+                            <span data-bind="text: MarketName" />
+                        </td>
+                        <td><input type="checkbox" data-bind='checked: isPublished, attr: { name: "Publishes[" + $index() + "].IsPublished" }' /></td>
+                        <td>$<input type="text" class="k-textbox" data-bind='value: price, attr: { name: "Publishes[" + $index() + "].Price",  enable: isPublished }' /></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- /ko -->

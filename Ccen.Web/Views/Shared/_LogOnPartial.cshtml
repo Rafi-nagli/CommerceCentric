@@ -1,0 +1,88 @@
+﻿@using Amazon.DAL
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels
+@{
+    var model = new AccountStatusViewModel(AccessManager.Company);
+}
+
+<script>
+    var BalanceViewModel = function (model) {
+        var self = this;
+
+        self.providerList = ko.observable(model.ShipmentProviderList);
+        
+        self.updateBalance = function() {
+            $.ajax({
+                url: '@Url.Action(MVC.Home.GetBalance())',
+                async: true,
+                cache: false,
+                success: function (result) {
+                    self.providerList(result.Data);
+                }
+            });
+        }
+
+        self.prepareProviders = function(providers) {
+            $.each(providers, function(i, n) {
+                n.Balance = ko.observable(kendo.parseDate(n.Balance)).extend({
+                    format: "0.00"
+                });
+            });
+        }
+    }
+
+    $(document).ready(function() {
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(model));
+        var balanceViewModel = new BalanceViewModel(model);
+
+        ko.applyBindings(balanceViewModel, document.getElementById('header-balance-info'));
+    });
+</script>
+
+<div id="header-balance-info" class="amz-login-info">
+    @if (AccessManager.IsAuthenticated)
+    {
+        <text>
+            <div>
+                Hello,
+                @Html.ActionLink(String.IsNullOrEmpty(User.Identity.Name) ? "-" : User.Identity.Name,
+                    MVC.Account.ActionNames.Profile,
+                    MVC.Account.Name,
+                    routeValues: null,
+                    htmlAttributes: new { @class = "username", title = "Manage" })!
+                @using (Html.BeginForm(MVC.Account.LogOff(),
+                    FormMethod.Post,
+                    new { id = "logoutForm", style = "display: inline; margin-left: 10px;" }))
+                {
+                    @Html.AntiForgeryToken()
+                    <a href="javascript:document.getElementById('logoutForm').submit()">
+                        <span class='glyphicon glyphicon-log-out am-icon'></span>Log off
+                    </a>
+                }
+            </div>
+
+            @if (AccessManager.CanViewBalance())
+            {
+                <div style="padding-top: 4px; padding-bottom: 0px;">
+                    <a class="username"
+                       style="text-decoration: none"
+                       href="javascript:;"
+                       data-bind="click: updateBalance"><span class='glyphicon glyphicon-refresh am-icon'></span></a>
+                    <span data-bind="foreach: providerList">
+                        @*<span data-bind="textFormatted: Balance, pattern: '0.00', ifEmpty: '-'"></span>*@
+                        $<span data-bind="text: Balance"></span>
+                        (<span data-bind="text: ShortName"></span>)
+                    </span>
+                </div>
+            }
+        </text>
+    }
+    else
+    {
+        <div class="logout-block">
+            <a href="@Url.Action("LogOn", "Account")">
+                <span class='glyphicon glyphicon-log-in am-icon'></span>Log in
+            </a>
+        </div>
+    }
+</div>

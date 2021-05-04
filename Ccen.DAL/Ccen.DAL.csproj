@@ -1,0 +1,303 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\EntityFramework.6.4.4\build\EntityFramework.props" Condition="Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.props')" />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{64BD5177-22DC-43C8-A8E3-DDD30DC49831}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ccen.DAL</RootNamespace>
+    <AssemblyName>Ccen.DAL</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+    <TargetFrameworkProfile />
+    <AssemblyVersion>2016.5.1553.18</AssemblyVersion>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.4.4\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.4.4\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
+    <Reference Include="log4net, Version=1.2.15.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+      <HintPath>..\packages\log4net.2.0.5\lib\net45-full\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="Z.EntityFramework.Plus.EF6, Version=1.4.23.0, Culture=neutral, PublicKeyToken=59b66d028979105b, processorArchitecture=MSIL">
+      <HintPath>..\packages\Z.EntityFramework.Plus.EF6.1.4.23\lib\net40\Z.EntityFramework.Plus.EF6.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AmazonContext.cs" />
+    <Compile Include="Contracts\IQueryableUnitOfWork.cs" />
+    <Compile Include="DbCacheService.cs" />
+    <Compile Include="DbFactory.cs" />
+    <Compile Include="Repositories\Audits\AuditRepository.cs" />
+    <Compile Include="Repositories\BulkEdits\BulkEditHistoryRepository.cs" />
+    <Compile Include="Repositories\BulkEdits\BulkEditOperationRepository.cs" />
+    <Compile Include="Repositories\Categories\AmazonCategoryMappingRepository.cs" />
+    <Compile Include="Repositories\Categories\CustomCategoryFilterRepository.cs" />
+    <Compile Include="Repositories\Categories\CustomCategoryRepository.cs" />
+    <Compile Include="Repositories\Categories\CustomCategoryToStyleRepository.cs" />
+    <Compile Include="Repositories\CustomFeeds\CustomFeedFieldRepository.cs" />
+    <Compile Include="Repositories\CustomFeeds\CustomFeedRepository.cs" />
+    <Compile Include="Repositories\CustomFeeds\CustomFeedScheduleRepository.cs" />
+    <Compile Include="Repositories\DropShippers\DropShipperRepository.cs" />
+    <Compile Include="Repositories\General\ChartRepository.cs" />
+    <Compile Include="Repositories\General\ChartPointRepository.cs" />
+    <Compile Include="Repositories\Inventory\SealedBoxTrackingRepository.cs" />
+    <Compile Include="Repositories\Inventory\OpenBoxTrackingRepository.cs" />
+    <Compile Include="Repositories\Inventory\PhotoshootPickListEntryRepository.cs" />
+    <Compile Include="Repositories\Inventory\PhotoshootPickListRepository.cs" />
+    <Compile Include="Repositories\Inventory\StyleGroupRepository.cs" />
+    <Compile Include="Repositories\Inventory\StyleItemAttributeRepository.cs" />
+    <Compile Include="Repositories\Inventory\StyleToGroupRepository.cs" />
+    <Compile Include="Repositories\Inventory\WalmartBrandInfoRepository.cs" />
+    <Compile Include="Repositories\Listings\ItemAdditionRepository.cs" />
+    <Compile Include="Repositories\Listings\ItemChangeHistoryRepository.cs" />
+    <Compile Include="Repositories\Orders\CustomerRepository.cs" />
+    <Compile Include="Repositories\Messages\SystemMessageRepository.cs" />
+    <Compile Include="Repositories\Orders\OrderReportRepository.cs" />
+    <Compile Include="Repositories\Orders\ReturnRequestItemRepository.cs" />
+    <Compile Include="Repositories\Orders\ShippingChargeRepository.cs" />
+    <Compile Include="Repositories\Rates\SkyPostalRateRepository.cs" />
+    <Compile Include="Repositories\Rates\IBCRateRepository.cs" />
+    <Compile Include="Repositories\Rates\SkyPostalCityCodeRepository.cs" />
+    <Compile Include="Repositories\Reports\CustomOrderReportRepository.cs" />
+    <Compile Include="Repositories\Reports\CustomReportFieldRepository.cs" />
+    <Compile Include="Repositories\Reports\CustomReportPredefinedFieldRepository.cs" />
+    <Compile Include="Repositories\Reports\CustomReportFilterRepository.cs" />
+    <Compile Include="Repositories\Reports\CustomReportRepository.cs" />
+    <Compile Include="Repositories\Reports\ShipmentReportRepository.cs" />
+    <Compile Include="Repositories\SaleEvents\SaleEventFeedRepository.cs" />
+    <Compile Include="Repositories\SaleEvents\SaleEventSizeHoldInfoRepository.cs" />
+    <Compile Include="Repositories\SaleEvents\SaleEventEntryRepository.cs" />
+    <Compile Include="Repositories\SaleEvents\SaleEventRepository.cs" />
+    <Compile Include="Repositories\Features\StyleFeatureTextValueRepository.cs" />
+    <Compile Include="Repositories\Feeds\FeedItemRepository.cs" />
+    <Compile Include="Repositories\Feeds\FeedMessageRepository.cs" />
+    <Compile Include="Repositories\Inventory\DhlInvoiceRepository.cs" />
+    <Compile Include="Repositories\Inventory\FBAPickListEntryRepository.cs" />
+    <Compile Include="Repositories\Inventory\FBAPickListRepository.cs" />
+    <Compile Include="Repositories\Inventory\StyleChangeHistoryRepository.cs" />
+    <Compile Include="Repositories\Inventory\StyleItemSaleToMarketRepository.cs" />
+    <Compile Include="Repositories\Inventory\StyleItemSaleToListingRepository.cs" />
+    <Compile Include="Repositories\Inventory\StyleItemSaleRepository.cs" />
+    <Compile Include="Repositories\Inventory\StyleImageRepository.cs" />
+    <Compile Include="Repositories\Inventory\StyleItemReferenceRepository.cs" />
+    <Compile Include="Repositories\Listings\BuyBoxQuantityRepository.cs" />
+    <Compile Include="Repositories\Listings\ListingSizeIssueRepository.cs" />
+    <Compile Include="Repositories\Listings\OfferInfoRepository.cs" />
+    <Compile Include="Repositories\Listings\OfferChangeEventRepository.cs" />
+    <Compile Include="Repositories\Orders\QuickBookRepository.cs" />
+    <Compile Include="Repositories\Rates\DhlGroundZipCodeRepository.cs" />
+    <Compile Include="Repositories\Rates\DhlGBZipCodeZoneRepository.cs" />
+    <Compile Include="Repositories\Rates\DhlECommerceRateRepository.cs" />
+    <Compile Include="Repositories\Orders\ScanFormRepository.cs" />
+    <Compile Include="Repositories\Rates\DhlCAZipCodeZoneRepository.cs" />
+    <Compile Include="Repositories\Rates\ZipCodeZoneRepository.cs" />
+    <Compile Include="Repositories\Orders\RateByCountryRepository.cs" />
+    <Compile Include="Repositories\Orders\MailLabelItemRepository.cs" />
+    <Compile Include="Repositories\Orders\OrderChangeHistoryRepository.cs" />
+    <Compile Include="Repositories\Orders\OrderToBatchRepository.cs" />
+    <Compile Include="Repositories\Orders\OrderItemSourceRepository.cs" />
+    <Compile Include="Repositories\Rates\ZipCodeRepository.cs" />
+    <Compile Include="Repositories\ProxyInfoRepository.cs" />
+    <Compile Include="Repositories\Inventory\Counting\OpenBoxItemRepository.cs" />
+    <Compile Include="Repositories\Inventory\Counting\OpenBoxRepository.cs" />
+    <Compile Include="Repositories\Inventory\Counting\SealedBoxItemRepository.cs" />
+    <Compile Include="Repositories\Inventory\Counting\SealedBoxRepository.cs" />
+    <Compile Include="Repositories\Inventory\StyleItemActionHistoryRepository.cs" />
+    <Compile Include="Repositories\Inventory\StyleReferenceRepository.cs" />
+    <Compile Include="Repositories\LabelRepository.cs" />
+    <Compile Include="Repositories\Listings\ListingDefectRepository.cs" />
+    <Compile Include="Repositories\Listings\ParentItemImageRepository.cs" />
+    <Compile Include="Repositories\Listings\ItemImageRepository.cs" />
+    <Compile Include="Repositories\Messages\NotificatonRepository.cs" />
+    <Compile Include="Repositories\Rates\DhlRateCodePriceRepository.cs" />
+    <Compile Include="Repositories\Rates\DhlRateCodeRepository.cs" />
+    <Compile Include="Repositories\Orders\DhlInvoiceRepository.cs" />
+    <Compile Include="Repositories\Orders\ScheduledPickupRepository.cs" />
+    <Compile Include="Repositories\Orders\OrderItemRepository.cs" />
+    <Compile Include="Repositories\Orders\ReturnRequestRepository.cs" />
+    <Compile Include="Repositories\Orders\OrderSearchRepository.cs" />
+    <Compile Include="Repositories\CustomBarcodeRepository.cs" />
+    <Compile Include="Repositories\Sizes\PackingSlipSizeMappingRepository.cs" />
+    <Compile Include="Repositories\SystemActionRepository.cs" />
+    <Compile Include="Repositories\BuyerRepository.cs" />
+    <Compile Include="Repositories\FeedbackBlackListRepository.cs" />
+    <Compile Include="Repositories\Cache\ItemCacheRepository.cs" />
+    <Compile Include="Repositories\Cache\ListingCacheRepository.cs" />
+    <Compile Include="Repositories\Cache\StyleItemCacheRepository.cs" />
+    <Compile Include="Repositories\Cache\StyleCacheRepository.cs" />
+    <Compile Include="Repositories\Cache\ParentItemCacheRepository.cs" />
+    <Compile Include="Repositories\Emails\EmailToOrderRepository.cs" />
+    <Compile Include="Repositories\Emails\EmailAttachmentRepository.cs" />
+    <Compile Include="Repositories\Emails\EmailRepository.cs" />
+    <Compile Include="Repositories\Features\StyleFeatureValueRepository.cs" />
+    <Compile Include="Repositories\Features\FeatureValueRepository.cs" />
+    <Compile Include="Repositories\Inventory\QuantityChangeRepository.cs" />
+    <Compile Include="Repositories\Inventory\QuantityOperationRepository.cs" />
+    <Compile Include="Repositories\MarketplaceRepository.cs" />
+    <Compile Include="Repositories\General\CountryRepository.cs" />
+    <Compile Include="Repositories\General\DateRepository.cs" />
+    <Compile Include="Repositories\Features\FeatureRepository.cs" />
+    <Compile Include="Repositories\Features\FeatureToItemTypeRepository.cs" />
+    <Compile Include="Repositories\Inventory\ItemTypeRepository.cs" />
+    <Compile Include="Repositories\Inventory\StyleItemQuantityHistoryRepository.cs" />
+    <Compile Include="Repositories\Inventory\ScannedRepository.cs" />
+    <Compile Include="Repositories\Listings\ListingFBAInvRepository.cs" />
+    <Compile Include="Repositories\Listings\ListingFBAEstFeeRepository.cs" />
+    <Compile Include="Repositories\Listings\QuantityHistoryRepository.cs" />
+    <Compile Include="Repositories\BuyerBlackListRepository.cs" />
+    <Compile Include="Repositories\Orders\OrderCommentRepository.cs" />
+    <Compile Include="Repositories\Orders\OrderEmailNotifyRepository.cs" />
+    <Compile Include="Repositories\Orders\TrackingOrderRepository.cs" />
+    <Compile Include="Repositories\Sizes\SizeGroupToItemTypeRepository.cs" />
+    <Compile Include="Repositories\Inventory\StyleItemBarcodeRepository.cs" />
+    <Compile Include="Repositories\Inventory\StyleLocationRepository.cs" />
+    <Compile Include="Repositories\Orders\OrderNotifyRepository.cs" />
+    <Compile Include="Repositories\Listings\PriceHistoryRepository.cs" />
+    <Compile Include="Repositories\Listings\ProductCommentRepository.cs" />
+    <Compile Include="Repositories\Listings\BuyBoxStatusRepository.cs" />
+    <Compile Include="Repositories\Sizes\SizeGroupRepository.cs" />
+    <Compile Include="Repositories\Sizes\SizeRepository.cs" />
+    <Compile Include="Repositories\Sizes\SizeMappingRepository.cs" />
+    <Compile Include="Repositories\Messages\SyncMessageRepository.cs" />
+    <Compile Include="Repositories\Messages\SyncHistoryRepository.cs" />
+    <Compile Include="Repositories\Listings\ListingRepository.cs" />
+    <Compile Include="Repositories\Orders\MailLabelInfoRepository.cs" />
+    <Compile Include="Repositories\NodePositionRepository.cs" />
+    <Compile Include="Repositories\Orders\OrderBatchRepository.cs" />
+    <Compile Include="Repositories\ReportRepository.cs" />
+    <Compile Include="Repositories\PushRepository.cs" />
+    <Compile Include="Repositories\Feeds\FeedRepository.cs" />
+    <Compile Include="Repositories\Inventory\OpenBoxRepository.cs" />
+    <Compile Include="Repositories\Inventory\StyleItemRepository.cs" />
+    <Compile Include="Repositories\Inventory\OpenBoxItemRepository.cs" />
+    <Compile Include="Repositories\Inventory\SealedBoxItemRepository.cs" />
+    <Compile Include="Repositories\Inventory\SealedBoxRepository.cs" />
+    <Compile Include="Repositories\Inventory\StyleRepository.cs" />
+    <Compile Include="Repositories\LabelPrintPackRepository.cs" />
+    <Compile Include="Repositories\InventoryReportRepository.cs" />
+    <Compile Include="Repositories\Orders\ItemOrderMappingRepository.cs" />
+    <Compile Include="Repositories\Listings\ItemRepository.cs" />
+    <Compile Include="Repositories\Orders\OrderRepository.cs" />
+    <Compile Include="Repositories\Orders\OrderShippingInfoRepository.cs" />
+    <Compile Include="Repositories\Listings\ParentItemRepository.cs" />
+    <Compile Include="Repositories\General\SettingRepository.cs" />
+    <Compile Include="Repositories\Trackings\CustomTrackingNumberRepository.cs" />
+    <Compile Include="Repositories\Trackings\TrackingNumberStatusRepository.cs" />
+    <Compile Include="Repositories\Users\CompanyAddressRepository.cs" />
+    <Compile Include="Repositories\Users\AddressProviderRepository.cs" />
+    <Compile Include="Repositories\Users\SQSAccountRepository.cs" />
+    <Compile Include="Repositories\Users\ShipmentProviderRepository.cs" />
+    <Compile Include="Repositories\Users\EmailAccountRepository.cs" />
+    <Compile Include="Repositories\Users\CompanyRepository.cs" />
+    <Compile Include="Repositories\Users\RoleRepository.cs" />
+    <Compile Include="Repositories\Orders\ShippingMethodRepository.cs" />
+    <Compile Include="Repositories\General\StateRepository.cs" />
+    <Compile Include="Repositories\Users\UserRepository.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Repositories\Vendors\VendorOrderItemSizeRepository.cs" />
+    <Compile Include="Repositories\Vendors\VendorOrderAttachmentRepository.cs" />
+    <Compile Include="Repositories\Vendors\VendorOrderItemRepository.cs" />
+    <Compile Include="Repositories\Vendors\VendorOrderRepository.cs" />
+    <Compile Include="Repository.cs" />
+    <Compile Include="UnitOfWork.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="SQL\View\UserViewStylesWithFeatures.sql" />
+    <Content Include="SQL\View\ViewActualProductComments.sql" />
+    <Content Include="SQL\View\ViewBatches.sql" />
+    <Content Include="SQL\View\ViewEmailInfoes.sql" />
+    <Content Include="SQL\View\ViewItems.sql" />
+    <Content Include="SQL\View\ViewItemsWithRemoved.sql" />
+    <Content Include="SQL\View\ViewListings.sql" />
+    <Content Include="SQL\View\ViewOpenBoxQuantities.sql" />
+    <Content Include="SQL\View\ViewInventoryQuantities.sql" />
+    <Content Include="SQL\View\ViewSealedBoxQuantities.sql" />
+    <Content Include="SQL\View\ViewMarketsSoldQuantities.sql" />
+    <Content Include="SQL\View\ViewScannedSoldQuantities.sql" />
+    <Content Include="SQL\View\ViewSpecialCaseQuantities.sql" />
+    <Content Include="SQL\View\ViewStyleFeatureValues.sql" />
+    <Content Include="SQL\View\ViewStyles.sql" />
+    <Content Include="SQL\View\ViewUnmaskedListings.sql" />
+    <Content Include="SQL\View\ViewVisibleShippings.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ccen.Common\Ccen.Common.csproj">
+      <Project>{447f53f9-324d-479e-849a-8af262ef8537}</Project>
+      <Name>Ccen.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.Core\Ccen.Core.csproj">
+      <Project>{b852ab63-645f-4f09-b314-29c3d46be832}</Project>
+      <Name>Ccen.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.DAL.Inventory\Ccen.DAL.Inventory.csproj">
+      <Project>{ece0ddee-f59e-4a9d-a551-ae851d37ddaa}</Project>
+      <Name>Ccen.DAL.Inventory</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ccen.DTO\Ccen.DTO.csproj">
+      <Project>{8342451d-92ab-4b34-80dc-ed20fbbe6a32}</Project>
+      <Name>Ccen.DTO</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
+    <Error Condition="!Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\EntityFramework.6.4.4\build\EntityFramework.props'))" />
+    <Error Condition="!Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\EntityFramework.6.4.4\build\EntityFramework.targets'))" />
+  </Target>
+  <Import Project="..\packages\EntityFramework.6.4.4\build\EntityFramework.targets" Condition="Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.targets')" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

@@ -1,0 +1,656 @@
+﻿/*----------------------------------------------------------
+The base color for this template is #5c87b2. If you'd like
+to use a different color start by replacing all instances of
+#5c87b2 with your new color.
+----------------------------------------------------------*/
+body
+{
+    font-size: 75%;
+    font-family: Verdana, Tahoma, Arial, "Helvetica Neue", Helvetica, Sans-Serif;
+    margin: 0;
+    padding: 0;
+    color: #696969;
+}
+
+header,
+footer,
+nav,
+section 
+{
+    display: block;
+}
+
+/* HEADINGS   
+----------------------------------------------------------*/
+h1, h2, h3, h4, h5, h6
+{
+    font-size: 1.5em;
+    color: #000;
+}
+
+h1
+{
+    font-size: 2em;
+    padding-bottom: 0px;
+    margin-bottom: 0;
+    padding-top: 0;
+    margin-top: 0;
+    font-weight: normal;
+}
+h2
+{
+    padding: 0 0 10px 0;
+}
+h3
+{
+    font-size: 1.2em;
+}
+h4
+{
+    font-size: 1.1em;
+}
+h5, h6
+{
+    font-size: 1em;
+}
+
+a
+{
+    color: #696969;
+}
+
+li
+{
+    line-height: 1.6;
+}
+
+/* this rule styles <h2> tags that are the 
+first child of the left and right table columns */
+.rightColumn > h1, .rightColumn > h2, .leftColumn > h1, .leftColumn > h2
+{
+    margin-top: 0;
+}
+
+/* PRIMARY LAYOUT ELEMENTS   
+----------------------------------------------------------*/
+
+body .amz-content {
+    background-color: white;
+}
+
+
+.page
+{
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+header
+{
+    color: #000;
+}
+
+header h1
+{
+    font-weight: bold;
+    padding: 0 0 0 25px;
+    margin: 0;
+    color: #555;
+    border: none;
+    font-size: 32px !important;
+}
+
+header table td {
+    padding: 0px;
+}
+
+.main
+{
+    background: #fff;
+    padding: 30px 30px 15px 30px;
+    /*margin-bottom: 30px;*/
+    _height: 1px; /* only IE6 applies CSS properties starting with an underscore */
+}
+
+footer, #footer
+{
+    color: #999;
+    padding: 10px 0;
+    background-color: white;
+    text-align: center;
+    line-height: normal;
+    margin: 0;
+    font-size: .9em;
+}
+
+/* KENDO OVERRIDE */
+.amz-content .k-input {
+    padding: 0 0;
+}
+
+.amz-content .k-state-highlight,
+.amz-content .k-state-hover {
+    background-color: #5d5d5d;
+}
+
+
+
+.amz-content .amz-filter {
+    background-color: #efefef;
+    border: 1px solid #ccc;
+    padding: 5px 15px 10px 15px;
+    margin: 5px 0px 0px 0px;
+}
+
+.amz-content .amz-filter input[type="text"], 
+.amz-content .amz-filter input[type="number"], 
+.amz-content .amz-filter input[type="password"]
+{
+    border-color: black;
+}
+
+
+
+
+
+/* MENU   
+----------------------------------------------------------*/
+.menu {
+    padding: 0 0 0 0px;
+}
+
+#menu
+{
+    position: relative;
+    padding: 0 0 0 35px;
+    text-align: left;
+}
+
+#menu .t-item
+{
+    border-width: 0 0 0 1px;
+}
+
+#menu .t-link
+{
+    padding: 5px 20px;
+    font-weight: bold;
+    text-decoration: none;
+    line-height: 1.8em;
+}
+
+.amz-status-info {
+    display: block;
+    text-align: left;
+    padding: 0px 15px;
+}
+
+/* LOGIN INFO PANEL */
+.amz-login-info
+{
+    padding-right: 15px;
+    font-size:1.1em;
+    display:block;
+    text-align:right;
+    margin:5px 10px 5px 10px;
+    color:black;
+}
+
+.amz-login-info a:link
+{
+    color: black;
+    text-decoration: underline;
+}
+
+.amz-login-info a:visited
+{
+    color: black;
+    text-decoration: underline;
+}
+
+.amz-login-info a:hover
+{
+    color: black;
+    text-decoration: none;
+}
+
+.amz-login-info li {
+    list-style-type: none;
+}
+
+/* FORM LAYOUT ELEMENTS   
+----------------------------------------------------------*/
+
+fieldset 
+{
+    border:1px solid #ddd;
+    padding:0 1.4em 1.4em 1.4em;
+    margin:0 0 1.5em 0;
+}
+
+legend 
+{
+    font-size:1.2em;
+    font-weight: bold;
+}
+
+textarea 
+{
+    /*min-height: 75px;*/
+}
+
+input[type="text"], input[type="number"], input[type="password"]
+{
+    width: 200px;
+    border: 1px solid #CCC;
+}
+
+/* TABLE
+----------------------------------------------------------*/
+
+table 
+{
+  border: solid 1px #e8eef4;
+  border-collapse: collapse;
+}
+
+table td 
+{
+  padding: 5px;   
+  /*border: solid 1px #e8eef4;*/
+}
+
+table th
+{
+  padding: 6px 5px;
+  text-align: left;
+  /*background-color: #e8eef4;*/ 
+  /*border: solid 1px #e8eef4;*/   
+}
+
+
+
+/* MISC  
+----------------------------------------------------------*/
+.clear
+{
+    clear: both;
+}
+
+.dark {}
+.light {}
+
+.error
+{
+    color:#ff0000;
+}
+
+.dark .error
+{
+    color:#ff9999;
+}
+
+.light .error {
+    color: #ff0000;
+}
+
+
+.warning {
+    color: orange;
+}
+
+.bold {
+    font-weight: bold;
+}
+
+.dark .warning {
+    color: orange;
+}
+
+.light .warning {
+    color: orange;
+}
+
+
+.info {
+    color: white;
+}
+
+.light .info {
+    color: black;
+}
+
+.dark .info {
+    color: white;
+}
+
+
+.success {
+    color: lightgreen;
+}
+
+.dark .success {
+    color: lightgreen;
+}
+
+.light .success {
+    color: green;
+}
+
+.dark .green {
+    color: lightgreen;
+}
+
+.dark .yellow {
+    color: yellow;
+}
+
+.dark .red {
+    color: #ff9999;
+}
+
+.dark .white {
+    color: white;
+}
+
+.light .white {
+    color: white;
+}
+
+.dark .black {
+    color: black;
+}
+
+.light .black {
+    color: black;
+}
+
+
+/* Styles for validation helpers
+-----------------------------------------------------------*/
+.field-validation-error
+{
+    color: #ff0000;
+    display: block;
+}
+
+.field-validation-error-inline {
+    color: #ff0000;
+    padding-left: 2px;
+}
+
+.field-validation-valid
+{
+    display: none;
+}
+
+.input-validation-error
+{
+    border: 1px solid #ff0000;
+    background-color: #ffeeee;
+}
+
+.validation-summary-errors
+{
+    font-weight: normal;
+    color: #ff0000;
+}
+
+.validation-summary-valid
+{
+    display: none;
+}
+
+.red {
+    color: #ff0000;
+}
+
+.gray {
+    color: #bbb;
+}
+
+.white {
+    color: #ffffff;
+}
+
+
+/* Styles for editor and display helpers
+----------------------------------------------------------*/
+.display-label,
+.editor-label
+{
+    margin: 1em 0 0 0;
+}
+
+.display-field,
+.editor-field
+{
+    margin:0.5em 0 0 0;
+    vertical-align: top;
+}
+
+/*.text-box
+{
+    width: 30em;
+}*/
+
+.text-box.multi-line
+{
+    height: 6.5em;
+}
+
+.tri-state
+{
+    width: 6em;
+}
+
+.note {
+    color: #bbb;
+    display: block;
+}
+
+.note, .remark, .remark-tip {
+    font-size: 80%;
+}
+
+.tip {
+    text-decoration: underline;
+}
+
+/********Sheduler************/
+#scheduler {
+    padding-bottom: 15px;
+}
+
+#scheduler .days .k-textbox {
+    /*width: 50px;*/
+}
+
+
+/********Order Item************/
+.person {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.order-num {
+    font-size: 10px;
+    color: white;
+}
+
+.tr-num {
+    font-size: 10px;
+}
+
+.order-status {
+    font-size: 10px;
+    color: white;
+    padding-top: 7px;
+}
+
+.order-canada-channel {
+    background: #C0143C;
+    padding: 2px;
+}
+
+.order-europe-channel {
+    background: #003399;
+    padding: 2px;
+}
+
+.order-ebay-market {
+    background: orange;
+    padding: 2px;
+}
+
+.order-magento-market {
+    background: green;
+    padding: 2px;
+}
+
+.order-sales-channel {
+    font-size: 10px;
+    color: white;
+}
+
+.order-link {
+    color: white;
+}
+
+.asin {
+    font-weight: bold;
+    color: white;
+}
+
+.orig-service {
+    font-size: 10px;
+    color: white;
+}
+
+.size-num {
+    font-weight: bold;
+}
+
+.not-standard {
+    background: mediumpurple;
+}
+
+.not-standard-i {
+    background: #9950db;
+}
+
+.not-in-time {
+    background: red;
+}
+
+.in-blacklist {
+    background: rosybrown;
+}
+
+.warn-rect {
+    margin-top: 2px;
+    padding: 2px 4px 2px 4px;
+    background: #e51400;
+    font-size: 10px;
+    color: white;
+}
+
+.info-rect {
+    padding: 2px 4px 2px 4px;
+    background: gray;
+    font-size: 10px;
+    color: white;
+}
+
+.blue-rect {
+    padding: 2px 4px 2px 4px;
+    background: orange;
+    font-size: 10px;
+    color: white;
+}
+
+.dismiss-warn {
+    background: gray;
+}
+
+.priority-express {
+    background: red;
+}
+
+.same-day {
+    background: darkred;
+}
+
+.not-one-quantity {
+    background: yellowgreen;
+}
+
+.possible_duplicate {
+    background: yellow;
+}
+
+.promo {
+    color: #ee4400;
+}
+
+.stamps-note {
+    font-size: 8px;
+}
+
+.filter table {
+    border: none;
+}
+
+.filter table th, td {
+    border: none;
+}
+.filter table th {
+    color:  #696969;
+}
+
+
+.email-view th {
+    background-color: #969696;
+    color: #F2F2F0;
+    padding: 6px;
+    text-align: right;
+    vertical-align: top;
+    width: 120px;
+}
+
+.email-view {
+    color: #69697C;
+    width: 100%;
+}
+
+.pagetitle 
+{
+    font-size: 30px;
+    font-weight: normal;
+    color: #383838;
+    font-family: 'Proxima Nova Regular', 'Helvetica Neue', Arial, Sans-serif;
+}
+
+.pagetitle-self {
+    padding-bottom: 10px;    
+}
+
+/*Messages*/
+.alert-danger {
+    color: red;
+}
+
+.alert-warning {
+    color: orange;
+}
+
+.alert-info {
+    color: #88bbee;
+}
+
+.alert-success {
+    color: green;
+}
+
+

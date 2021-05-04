@@ -1,0 +1,547 @@
+﻿@using Amazon.Web.HtmlExtend
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Inventory.Boxes.AddBoxWizardViewModel
+@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var SealedBoxWizardViewModel = function(model) {
+        var self = this;
+
+        console.log(model.CreateDateUtc);
+        //var date = moment.tz(model.)
+
+        var date = moment.utc(model.CreateDateUtc); //, "America/New_York");//model.CreateDate).tz("EST");
+        self.createDateUtc = ko.observable(new Date(date.format()));
+        self.createDate = ko.observable(new Date(date.format()));
+        self.styleString = ko.observable(model.StyleString);
+        self.styleId = ko.observable(model.StyleId);
+
+        self.incomeType = ko.observable("0");
+        self.unitsPerBox = ko.observable(null)
+            .extend(ko.validation.patterns.requredNumber("*"));
+        self.boxQuantity = ko.observable(null)
+            .extend(ko.validation.patterns.requredNumber("*"));
+        //.extend({ required : true });
+        self.price = ko.observable(null)
+            .extend(ko.validation.patterns.number("*"));
+        self.boxBarcode = ko.observable(model.BoxBarcode)
+            .extend({ required: { params: true, message: '*' } });
+        self.printed = ko.observable(false);
+        self.owned = ko.observable(model.Owned);
+
+        self.isPPK = ko.computed(function() {
+            return self.incomeType() == "0";
+        });
+        self.isPolyBagged = ko.computed(function() {
+            return self.incomeType() == "1";
+        });
+        self.isOther = ko.computed(function() {
+            return self.incomeType() == "2";
+        });
+
+
+        model.Sizes.forEach(function(entry) {
+            entry.quantity = ko.observable(entry.Quantity)
+                .extend(ko.validation.patterns.number("*"));
+            entry.breakdown = ko.observable(entry.Breakdown)
+                .extend(ko.validation.patterns.number("*"));
+            entry.total = ko.computed(function() {
+                if (self.isPPK()) {
+                    return self.boxQuantity() * (entry.breakdown() || 0);
+                }
+                if (self.isPolyBagged()) {
+                    return self.unitsPerBox() * (entry.quantity() || 0);
+                }
+                if (self.isOther()) {
+                    return (entry.quantity() || 0) * 1;
+                }
+                return 0;
+            });
+            entry.useBoxQuantity = ko.observable(entry.UseBoxQuantity);
+            entry.enableUseBoxQuantity = ko.observable(!entry.UseBoxQuantity);
+        });
+
+        self.sizes = ko.observable(model.Sizes);
+
+        self.total = ko.computed(function() {
+            var sum = 0;
+            for (var i = 0; i < self.sizes().length; i++) {
+                sum += self.sizes()[i].total();
+            }
+            return sum;
+        });
+
+        self.totalPrice = ko.computed(function() {
+            return self.total() * self.price();
+        });
+
+        self.unitPrice = ko.computed(function() {
+            return self.price() * 1;
+        });
+
+        self.wizardStep = ko.observable(0);
+
+        self.getModel = function() {
+            return {
+                StyleId: self.styleId(),
+                IncomeType: self.incomeType(),
+                UnitsPerBox: self.unitsPerBox(),
+                BoxQuantity: self.boxQuantity(),
+                Price: self.price(),
+                BoxBarcode: self.boxBarcode(),
+                Printed: self.printed(),
+                Owned: self.owned(),
+                CreateDate: self.createDate(),
+                Sizes: $.map(self.sizes(), function(n) {
+                    return {
+                        Id: n.Id,
+                        Quantity: n.quantity(),
+                        Breakdown: n.breakdown(),
+                        UseBoxQuantity: n.useBoxQuantity(),
+                    }
+                }),
+            };
+        }
+
+        self.isAdvOptionsCollapsed = ko.observable(true);
+        self.onToggleAdvOptions = function() {
+            self.isAdvOptionsCollapsed(!self.isAdvOptionsCollapsed());
+        }
+
+        self.onNextStep = function() {
+            if (self.isValidStep())
+                self.wizardStep(self.wizardStep() + 1);
+        }
+
+        self.onPrevStep = function() {
+            self.wizardStep(self.wizardStep() - 1);
+        }
+
+        self.validateAsync = function(m, e) {
+            var model = self.getModel();
+            var url = '@Url.Action("ValidateWizard", "SealedBox")';
+            return validationUtils.callAsyncValidation(url, model);
+        }
+
+        self.onFinish = function(m, e) {
+            var sender = $(e.target);
+
+            var model = self.getModel();
+            helper.ui.showLoading(sender);
+
+            self.validateAsync().done(function() {
+                $.ajax({
+                    method: "POST",
+                    dataType: 'json',
+                    contentType: 'application/json; charset=utf-8',
+
+                    url: '@Url.Action("SubmitWizard", "SealedBox")',
+                    cache: false,
+                    data: JSON.stringify(model),
+                    success: function(result) {
+                        if (result.IsSuccess) {
+                            $.publish("refresh-style-boxes", self.styleId());
+                            popupWindow.close();
+                        } else {
+                            Message.popupAsync({
+                                title: 'Warning',
+                                message: 'Error while saving data. Details: ' + result.Message,
+                                type: Message.CLOSE
+                            });
+                        }
+                        helper.ui.hideLoading(sender);
+                    }
+                });
+            }).fail(function() {
+                helper.ui.hideLoading(sender);
+            });
+        }
+
+        self.isValidStep = function() {
+            //if (self.wizardStep() == 1) {
+            //    var errors = ko.validation.group({
+            //        v1: self.unitsPerBox,
+            //    });
+            //    errors.showAllMessages();
+            //    return errors().length == 0;
+            //}
+            if (self.wizardStep() == 1) {
+                var fields = {
+                    v1: self.sizes,
+                };
+                if (self.isPolyBagged()) {
+                    fields.v2 = self.unitsPerBox;
+                };
+                if (self.isPPK()) {
+                    fields.v3 = self.boxQuantity;
+                };
+
+                var errors = ko.validation.group(fields, { deep: true });
+                errors.showAllMessages();
+
+                var hasNotEmptySize = $.grep(self.sizes(), function(s) {
+                    if (self.isPPK())
+                        return s.breakdown() > 0;
+                    return s.quantity() > 0;
+                }).length > 0;
+
+                if (!hasNotEmptySize) {
+                    Message.popupAsync({
+                        title: 'Validation',
+                        message: 'Please specify a positive value for at least one size',
+                        type: Message.CLOSE
+                    });
+                }
+
+                return errors().length == 0 && hasNotEmptySize;
+            }
+            if (self.wizardStep() == 2) {
+                var errors = ko.validation.group({
+                    v1: self.price,
+                }, { deep: true });
+                errors.showAllMessages();
+                return errors().length == 0;
+            }
+
+            return true;
+        }
+
+        self.isFirstStep = ko.computed(function() {
+            return self.wizardStep() == 0;
+        });
+
+        self.isLastStep = ko.computed(function() {
+            return self.wizardStep() == 3;
+        });
+    }
+
+    $(document).ready(function() {
+        console.log("onready");
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+
+        };
+
+        //ko.validation.init({
+        //    errorElementClass: "input-validation-error",
+        //    //errorClass: "input-validation-error",
+        //    errorMessageClass: "field-validation-error",
+        //    decorateElement: true,
+        //    decorateInputElement: true,
+        //    decorateElementOnModified: true
+        //});
+
+        var vm = new SealedBoxWizardViewModel(model, settings);
+        ko.applyBindings(vm, document.getElementById('addbox-wizard-container'));
+
+        $('#addbox-wizard-container input[type=checkbox][data-toggle^=toggle]').bootstrapToggle({
+            size: 'mini',
+        });
+    });
+</script>
+
+<style>
+    .toggle-override .toggle-group .toggle-on {
+        padding-top: 12px;
+        padding-left: 4px;
+    }
+
+    .toggle-override .toggle-group .toggle-off {
+        padding-top: 12px;
+        padding-left: 15px;
+    }
+
+    .summary-result {
+        text-align: left;
+        margin-top: 10px;
+    }
+
+    .summary-result th {
+        font-weight: normal;
+        text-align: right;
+        padding: 5px;
+    }
+
+    .summary-result td {
+        padding: 5px;
+    }
+</style>
+
+<div id="addbox-wizard-container">
+    <input type="hidden" data-bind="value: styleId"/>
+
+    <div class="k-edit-form-container wizard" style="width: auto">
+        <div style="padding: 5px 5px 10px 10px; color: #666; border-bottom: 1px solid #ddd">
+            Style Id: <span style="font-weight: bold" data-bind="text: styleString"></span>
+        </div>
+
+        <table style="width: 100%">
+            <tr>
+                <td style="vertical-align: top; width: 150px">
+                    <div style="padding-top: 10px">
+                        <ul class="nav nav-tabs" style="padding-top: 10px; min-height: 300px">
+                            <li role="presentation" data-bind="css: { 'active': wizardStep() == 0 }"><a href="#">1. Goods form</a></li>
+                            @*<li role="presentation" data-bind="css: { 'active': wizardStep() == 1 }"><a href="#">2. Units per box</a></li>*@
+                            <li role="presentation" data-bind="css: { 'active': wizardStep() == 1 }"><a href="#">2. Number of units</a></li>
+                            <li role="presentation" data-bind="css: { 'active': wizardStep() == 2 }"><a href="#">3. Box details</a></li>
+                            <li role="presentation" data-bind="css: { 'active': wizardStep() == 3 }"><a href="#">4. Summary</a></li>
+                        </ul>
+                    </div>
+                </td>
+                <td style="vertical-align: top">
+                    <div data-bind="visible: wizardStep() == 0"
+                         class="wizard-tab">
+                        <div style="padding-left: 20px">
+                            <div style="padding: 4px">
+                                <input type="radio"
+                                       value="0"
+                                       data-bind="checked: incomeType"/> PPK (pre packed)
+                            </div>
+                            <div style="padding: 4px">
+                                <input type="radio"
+                                       value="1"
+                                       data-bind="checked: incomeType"/> Poly begged by size
+                            </div>
+                            <div style="padding: 4px">
+                                <input type="radio"
+                                       value="2"
+                                       data-bind="checked: incomeType"/> Other
+                            </div>
+                        </div>
+
+                        <div class="clear"></div>
+                    </div>
+
+
+                    <div data-bind="visible: wizardStep() == 1"
+                         class="wizard-tab">
+                        <div data-bind="visible: incomeType() == '0'">
+                            <div>
+                                <div class="editor-label"># of Boxes</div>
+                                <div class="editor-field">
+                                    <input type="number" data-bind="value: boxQuantity" class="k-textbox" />
+                                </div>
+
+                                <div class="editor-label">Breakdown</div>
+                                <div class="editor-field">
+                                    <div class="k-widget k-grid k-secondary grid-small"
+                                         style="width: 200px;">
+                                        <table>
+                                            <thead class="k-grid-header">
+                                            <tr>
+                                                <th class="k-header">Size</th>
+                                                <th class="k-header">Breakdown</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody data-bind="foreach: sizes">
+                                            <tr>
+                                                <td><span data-bind="text: Size"></span> / <span data-bind="textFormatted: Color, ifEmpty: '-'"></span></td>
+                                                <td>
+                                                    <input type="number"
+                                                           style="width: 70px"
+                                                           data-bind="value: breakdown"
+                                                           class="k-textbox"/>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div data-bind="visible: incomeType() == '1'">
+                            <div>
+                                <div class="editor-label">Units per box</div>
+                                <div class="editor-field">
+                                    <input type="number" data-bind="value: unitsPerBox" class="k-textbox"/>
+                                </div>
+                            </div>
+
+                            <div class="editor-label"># of Boxes</div>
+                            <div class="editor-field">
+                                <div class="k-widget k-grid k-secondary grid-small"
+                                     style="width: 200px;">
+                                    <table>
+                                        <thead class="k-grid-header">
+                                        <tr>
+                                            <th class="k-header">Size</th>
+                                            <th class="k-header"># of Boxes</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody data-bind="foreach: sizes">
+                                        <tr>
+                                            <td><span data-bind="text: Size"></span> / <span data-bind="textFormatted: Color, ifEmpty: '-'"></span></td>
+                                            <td>
+                                                <input type="number"
+                                                       style="width: 70px"
+                                                       data-bind="value: quantity"
+                                                       class="k-textbox"/>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="clear"></div>
+                        </div>
+
+                        <div data-bind="visible: incomeType() == '2'">
+                            <div class="editor-label"># piece</div>
+                            <div class="editor-field">
+                                <div class="k-widget k-grid k-secondary grid-small"
+                                     style="width: 200px;">
+                                    <table>
+                                        <thead class="k-grid-header">
+                                        <tr>
+                                            <th class="k-header">Size</th>
+                                            <th class="k-header"># piece</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody data-bind="foreach: sizes">
+                                        <tr>
+                                            <td><span data-bind="text: Size"></span> / <span data-bind="textFormatted: Color, ifEmpty: '-'"></span></td>
+                                            <td>
+                                                <input type="number"
+                                                       style="width: 70px"
+                                                       class="k-textbox" 
+                                                       data-bind="value: quantity"/>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="clear"></div>
+                        </div>
+                    </div>
+
+                <div data-bind="visible: wizardStep() == 2"
+                     class="wizard-tab">
+                    <div style="border-bottom: 1px solid #ccc; margin-bottom: 10px; padding: 3px;">
+                        Base Options
+                    </div>
+
+                    <div class="editor-label">Boxes ID</div>
+                    <div class="editor-field">
+                        <input type="text"
+                               class="k-textbox"
+                               style="width: 210px"
+                               data-bind="value: boxBarcode"/>
+                    </div>
+
+                    <div class="editor-label">Cost</div>
+                    <div class="editor-field">
+                        <input type="text" data-bind="value: price" class="k-textbox"/>
+                    </div>
+
+                    <div class="editor-label">Invoice Date</div>
+                    <div class="editor-field">
+                        <input data-bind="kendoDatePicker: { value: createDate, format: 'MM/dd/yyyy' }"/>
+                    </div>
+                    <div class="clear"></div>
+
+                    <div style="border-bottom: 1px solid #ccc; margin-top: 20px; margin-bottom: 10px; padding: 3px;">
+                        Advanced Options
+                        <span class="pull-right clickable">
+                                <a style="color: #333"
+                                   href="javascript:;"
+                                   data-bind="click: onToggleAdvOptions">
+                                    <i class="glyphicon glyphicon-chevron-down" data-bind="css: { 'glyphicon-chevron-down' : !isAdvOptionsCollapsed(), 'glyphicon-chevron-up' : isAdvOptionsCollapsed()}"></i>
+                                </a>
+                            </span>
+                    </div>
+
+                    <div data-bind="visible: !isAdvOptionsCollapsed()">
+                        <div class="editor-label">Printed</div>
+                        <div class="editor-field" style="margin-top: 3px">
+                            <input type="checkbox"
+                                   data-bind="checked: printed"/>
+                        </div>
+
+                        <div class="editor-label">Owned</div>
+                        <div class="editor-field" style="margin-top: 3px">
+                            <input type="checkbox"
+                                   data-bind="checked: owned"/>
+                        </div>
+
+                        <div class="clear"></div>
+                    </div>
+                </div>
+
+                    <div data-bind="visible: wizardStep() == 3"
+                            class="wizard-tab">
+                        <div class="editor-label">By Size</div>
+                        <div class="editor-field">
+                            <div class="k-widget k-grid k-secondary grid-small"
+                                 style="width: 200px;">
+                                <table>
+
+                                    <thead class="k-grid-header">
+                                    <tr>
+                                        <th class="k-header">Size</th>
+                                        <th class="k-header">Qty</th>
+                                        <th class="k-header">Use boxes</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody data-bind="foreach: sizes">
+                                    <tr>
+                                        <td><span data-bind="text: Size"></span> / <span data-bind="textFormatted: Color, ifEmpty: '-'"></span></td>
+                                        <td><span data-bind="text: total"></span></td>
+                                        <td class="toggle-override" style="text-align: center">
+                                            <input type="checkbox"
+                                                   data-toggle="toggle"
+                                                   data-onstyle="success"
+                                                   data-height="14"
+                                                   data-bind='bsChecked: useBoxQuantity, enable: enableUseBoxQuantity, attr: { tabindex: $index() + 200 }'/>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="clear"></div>
+                        <div style="text-align: center">
+                            <table class="summary-result" style="margin-left: auto; margin-right: auto">
+                                <tr>
+                                    <th>In new boxes total:</th>
+                                    <td style="font-size: 115%"><span data-bind="text: total"></span> units</td>
+                                </tr>
+                                <tr>
+                                    <th>Unit price:</th>
+                                    <td><span data-bind="textFormatted: unitPrice, pattern: '$#,##0.00', ifEmpty: '-'"></span></td>
+                                </tr>
+                                <tr>
+                                    <th>Total price:</th>
+                                    <td style="font-size: 115%"><span data-bind="textFormatted: totalPrice, pattern: '$#,##0.00', ifEmpty: '-'"></span></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="k-edit-buttons k-state-default popup-button-panel wizard-buttons" style="position: static">
+                <button type="button"
+                        class="k-button"
+                        data-bind="click: onPrevStep, disable: isFirstStep(), css: { 'k-state-disabled': isFirstStep() }">
+                    Prev
+                </button>
+                <button type="button"
+                        class="k-button"
+                        data-bind="click: onNextStep, disable: isLastStep(), css: { 'k-state-disabled': isLastStep() }">
+                    Next
+                </button>
+                <button type="button"
+                        class="k-button"
+                        data-bind="click: onFinish, enabled: isLastStep(), css: { 'k-state-disabled': !isLastStep() }">
+                    Finish
+                </button>
+            </div>
+        </div>
+</div>

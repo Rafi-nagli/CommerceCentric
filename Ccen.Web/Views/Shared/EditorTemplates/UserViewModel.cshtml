@@ -1,0 +1,39 @@
+﻿@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Companies.UserViewModel
+
+@{
+    Layout = null;
+}
+
+<div>    
+    <div class="k-edit-form-container" autocomplete="chrome-off">
+        @Html.HiddenFor(m => m.Id)
+        
+        <div class="editor-label">User Name</div>
+        <div class="editor-field" >
+            @Html.TextBoxFor(m => m.UserName, new { @autocomplete= "off", @readonly=true, @class="k-textbox k-state-disabled" })
+        </div>
+        <div class="editor-label">Email</div>
+        <div class="editor-field">
+            @Html.TextBoxFor(m => m.Email, new { @autocomplete = "off", @readonly = true, @class ="k-textbox", @onfocus = "this.removeAttribute('readonly');" })
+        </div>
+
+        <div class="editor-label">Password</div>
+        <div class="editor-field">
+            @Html.PasswordFor(m => m.Password, new { @autocomplete = "off", @readonly = true, @class ="k-textbox", @onfocus = "this.removeAttribute('readonly');" })
+        </div>
+       
+        <div class="editor-label">Locked Out</div>
+        <div class="editor-field">
+            @Html.CheckBoxFor(m => m.IsLockedOut)
+        </div>
+        
+        <div class="editor-label">Role</div>
+        <div class="editor-field">
+            @Html.Kendo().DropDownListFor(m => m.RoleId).BindTo(OptionsHelper.Roles)
+        </div>
+        
+        <div class="clear"></div>
+    </div>
+</div>

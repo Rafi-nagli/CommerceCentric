@@ -1,0 +1,234 @@
+﻿@using Amazon.Web.ViewModels
+@using Amazon.Web.Models
+@using Amazon.Web.ViewModels.Reports
+@using Kendo.Mvc.UI
+@model SalesReportViewModel.SalesReportType
+@{
+    var columnTitle = "";
+    switch (Model)
+    {
+        case SalesReportViewModel.SalesReportType.ByStyle:
+            columnTitle = "Date";
+            break;
+        case SalesReportViewModel.SalesReportType.ByLicense:
+            columnTitle = "License";
+            break;
+        case SalesReportViewModel.SalesReportType.BySleeve:
+            columnTitle = "Sleeve";
+            break;
+        case SalesReportViewModel.SalesReportType.ByGender:
+            columnTitle = "Gender";
+            break;
+    }
+
+    ViewBag.Title = "Sales by " + columnTitle;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Icon
+{
+
+}
+
+<style>
+    .k-master-row .k-hierarchy-cell {
+        visibility: hidden;
+    }
+
+    .k-grid tbody a.k-button {
+        min-width: 78px;
+    }
+</style>
+
+<script>
+    var SalesByDateViewModel = function(settings) {
+        var self = this;
+
+        self.settings = settings;
+
+        self.grid = $("#" + settings.gridId).data("kendoGrid");
+
+        ko.BaseViewModel.call(self);
+
+        self.period = ko.observable(1);
+        self.periodList = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(SalesReportViewModel.PeriodList));
+        self.period.subscribe(function() { self.search(); });
+
+        self.search = function () {
+            if (self.isValid()) {
+                self.resetRowNumber();
+                self.grid.dataSource.read({
+                    period: self.period(),
+                    reportType: @((int)Model),
+                });
+            }
+        };
+
+        self.clear = function() {
+            self.period(1);
+            self.search();
+        };
+
+        self.onDataBound = function(e) {
+            self.resetRowNumber();
+            self.rowTotal(self.grid.dataSource.total());
+        }
+
+        self.grid.bind("dataBound", self.onDataBound);
+
+        self.errors = ko.validation.group(self, { observable: true, live: true });
+        self.isValid = ko.computed(function () { return self.errors().length === 0; });
+
+
+        helper.ui.addTopPager(self.grid);
+
+        self.search();
+    };
+</script>
+
+<style>
+    .filter .input-validation-error {
+        border: 1px solid #ff0000;
+        background-color: #ffeeee;
+    }
+</style>
+
+<div id="page-content">
+    <ol class="breadcrumb">
+        <li><a href="#">Reports</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+    
+    <div class="panel panel-default">
+        <div class="filters">
+            <div class="messages-block">
+                <div><span id="infoMessage" class="text-info"></span></div>
+                <div><span id="errorMessage" class="label label-danger"></span></div>
+                <div><span id="successMessage" class="label label-success"></span></div>
+            </div>
+
+            <table>
+                <tr>
+                    <th>Period:</th>
+                    <td>
+                        <input style="width: 180px" data-bind="kendoDropDownList: { data: periodList, value: period, dataTextField: 'Text', dataValueField: 'Value' }"/>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div>
+        @(Html.Kendo().Grid<SalesReportViewModel>()
+              .Name("grid")
+              .Columns(columns =>
+              {
+                  if (Model == SalesReportViewModel.SalesReportType.ByStyle)
+                  {
+                      columns.Bound(c => c.StyleId)
+                          .ClientTemplate("#= salesByDateVm.renderNumber(data) #")
+                          .Title("#")
+                          .Width(50)
+                          .Sortable(false);
+
+                      columns.Bound(c => c.StyleString)
+                          .Sortable(true)
+                          .Filterable(true)
+                          .ClientTemplate("<a href='#=StyleUrl#' target='_blank'>#=StyleString#</a>")
+                          .Width(180)
+                          .Title("Style ID");
+                  }
+                  else
+                  {
+                      columns.Bound(c => c.FeatureValue)
+                          .ClientTemplate("#= salesByDateVm.renderNumber(data) #")
+                          .Title("#")
+                          .Width(50)
+                          .Sortable(false);
+
+                      columns.Bound(c => c.FeatureValue)
+                          .Sortable(true)
+                          .Filterable(true)
+                          .ClientTemplate("#=tmpl.isNull(FeatureValue, '[empty]')#")
+                          .Width(180)
+                          .Title(columnTitle);
+                  }
+
+                  columns.Bound(c => c.NumberOfSoldUnits)
+                      .Sortable(true)
+                      .ClientTemplate("#=tmpl.isNullFormat(NumberOfSoldUnits, '\\#,\\#\\#\\#', '-')#")
+                      .ClientFooterTemplate("#=tmpl.isNullFormat(sum, '\\#,\\#\\#\\#', '-')#")
+                      .Filterable(true)
+                      .Width(150)
+                      .Title("Sold Units");
+
+                  columns.Bound(c => c.AveragePrice)
+                      .Sortable(true)
+                      .Filterable(true)
+                      .ClientTemplate("#=tmpl.isNullFormat(AveragePrice, '$0.00', '-')#")
+                      .Width(150)
+                      .Title("Average Price");
+
+                  columns.Bound(c => c.MinCurrentPrice)
+                      .Sortable(true)
+                      .Filterable(true)
+                      .ClientTemplate("#if (MinCurrentPrice != MaxCurrentPrice) {# #=tmpl.f(MinCurrentPrice, '$0.00')# - #=tmpl.f(MaxCurrentPrice, '$0.00')# #} else {# #=tmpl.f(MaxCurrentPrice, '$0.00')# #}#")
+                      .Title("Current Price")
+                      .Width(180);
+
+                  columns.Bound(c => c.RemainingUnits)
+                      .Sortable(true)
+                      .ClientTemplate("#if (RemainingUnits == null || RemainingUnits < 0) {# 0 #} else {# #=tmpl.isNullFormat(RemainingUnits, '\\#,\\#\\#\\#', '-')# #}#")
+                      .Filterable(true)
+                      .ClientFooterTemplate("#=tmpl.isNullFormat(sum, '\\#,\\#\\#\\#', '-')#")
+                      .Title("Remaining Units");
+              })
+              .Sortable(conf => conf.Enabled(true).SortMode(GridSortMode.SingleColumn))
+              .Filterable(conf => conf.Enabled(true))
+              .Navigatable(conf => conf.Enabled(false))
+              .Scrollable(conf => conf.Enabled(false))
+              .Selectable(conf => conf.Enabled(false))
+              .Pageable(conf => conf.Enabled(true).Refresh(true))
+              .AutoBind(false)
+              .DataSource(dataSource => dataSource
+                  .Ajax()
+                  .ServerOperation(false)
+                  .Aggregates(conf =>
+                  {
+                      conf.Add(c => c.NumberOfSoldUnits).Sum();
+                      conf.Add(c => c.RemainingUnits).Sum();
+                  })
+                  .PageSize(10000)
+                  .Sort(conf =>
+                  {
+                      if (Model == SalesReportViewModel.SalesReportType.ByStyle)
+                          conf.Add(o => o.StyleString).Ascending();
+                      else
+                          conf.Add(o => o.FeatureValue).Ascending();
+                  })
+                  .Read(read => read.Action("GetAll", "Report")))
+              )
+
+    </div>
+</div>
+
+<script>
+    var salesByDateVm = null;
+
+    $(document).ready(function () {
+        var settings = {
+            gridId: "grid"
+        };
+
+        salesByDateVm = new SalesByDateViewModel(settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+        ko.applyBindings(salesByDateVm, document.getElementById('page-content'));
+    });
+</script>

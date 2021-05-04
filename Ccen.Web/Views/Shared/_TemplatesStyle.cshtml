@@ -1,0 +1,161 @@
+﻿@using Amazon.Core.Models
+
+<script type="text/kendo-tmpl" id="remaining-column-template">
+    <div><span class="remark gray">remaining: </span> #=tmpl.isNull(data.RemainingQuantity, '-')#</div>
+    <div><span class="remark gray">sold online:</span> #=tmpl.isNull(data.MarketsSoldQuantity, '-')# #if (data.MarketsSoldQuantity != data.TotalMarketsSoldQuantity) {# (#=tmpl.isNull(data.TotalMarketsSoldQuantity, '-')#) #}#</div>
+    <div><span class="remark gray">sold in store:</span> #=tmpl.isNull(data.ScannedSoldQuantity, '-')# #if (data.ScannedSoldQuantity != data.TotalScannedSoldQuantity) {# (#=tmpl.isNull(data.TotalScannedSoldQuantity, '-')#) #}#</div>
+    <div><span class="remark gray">sent to fba:</span> #=tmpl.isNull(data.SentToFBAQuantity, '-')# #if (data.SentToFBAQuantity != data.TotalSentToFBAQuantity) {# (#=tmpl.isNull(data.TotalSentToFBAQuantity, '-')#) #}#</div>
+    <div><span class="remark gray">special cases:</span> #=tmpl.isNull(data.SpecialCaseQuantity, '-')# #if (data.SpecialCaseQuantity != data.TotalSpecialCaseQuantity) {# (#=tmpl.isNull(data.TotalSpecialCaseQuantity, '-')#) #}#</div>
+    <div><span class="remark gray">sent to PS:</span> #=tmpl.isNull(data.SentToPhotoshootQuantity, '-')# #if (data.SentToPhotoshootQuantity != data.TotalSentToPhotoshootQuantity) {# (#=tmpl.isNull(data.TotalSentToPhotoshootQuantity, '-')#) #}#</div>
+</script>
+
+<script type="text/kendo-tmpl" id="location-column-template">
+    #if (data.MainLocation != null) {# 
+        <div><span class="gray">Isle: </span>#=data.MainLocation.Isle#</div>
+        <div><span class="gray">Section: </span>#=data.MainLocation.Section#</div>
+        <div><span class="gray">Shelf: </span>#=data.MainLocation.Shelf#</div>
+    #} else {#
+        <div>-</div>
+    #}#
+</script>
+
+<script type="text/kendo-tmpl" id="all-locations-column-template">
+    #if (data.Locations != null && data.Locations.length > 0) {#
+        #for (var i = 0; i < data.Locations.length; i++) {#
+            <div>#=data.Locations[i].Isle# / #=data.Locations[i].Section# / #=data.Locations[i].Shelf# </div>
+        #}#
+    #} else {#
+        <span>-</span>
+    #}#
+</script>
+
+<script type="text/kendo-tmpl" id="size-column-template">
+    #if (data.StyleItemCaches != null) {#
+        #for (var i = 0; i < data.StyleItemCaches.length; i++) {#
+        <div>
+            <div style="float: left">
+                #if (data.StyleItemCaches[i].RemainingQuantity <= 0 && data.StyleItemCaches[i].RemainingQuantity !== null) {#
+                <span class="red"><span class='gray'>#=data.StyleItemCaches[i].Name#:</span> 0</span>
+                #}#
+                #if (data.StyleItemCaches[i].RemainingQuantity == 1) {#
+                <span class="yellow"><span class='gray'>#=data.StyleItemCaches[i].Name#:</span> #=data.StyleItemCaches[i].RemainingQuantity#</span>
+                #}#
+                #if (data.StyleItemCaches[i].RemainingQuantity > 1) {#
+                <span class=""><span class='gray'>#=data.StyleItemCaches[i].Name#:</span> #=data.StyleItemCaches[i].RemainingQuantity#</span>
+                #}#
+                #if (data.StyleItemCaches[i].RemainingQuantity === null) {#
+                <span class="red"><span class='gray'>#=data.StyleItemCaches[i].Name#:</span> -</span>
+                #}#
+            </div>
+            #if (data.StyleItemCaches[i].HasSale) {#
+                <div class='red-rect' style="float: left; margin-left: 3px; padding: 0px 6px;">Sale</div>
+            #}#
+            #if (data.StyleItemCaches[i].IsInVirtual == true) {#
+                <img src="/Images/cloud-icon.png" title="In virtual listing" height="12px" style="margin-left: 4px" />
+                @*<div class='blue-rect' style="float: left; margin-left: 3px; padding: 0px 6px;">In Virtual</div>*@
+            #}#
+        </div>
+        <div class="clear"></div>
+        #}#
+    #}#
+</script>
+
+<script type="text/kendo-tmpl" id="quantity-complex-column-template">
+    <div>
+        #=tmpl.isNull(data.UsedBoxQuantity, '0')# + #=tmpl.isNull(data.ManuallyQuantity, '0')#
+        <div class='remark gray'>from box+manual</div>
+    </div>
+    #if (data.UsedBoxQuantity != data.BoxQuantity) {#
+        <div class="remark" style="padding-top:5px; line-height: 1.3em">
+            <div>#=tmpl.isNull(data.BoxQuantity, '-')#</div>
+            <span class='gray'>total in boxes</span>
+        </div>
+    #}#
+</script>
+
+<script type="text/kendo-tmpl" id="styleid-complex-column-template">
+    #if(data.IsOnline && data.HasAssociatedASIN){#
+        <a target='_blank' href='#=data.MarketUrl#'>#=data.StyleId#</a>
+    #} else {#
+        #=data.StyleId#
+    #}#
+    
+    <div style="float: left; margin-right: 5px">
+        <div class="image-box-holder">
+            #if(data.IsOnline) {#
+            <a target='_blank' href='#=data.ProductStyleUrl#'>
+                <img src='#=data.Thumbnail#' style="max-width: 75px; max-height: 75px" />
+            </a>
+            #} else { #
+            <img src='#=data.Thumbnail#' style="max-width: 75px; max-height: 75px" />
+            #}#
+        </div>
+        #if (data.HasImage) {#
+        <div class="image-zoom-icon">
+            <a href="#=data.Image#" target="_blank" class="k-button">
+                <span class="glyphicon glyphicon-zoom-in"></span>
+            </a>
+        </div>
+        #}#
+    </div>
+    
+    #if (data.OnHold) {#
+        <div class='rect info-rect'>On Hold</div>
+    #}#
+    
+    #for (var i = 0; i < data.StyleItemCaches.length; i++) {#
+        #if (data.StyleItemCaches[i].OnHold) {#
+            <div class='rect info-rect'>On Hold: #=data.StyleItemCaches[i].Size#</div>
+        #}#
+    #}#
+    
+    #if (data.IsHidden) {#
+        <div class='rect lightblue-rect'>Kiosk</div>
+    #}#
+    
+    #if (data.Type == @((int) StyleTypes.References)) {#
+        <div class='rect blue-rect'>Virtual</div>
+    #}#
+    
+    #if (data.HasSale) {#
+        <div class='rect red-rect'>Sale</div>
+    #}#
+    
+    <div style='padding-top: 3px'>
+        <span class="gray">Type: </span>#=data.ItemTypeName#,
+        <span class="gray">Status: </span>#=data.Status#
+        <div>
+            #for (var i = 0; i < data.Marketplaces.length; i++) {#
+            #if (data.Marketplaces[i].Count > 0) {#
+            <div style="display:block; float:left">
+                <a href="@Url.Action("Products", "Item")?market=#=data.Marketplaces[i].Market#&marketplaceId=#=data.Marketplaces[i].MarketplaceId#&styleId=#=data.StyleId#"
+                   target="_blank"><span class="flag-#=data.Marketplaces[i].ShortName#" style="display: block"></span></a>
+                <div style="text-align: center;line-height: 14px; margin: -26px 3px 0px 17px; position: relative; color: black;padding: 0px;background-color: #if (data.Marketplaces[i].IsPublished) { if (data.Marketplaces[i].HasPublishErrors || data.Marketplaces[i].HasPublishInProgress) { # yellow #} else {# \#ffffffdd #} } else {# red #}# ;border: 1px solid \#999;font-size:  11px;">
+                    <a href="#=data.Marketplaces[i].MarketUrl#" style="color:black; margin: 0px; padding: 0px"
+                       target="_blank">#=data.Marketplaces[i].Count#</a>
+                </div>
+            </div>
+            #}#
+            #}#
+            <div class="clear"></div>
+        </div>
+    </div>
+    
+    <div style='padding-top:3px'>#=data.Name#</div>
+</script>
+
+<script type="text/kendo-tmpl" id="boxprice-column-template">
+    #if (data.BoxItemMinPrice > 0) {#
+        #=tmpl.isNullFormat(data.BoxItemMinPrice, '$0.00', '-')#
+        #if (data.BoxItemMaxPrice > 0 && data.BoxItemMinPrice != data.BoxItemMaxPrice) {#
+            - #=tmpl.isNullFormat(data.BoxItemMaxPrice, '$0.00', '-')#
+        #}#
+    #}#
+
+    @*#=kendo.toString(data.BoxTotalPrice, 'c')#*@
+</script>
+
+
+<script type="text/kendo-tmpl" id="ds-column-template">
+    #=tmpl.isNullOrEmpty(data.DropShipperName, '-')#
+</script>

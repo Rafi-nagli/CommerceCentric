@@ -1,0 +1,189 @@
+﻿@using RazorEngine.Text
+<meta name="viewport" content="width=device-width">
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+<link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700" rel="stylesheet">
+<link href="https://pa.commercentric.com/templates/ebay-pa/list-style.css" rel="stylesheet">
+<style>
+    .listt {
+        width: 50%;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        float: left;
+    }
+</style>
+<div class="main-bg">
+    <div class="header-container">
+        <div class="header-content">
+            <div class="container">
+                <center><img class="logo" style="padding: 21px;" src="https://pa.commercentric.com/templates/ebay-pa/logo.jpg"></center>
+                <div class="header-right">
+                    <input type="checkbox" id="nav-trigger" class="nav-trigger"> <label for="nav-trigger" class="hidden-nav">MENU</label>
+                    <div class="menu-header menu-header-mobile">
+                        <div class="container">
+                            <div class="menu-container">
+                                <ul class="menu">
+                                    <li><a href="https://www.ebay.com/str/premiumapparelstore"><i class="fa fa-home"></i>Our Store</a></li>
+
+                                    <li><a target="_blank" href="https://my.ebay.com/ws/eBayISAPI.dll?AcceptSavedSeller&mode=0&preference=0&ssPageName=STRK:MEFS:ADDMP&sellerid=premium_apparel" title="Newsletter Signup">Newsletter Signup</a></li>
+                                    <li><a target="_blank" href="https://my.ebay.com/ws/eBayISAPI.dll?AcceptSavedSeller&mode=0&preference=0&ssPageName=STRK:MEFS:ADDMP&sellerid=premium_apparel" title="Favorite Seller">Favorite Seller</a></li>
+                                    <li><a target="_blank" href="https://www.ebay.com/str/premiumapparelstore?_sop=10&rt=nc" title="New Arrivals">New Arrivals</a></li>
+
+                                    <li><a target="_blank" href="https://contact.ebay.com/ws/eBayISAPI.dll?ReturnUserEmail&requested=premium_apparel&frm=3692&iid=-1&de=off&redirect=0" title="Send Message">Send Message</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="menu-header">
+                <div class="container">
+                    <div class="menu-container">
+                        <ul class="menu">
+                            <li><a href="https://www.ebay.com/str/premiumapparelstore"><i class="fa fa-home"></i>Our Store</a></li>
+
+                            <li><a target="_blank" href="https://my.ebay.com/ws/eBayISAPI.dll?AcceptSavedSeller&mode=0&preference=0&ssPageName=STRK:MEFS:ADDMP&sellerid=premium_apparel" title="Newsletter Signup">Newsletter Signup</a></li>
+                            <li><a target="_blank" href="https://my.ebay.com/ws/eBayISAPI.dll?AcceptSavedSeller&mode=0&preference=0&ssPageName=STRK:MEFS:ADDMP&sellerid=premium_apparel" title="Favorite Seller">Favorite Seller</a></li>
+                            <li><a target="_blank" href="https://www.ebay.com/str/premiumapparelstore?_sop=10&rt=nc" title="New Arrivals">New Arrivals</a></li>
+
+                            <li><a target="_blank" href="https://contact.ebay.com/ws/eBayISAPI.dll?ReturnUserEmail&requested=premium_apparel&frm=3692&iid=-1&de=off&redirect=0" title="Send Message">Send Message</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="clearfix"></div>
+    <div class="promo hidden-sm hidden-xs">
+        <div class="container">
+            <div class="promo-content">
+                <a class="box-promotion" title="Free & Fast US DELIVERY"><i class="fa fa-truck" aria-hidden="true"></i><span>Free & Fast US Delivery</span> </a>
+                <a class="box-promotion" title="UK BASED & Operated"><i class="fa fa-globe" aria-hidden="true"></i><span>USA BASED & Operated</span></a>
+                <a class="box-promotion" title="Best Price Guarantee"><i class="fa fa-usd" aria-hidden="true"></i><span>Best Price Guarantee</span></a>
+                <a class="box-promotion" title="Secure Shopping"><i class="fa fa-shield" aria-hidden="true"></i><span>Secure Shopping</span></a>
+            </div>
+        </div>
+    </div>
+    <!--Header End-->
+    <div class="content">
+        <div class="container">
+            <div class="inner-row">
+                <div class="row">
+                    <div class="col-md-12 col-sm-12 col-xs-12">
+                        <center><h1 class="title-heading">@Model.Title</h1></center>
+                        <!--Item Title-->
+                    </div>
+                </div>
+                <br>
+                <div class="row">
+                    <div class="col-md-6 col-sm-6 col-xs-12">
+                        <div class="panel panel-default">
+                            <div class="image-gallery">
+                                <div class="slider">
+                                    @for (var i = 0; i < Model.Images.Count; i++)
+                                    {
+                                        <input type="radio" name="slide_switch" id="id@(i)" checked="" value="@Model.Images[i]"> <label for="id@(i)"> <span><img src="@Model.Images[i]" width="100"></span> </label>
+                                        <div class="img-details"><img src="@Model.Images[i]"></div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-sm-6 col-xs-12">
+                        <div class="text-section">
+                            <div class="panel-body">
+                                <p class="desc-head"><b>Product Description</b></p>
+                                <p>
+                                    @Raw(Model.Description)
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tabarea">
+                    <div class="tab-content">
+                        <input id="tab1" name="tabs" checked="" type="radio">
+                        <label for="tab1">
+                            <span>Payment</span><!--Tab 1 Name-->
+                        </label>
+                        <section id="content1">
+                            We accept Paypal as payment method.
+                        </section>
+                        <input id="tab2" name="tabs" type="radio">
+                        <label for="tab2">
+                            <span>Shipping</span><!--Tab 1 Name-->
+                        </label>
+                        <section id="content2">
+                            Shipments are processed within 1 business day after complete payment. We ship via USPS First Class, Expedited orders shipped using Fedex 2nd day (not available in PR).
+                        </section>
+                        <input id="tab3" name="tabs" type="radio">
+                        <label for="tab3">
+                            <span>Returns</span><!--Tab 2 Name-->
+                        </label>
+                        <section id="content3">
+                            <!--Tab 2 Content-->
+                            <p>
+                                We strive to ensure complete customer satisfaction with transaction, if you have a problem within 30 days of receiving a product, we will gladly exchange it or refund it.<br>
+                                You may return any purchase in the same bag or box in which it was shipped. Upon receipt of the item(s) you returned we will issue to you an refund less adjustments for shipping and handling (where applicable). All products must be returned in their original condition, unworn and unwashed, with tags still attached, and with a copy of the invoice and the reason for return included. We will ship all exchanges at no shipping charge to you. Underwear, socks, and tights are ineligible for refund or exchange.
+                            </p>
+                        </section>
+                        <input id="tab4" name="tabs" type="radio">
+                        <label for="tab4">
+                            <span>Contact Us</span><!--Tab 3 Name-->
+                        </label>
+                        <section id="content4">
+                            <!--Tab 3 Content-->
+                            <p>To contact our Customer Service Team, simply click <a href="https://contact.ebay.com/ws/eBayISAPI.dll?ReturnUserEmail&requested=premium_apparel&frm=3692&iid=-1&de=off&redirect=0">Send Message</a> and our Customer Service team will be happy to assist. </p>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--Footer Start-->
+    <div class="footer">
+        <div class="container">
+            <div class="inner-row">
+                <div class="col-sm-4 contact-us">
+                    <div class="head">Useful Links</div>
+                    <ul class="listt">
+                        <!--Footer Tab-1-->
+                        <li><a target="_blank" href="https://www.ebay.com/str/premiumapparelstore"> Shop Home</a></li>
+                        <li><a target="_blank" href="https://my.ebay.com/ws/eBayISAPI.dll?AcceptSavedSeller&mode=0&preference=0&ssPageName=STRK:MEFS:ADDMP&sellerid=premium_apparel"> Add to Favorite</a></li>
+                        <li><a target="_blank" href="https://www.ebay.com/str/premiumapparelstore?_sop=1&rt=nc"> Ending Items</a></li>
+                    </ul>
+                    <ul class="listt">
+                        <!--Footer Tab-1-->
+                        <li><a target="_blank" href="https://feedback.ebay.com/ws/eBayISAPI.dll?ViewFeedback2&userid=premium_apparel&rt=nc"> Our Feedback</a></li>
+                        <li><a target="_blank" href="https://www.ebay.com/str/premiumapparelstore?_sop=10&rt=nc"> New Arrivals</a></li>
+                        <li><a target="_blank" href="https://contact.ebay.com/ws/eBayISAPI.dll?ReturnUserEmail&requested=premium_apparel&frm=3692&iid=-1&de=off&redirect=0"> Send Message</a></li>
+                    </ul>
+                </div>
+                <div class="col-sm-1"></div>
+                <div class="col-sm-3 footer-signup">
+                    <div class="head">Newsletter</div>
+                    <!--Footer Tab-3-->
+                    <p>Sign up to our newsletter for special deals</p>
+                    <a target="_blank" href="https://my.ebay.com/ws/eBayISAPI.dll?AcceptSavedSeller&mode=0&preference=0&ssPageName=STRK:MEFS:ADDMP&sellerid=premium_apparel" title="SUBMIT">SUBMIT</a><!--Newsletter Link-->
+                </div>
+                <div class="col-sm-1"></div>
+                <div class="col-sm-3 hidden-xs footer-promo">
+                    <div class="head">We Accept Only</div>
+                    <!--Footer Tab-4-->
+                    <p>
+                        <img src="https://pa.commercentric.com/templates/ebay-pa/paypal-1.png" class="img-responsive"><!--Payment Banner-Footer-->
+                    </p>
+                </div>
+                <div class="clearfix"></div>
+                <div class="copyrights">
+                    <p class="text-center">Copyright © Premium Apparel Store. All Rights Reserved.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>

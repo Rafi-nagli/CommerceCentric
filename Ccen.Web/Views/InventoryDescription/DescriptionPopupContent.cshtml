@@ -1,0 +1,219 @@
+﻿@using Amazon.Core.Entities.Enums
+@using Amazon.Core.Models
+@using Amazon.Web.HtmlExtend
+@using Amazon.Web.Models
+@using Kendo.Mvc.UI
+@model Amazon.Web.ViewModels.Inventory.StyleDescriptionViewModel
+@{
+    Layout = null;
+}
+
+<script type="text/javascript">
+    var StyleDescriptionModel = function(model, settings) {
+        var self = this;
+
+        self.isLoaded = ko.observable(false);
+
+        self.settings = settings;
+        self.model = model;
+
+        self.id = model.StyleId;
+        self.type = model.Type;
+
+        self.styleString = model.StyleString;
+        self.styleId = model.StyleId;
+
+        self.description = ko.observable(model.Description);
+        self.longDescription = ko.observable(model.LongDescription);
+        self.searchTerms = ko.observable(model.SearchTerms);
+
+        self.bulletPoint1 = ko.observable(model.BulletPoint1);
+        self.bulletPoint2 = ko.observable(model.BulletPoint2);
+        self.bulletPoint3 = ko.observable(model.BulletPoint3);
+        self.bulletPoint4 = ko.observable(model.BulletPoint4);
+        self.bulletPoint5 = ko.observable(model.BulletPoint5);
+        
+        self.errors = ko.validation.group(self, { deep: true });
+        self.isValid = ko.computed(function() {
+            return self.errors().length === 0;
+        });
+        self.onSubmit = function(data, e) { // function(data, e) {
+            //console.log(data);
+            console.log(e);
+            console.log("save click");
+
+            //var validator = $("#form").kendoValidator().data('kendoValidator');
+
+            //http://stackoverflow.com/questions/18872652/how-to-customize-the-error-message-its-placement-in-knockout-validation
+            //http://jsfiddle.net/KHFn8/3238/
+            if (self.isValid()) {
+                console.log("validate true");
+
+                return true;
+            } else {
+                console.log("validate false");
+                self.errors.showAllMessages();
+                e.preventDefault();
+                return false;
+            }
+        };
+
+        self.isLoaded(true);
+    };
+
+    $(document).ready(function() {
+        var model = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
+        var settings = {
+
+        };
+
+        var viewModel = new StyleDescriptionModel(model, settings);
+
+        ko.validation.init({
+            errorElementClass: "input-validation-error",
+            //errorClass: "input-validation-error",
+            errorMessageClass: "field-validation-error",
+            decorateElement: true,
+            decorateInputElement: true,
+            decorateElementOnModified: true
+        });
+
+        ko.applyBindings(viewModel, $('#edit-description-container')[0]);
+    });
+</script>
+
+<div id="edit-description-container">
+    @Html.ValidationSummary(true)
+
+    @Html.HiddenFor(m => m.Id)
+    @Html.HiddenFor(m => m.StyleString)
+
+    <div class="k-edit-form-container" style="width: auto;">
+        <div class="inventory-popup " style="width: auto; font-size:13px">
+            <table style="width: 100%" class="edit-descriptions">
+                <tr>
+                    <td>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">General</div>
+                            <div class="panel-body">
+                                <div class="editor-label">Style Id:</div>
+                                <div class="editor-field" style="margin-top: 5px">
+                                    <span data-bind="text: styleString"></span>
+                                </div>
+                                <div class="editor-label">Description:</div>
+                                <div class="editor-field">
+                                    <textarea class="k-textbox"
+                                              style="width: 320px"
+                                              rows="6"
+                                              name="Description"
+                                              data-bind="value: description"></textarea>
+                                </div>
+                                <div class="editor-label">Long Description:</div>
+                                <div class="editor-field">
+                                    <textarea class="k-textbox"
+                                              style="width: 320px"
+                                              rows="6"
+                                              name="LongDescription"
+                                              data-bind="value: longDescription"></textarea>
+                                </div>
+                                <div class="editor-label">Search Terms:</div>
+                                <div class="editor-field">
+                                    <textarea class="k-textbox"
+                                              style="width: 260px"
+                                              rows="3"
+                                              name="SearchTerms"
+                                              data-bind="value: searchTerms"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="vertical-align: top">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">Shelf Description</div>
+                            <div class="panel-body">
+                                <div class="clear"></div>
+                                <div style="margin-top: 20px">
+                                    <div class="editor-label">Feature 1:</div>
+                                    <div class="editor-field">
+                                        <textarea class="k-textbox"
+                                                  rows="2"
+                                                  style="width: 260px"
+                                                  name="BulletPoint1"
+                                                  data-bind="value: bulletPoint1"></textarea>
+                                    </div>
+                                    <div class="editor-label">Feature 2:</div>
+                                    <div class="editor-field">
+                                        <textarea class="k-textbox"
+                                                  rows="2"
+                                                  style="width: 260px"
+                                                  name="BulletPoint2"
+                                                  data-bind="value: bulletPoint2"></textarea>
+                                    </div>
+                                    <div class="editor-label">Feature 3:</div>
+                                    <div class="editor-field">
+                                        <textarea class="k-textbox"
+                                                  rows="2"
+                                                  style="width: 260px"
+                                                  name="BulletPoint3"
+                                                  data-bind="value: bulletPoint3"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel panel-default">
+                            <div class="panel-heading">Other</div>
+                            <div class="panel-body">
+                                <div class="editor-label">Feature 4:</div>
+                                <div class="editor-field">
+                                    <textarea class="k-textbox"
+                                                rows="2"
+                                                style="width: 260px"
+                                                name="BulletPoint4"
+                                                data-bind="value: bulletPoint4"></textarea>
+                                </div>
+                                <div class="editor-label">Feature 5:</div>
+                                <div class="editor-field">
+                                    <textarea class="k-textbox"
+                                                rows="2"
+                                                style="width: 260px"
+                                                name="BulletPoint5"
+                                                data-bind="value: bulletPoint5"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="clear"></div>
+
+    <div class="k-edit-buttons k-state-default popup-button-panel"
+         style="position: static">
+        <table style="margin-left: auto">
+            <tr>
+                <td>
+                    <button type="submit"
+                            id="submit"
+                            tabindex="300"
+                            data-bind="click: onSubmit"
+                            class="k-button k-button-icontext k-grid-update">
+                        <span class="k-icon k-update"></span>Save
+                    </button>
+                </td>
+                <td>
+                    <button class="k-button k-button-icontext k-grid-cancel"
+                            type="reset"
+                            id="cancel"
+                            tabindex="301"
+                            onclick="popupWindow.close()">
+                        <span class="k-icon k-cancel"></span>Cancel
+                    </button>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
